@@ -1,0 +1,208 @@
+/* ===== 공통 리셋 & 기본 ===== */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-serif; }
+
+/* 뷰포트 메타 태그도 HTML <head>에 꼭 추가:
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+*/
+
+/* ===== 레이아웃 ===== */
+.home-container,
+.explore-container {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.section-title {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+/* ===== 카드 ===== */
+.news-card {
+  display: flex;
+  align-items: flex-start;
+  background-color: #f3f4f6;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+.news-card .emoji { font-size: 32px; margin-right: 16px; }
+.news-card .content { flex: 1; }
+
+.news-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.error { color: red; }
+.loading { color: gray; }
+
+/* ===== 상단 카테고리 네비(데스크탑) ===== */
+.category-nav {
+  display: flex;
+  justify-content: flex-start;
+  padding: 16px 32px;
+  gap: 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #fff;
+  font-family: 'Pretendard', sans-serif;
+}
+
+.category-button {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #999;
+  font-weight: 500;
+  cursor: pointer;
+  padding-bottom: 6px;
+  position: relative;
+}
+
+.category-button.active {
+  color: #111;
+  font-weight: 600;
+}
+
+.category-button.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 2px;
+  /* ⬇️ 문법 오타 수정: linear-gradient 사용 */
+  background: linear-gradient(to right, rgba(68,143,255,1), rgba(72,51,208,1));
+  border-radius: 1px;
+}
+
+/* ===== 탐험지 메인 ===== */
+.explore-step-container { padding: 40px; text-align: center; }
+.explore-title { font-size: 24px; font-weight: bold; margin-bottom: 24px; }
+
+.option-list {
+  display: flex; justify-content: center; gap: 12px;
+  flex-wrap: wrap; margin-bottom: 20px;
+}
+
+.option-button {
+  padding: 12px 24px; border-radius: 30px;
+  border: 1px solid #ccc; background-color: #fff;
+  cursor: pointer; font-size: 16px;
+}
+
+.option-button.selected {
+  background-color: #6366f1; color: #fff;
+  font-weight: bold; border: none;
+}
+
+.next-button {
+  background-color: #6366f1; color: #fff;
+  padding: 12px 24px; border: none; border-radius: 24px;
+  font-size: 16px; cursor: pointer;
+}
+
+.explore-main {
+  padding: 40px 20px; max-width: 600px; margin: 0 auto; text-align: center;
+}
+
+.explore-date { font-size: 14px; color: #666; text-align: left; margin-bottom: 8px; }
+.explore-title { font-size: 24px; font-weight: bold; margin-bottom: 40px; }
+
+.explore-progress-box {
+  background-color: #f9fafb; border-radius: 12px;
+  padding: 30px 20px; box-shadow: 0 2px 6px rgba(0,0,0,.05);
+  margin-bottom: 32px;
+}
+
+.explore-step-list { list-style: none; padding: 0; margin: 0; }
+.step-item { display: flex; align-items: center; margin-bottom: 20px; }
+
+.step-circle {
+  width: 28px; height: 28px; border-radius: 50%;
+  background-color: #6366f1; color: #fff;
+  font-weight: bold; display: flex; justify-content: center; align-items: center;
+  margin-right: 12px; flex-shrink: 0;
+}
+
+.step-text { font-size: 16px; color: #333; text-align: left; }
+
+/* ===== 모바일(≤767px) ===== */
+@media (max-width: 767px) {
+  :root {
+    --header-px: 16px;
+    --header-py: 14px;
+    --radius-lg: 16px;
+    --nav-h: 56px; /* 하단 탭바 높이 */
+  }
+
+  /* 콘텐츠 컨테이너 2종 모두 보정(겹침 방지) */
+  .home-container,
+  .explore-container {
+    background: #fff;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    overflow: hidden;
+    min-height: 100dvh; /* 주소창 변화 대응 */
+    min-height: 100vh;  /* 폴백 */
+    padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* 헤더: 클래스가 실제 DOM에 있어야 적용됨! */
+  .news-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: var(--header-py) var(--header-px);
+  }
+  .news-header .logo { flex: 0 0 auto; margin: 0; }
+  .news-header .search { flex: 1 1 auto; min-width: 0; margin: 0; order: 0; }
+  .news-header .icon-bell { flex: 0 0 auto; margin-left: 4px; touch-action: manipulation; order: 0; }
+
+  /* 하단 고정 탭 */
+  .category-nav {
+    position: fixed;
+    inset: auto 0 0 0;
+    height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+    padding: 8px 0 env(safe-area-inset-bottom, 0px);
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    display: flex; justify-content: space-around; align-items: center;
+    gap: 0; z-index: 100;
+  }
+  .category-nav .category-button {
+    flex: 1;
+    font-size: clamp(12px, 3.4vw, 14px);
+    line-height: 1.2;
+    min-height: 44px;
+    padding: 8px 0; margin: 0;
+  }
+
+  /* 카드 열→행 전환 */
+  .news-card {
+    flex-direction: column;
+  }
+  .news-card .emoji {
+    font-size: 28px;
+    margin: 0 0 8px 0;
+  }
+}
+
+/* 초소형 기기(≤380px): 헤더 세로 스택 */
+@media (max-width: 380px) {
+  .news-header {
+    flex-direction: column; align-items: stretch; gap: 8px;
+    padding: 12px 12px;
+  }
+  .news-header .logo { margin: 0 0 4px 0; }
+  .news-header .search { order: 2; width: 100%; }
+  .news-header .icon-bell { order: 3; align-self: flex-end; }
+}
