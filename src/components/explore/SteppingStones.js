@@ -6,7 +6,6 @@ import stepLocked from "../../assets/step-locked.svg";
 import antCharacter from "../../assets/antCharacter.svg";
 
 export default function SteppingStones({ total = 7, done = 0 }) {
-
   const positions = [
     { left: 74, top: 264 },
     { left: 235, top: 242 },
@@ -26,14 +25,14 @@ export default function SteppingStones({ total = 7, done = 0 }) {
         margin: "0 auto",
       }}
     >
-      {/* 징검다리 */}
+      {/* 징검다리 배경 경로 */}
       <img
         src={steppingPath}
         alt="stepping path"
         style={{
           position: "absolute",
           left: 61,
-          top: 111,
+            top: 111,
           width: 292,
           height: 590,
         }}

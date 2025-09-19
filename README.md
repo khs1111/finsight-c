@@ -14,6 +14,25 @@ Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 The page will reload when you make changes.\
 You may also see any lint errors in the console.
 
+## Folder Convention (Project Custom)
+
+pages/ : Route-level components only. Each file corresponds to a URL entry point and orchestrates data + composition.
+
+components/ : Reusable UI parts (buttons, cards, lists, navigation, domain widgets). Domain grouping encouraged (e.g. `components/community/`, `components/explore/`).
+
+Removed duplicate legacy scaffold: `ProfilePage.js` and its CSS were deleted. Active profile route component is `pages/profile.js` with styles in `pages/Profile.css`.
+
+Guidelines:
+- Keep purely page-specific layout glue in pages/.
+- Extract only when: reused across another route OR component grows too large (readability threshold).
+- Prefer domain folders over excessive granular nesting.
+- Avoid keeping two variants of the same page to prevent confusion (e.g. `ProfilePage.js` vs `profile.js`).
+
+Refactor Log:
+1. Consolidated Profile into single file `pages/profile.js`.
+2. Removed obsolete scaffold files.
+3. Added this section for future contributors.
+
 ### `npm test`
 
 Launches the test runner in the interactive watch mode.\

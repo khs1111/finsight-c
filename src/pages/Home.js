@@ -1,8 +1,11 @@
+// 홈 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import NewsCategoryTabs from '../components/news/NewsCategoryTabs';
+import BackendTest from '../components/dev/BackendTest';
 import './Home.css';
+
 
 export default function Home() {
   const [newsItems, setNewsItems]     = useState([]);

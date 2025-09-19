@@ -1,3 +1,6 @@
+// 뉴스 상세 페이지
+// - 선택된 뉴스 아이템 제목/내용 표시
+// - 향후: 공유 / 북마크 / 관련 기사 확장 포인트
 import React from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -16,6 +19,7 @@ const dummyNews = [
   },
 ];
 
+// NewsDetail: 뉴스 상세 컴포넌트
 function NewsDetail() {
   const { id } = useParams();
   const news = dummyNews.find((item) => item.id === id);

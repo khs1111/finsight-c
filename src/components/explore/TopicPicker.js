@@ -29,18 +29,23 @@ export default function TopicPicker({ onConfirm }) {
         maxWidth: "412px",
         width: "100%",
         margin: "0 auto",
-        padding: "16px",
+        padding: "60px 16px 140px 16px", // 상단 60px, 하단 고정 버튼 여유
         background: "#F4F6FA",
         minHeight: "100vh",
+        boxSizing: 'border-box',
+        position: 'relative'
       }}
     >
       <h1
         style={{
-          fontSize: "26px",
-          fontWeight: "900",
-          marginBottom: "20px",
-          lineHeight: "32px",
-          color: "#000",
+          fontFamily: 'Roboto, sans-serif',
+          fontWeight: 900,
+          fontStyle: 'normal', // "Black" weight already expressed via 900
+          fontSize: '30px',
+          lineHeight: '100%',
+          letterSpacing: '0',
+          marginBottom: '98px', // 유지: 첫 카드까지 간격
+          color: '#000',
         }}
       >
         내가 고른 주제, <br /> 깊이 있게 배워봐요!
@@ -89,18 +94,24 @@ export default function TopicPicker({ onConfirm }) {
         onClick={() => onConfirm(selectedTopic, selectedSub)}
         disabled={!selectedSub}
         style={{
-          marginTop: "20px",
-          width: "100%",
-          height: "60px",
+          position: 'fixed',
+          left: '50%',
+          bottom: '72px', // 하단 네비게이션 바 위
+          transform: 'translateX(-50%)',
+          maxWidth: '412px',
+          width: '380px',
+          height: '60px',
           background: selectedSub
-            ? "linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%)"
-            : "#CACACA",
-          color: "#fff",
-          fontSize: "18px",
-          fontWeight: "700",
-          border: "none",
-          borderRadius: "8px",
-          cursor: selectedSub ? "pointer" : "not-allowed",
+            ? 'linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%)'
+            : '#CACACA',
+          color: '#fff',
+          fontSize: '18px',
+          fontWeight: '700',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: selectedSub ? 'pointer' : 'not-allowed',
+          boxShadow: selectedSub ? '0 0 8px rgba(0,0,0,0.25)' : 'none',
+          zIndex: 120
         }}
       >
         확인
