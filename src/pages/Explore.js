@@ -7,6 +7,7 @@ import QuizQuestion from "../components/explore/QuizQuestion";
 import CompletionScreen from "../components/explore/CompletionScreen";
 
 import { getQuiz, getQuestions as apiGetQuestions } from "../api/explore";
+import { dummyQuizzes } from "../utils/testData.js";
 import CategoryNav from "../components/news/CategoryNav";
 import { useNavVisibility } from "../components/navigation/NavVisibilityContext";
 
@@ -47,19 +48,26 @@ export default function Explore() {
         onConfirm={async (lv) => {
           setLevel(lv);
           try {
-            // 새로운 백엔드 API 사용 (퀴즈 ID 1로 테스트)
-            const result = await getQuiz(1);
-            if (result.success) {
-              setQuestions(result.data.questions || []);
+            // getQuestions API 사용 (더미 데이터 우선)
+            console.log('🎯 퀴즈 데이터 요청 중...');
+            const result = await apiGetQuestions({ 
+              topicId: mainTopic, 
+              levelId: lv 
+            });
+            
+            if (result && result.questions && result.questions.length > 0) {
+              console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
+              setQuestions(result.questions);
             } else {
-              console.error("퀴즈 불러오기 실패:", result.error);
-              // 백엔드 연결 실패시 빈 배열
-              setQuestions([]);
+              console.log('🔄 더미 퀴즈 데이터 사용');
+              // API 실패시 기존 더미 데이터 사용
+              setQuestions(dummyQuizzes);
             }
           } catch (err) {
-            console.error("문제 불러오기 실패:", err);
-            // 백엔드 연결 실패시 빈 배열
-            setQuestions([]);
+            console.error("❌ 문제 불러오기 실패:", err);
+            console.log('🔄 더미 퀴즈 데이터로 폴백');
+            // 에러시 기존 더미 데이터 사용
+            setQuestions(dummyQuizzes);
           }
           setQid(0);
           setStep(3);

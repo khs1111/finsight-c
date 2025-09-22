@@ -5,6 +5,10 @@ import Logo from './Logo';
 import { useNavigate } from 'react-router-dom';
 import { STORAGE_KEYS } from './wizardSteps';
 import { SAMPLE_ARTICLES } from './feedData';
+import newsIcon from '../../assets/news-icon.png';
+import targetIcon from '../../assets/target-icon.png';
+import financeIcon from '../../assets/finance-icon.png';
+import bellIcon from '../../assets/bell-icon.png';
 
 const CANVAS_W = 412;
 const CONTENT_W = 380;
@@ -37,7 +41,6 @@ export default function Feed() {
       <div style={canvas}> 
         <TopBar />
         <Tabs active={activeTab} onChange={setActiveTab} />
-        {/* 온보딩 다시보기 버튼 제거 */}
         {activeTab === 'HOT' && <>
           <Banner />
           <div style={countText}>{filtered.length}개의 소식이 있어요</div>
@@ -69,13 +72,17 @@ export default function Feed() {
         </>}
         {activeTab === 'My news' && <>
           <div style={myHeroArea}>
-            <div style={myHeroImage} />
+            <div style={myHeroImage}>
+              <img src={newsIcon} alt="뉴스 아이콘" style={{ width: 120, height: 120 }} />
+            </div>
             <h1 style={myHeadline}>나만의 뉴스레터를 만나보세요</h1>
             <p style={mySubCopy}>관심 분야와 투자 성향에 맞는 맞춤형 뉴스레터를 구독하고 더 스마트한 투자자가 되어보세요!</p>
             <div style={myCardsWrap}>
               <div style={myFeatureCard}>
                 <div style={myFeatureInnerRow}>
-                  <div style={myIconBox} />
+                  <div style={myIconBox}>
+                    <img src={targetIcon} alt="타겟 아이콘" style={{ width: 48, height: 48 }} />
+                  </div>
                   <div style={myFeatureTextCol}>
                     <div style={myFeatureTitle}>맞춤형 콘텐츠</div>
                     <div style={myFeatureDesc} title="나에게 필요한 정보만 받을 수 있어요.">나에게 필요한 정보만 받을 수 있어요.</div>
@@ -83,9 +90,11 @@ export default function Feed() {
                 </div>
               </div>
               <div style={myFeatureCard}>
-                <div style={myFeatureInnerRowWide}>
-                  <div style={myIconBox} />
-                  <div style={myFeatureTextColWide}>
+                <div style={myFeatureInnerRow}>
+                  <div style={myIconBox}>
+                    <img src={financeIcon} alt="금융 아이콘" style={{ width: 48, height: 48 }} />
+                  </div>
+                  <div style={myFeatureTextCol}>
                     <div style={myFeatureTitle}>무제한 퀴즈</div>
                     <div style={myFeatureDesc} title="재미있게 경제 공부를 핀사이트에서 시작하세요.">재미있게 경제 공부를 핀사이트에서 시작하세요.</div>
                   </div>
@@ -93,7 +102,9 @@ export default function Feed() {
               </div>
               <div style={myFeatureCard}>
                 <div style={myFeatureInnerRow}>
-                  <div style={myIconBox} />
+                  <div style={myIconBox}>
+                    <img src={bellIcon} alt="벨 아이콘" style={{ width: 48, height: 48 }} />
+                  </div>
                   <div style={myFeatureTextCol}>
                     <div style={myFeatureTitle}>카카오톡 알림</div>
                     <div style={myFeatureDesc} title="실시간 맞춤 알림 서비스 제공해요.">실시간 맞춤 알림 서비스 제공해요.</div>
@@ -101,8 +112,8 @@ export default function Feed() {
                 </div>
               </div>
             </div>
+            <button style={myCTAButton} onClick={() => navigate('/newsletter/subscribe')}>구독하기</button>
           </div>
-          <button style={myCTAButton} onClick={() => navigate('/newsletter/subscribe')}>구독하기</button>
         </>}
       </div>
     </div>
@@ -181,10 +192,10 @@ function ArticleCard({ data, onClick }) {
 
 const pageOuter = { width: '100%', display: 'flex', justifyContent: 'center', background: '#F4F6FA', minHeight: '100vh', paddingBottom: 120 };
 const canvas = { position: 'relative', width: CANVAS_W, maxWidth: '100%', background: '#F4F6FA', minHeight: 917, fontFamily: 'Roboto, sans-serif' };
-const topBar = { position: 'absolute', top: 64, left: 16, width: CONTENT_W, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' };
+const topBar = { position: 'absolute', top: 64, left: 16, width: CONTENT_W, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 };
 const logoImg = { width:120, height:'auto', objectFit:'contain' };
 const searchIcon = { width:24, height:24, borderRadius:4, border:'1px solid #474747', background:'#fff', position:'relative' };
-const tabsWrap = { position:'absolute', top:108, left:16, width:CONTENT_W, height:38, display:'flex', gap:16 };
+const tabsWrap = { position:'absolute', top:108, left:16, width:CONTENT_W, height:38, display:'flex', gap:16, zIndex: 10 };
 const tabCol = { flex:1, display:'flex', flexDirection:'column', alignItems:'center', cursor:'pointer' };
 const tabLabel = active => ({ fontSize:20, fontWeight: active?700:400, color: active?'#1B1B1B':'#9B9B9B', lineHeight:'34px', letterSpacing:'-0.04em' });
 const underline = active => ({ width:'100%', height:2, background: active?'#1B1B1B':'transparent' });
@@ -206,21 +217,21 @@ const catBtn = catBtnBase;
 const topicBannerWrap = { position:'absolute', top:224, left:16, width:CONTENT_W };
 const topicCountWrap = { position:'absolute', top:320, left:16, fontSize:14, fontWeight:500, color:'#616161', letterSpacing:'-0.04em' };
 const topicCardsColumn = { position:'absolute', top:352, left:32, width:348, display:'flex', flexDirection:'column', gap:16, paddingBottom:40 };
-// My news 전용 스타일 (Subscribe 화면 패턴과 유사한 흐름으로 재작성)
-const myHeroArea = { position:'absolute', top:158, left:16, width:380, display:'flex', flexDirection:'column', alignItems:'center' };
-const myHeroImage = { width:120, height:120, borderRadius:24, background:'linear-gradient(137.91deg, #448FFF 5.02%, #4833D0 91.85%)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:52, boxShadow:'0 4px 14px rgba(56,111,255,0.35)' };
-const myHeadline = { maxWidth:244, textAlign:'center', fontFamily:'Roboto, sans-serif', fontWeight:700, fontSize:20, lineHeight:'24px', letterSpacing:'-0.02em', color:'#000', margin:'0 0 24px', whiteSpace:'nowrap' };
-const mySubCopy = { width:210, textAlign:'center', fontFamily:'Roboto, sans-serif', fontWeight:400, fontSize:14, lineHeight:'22px', letterSpacing:'-0.02em', color:'#4D4D4D', margin:'0 0 40px', wordBreak:'keep-all', overflowWrap:'break-word' };
-const myCardsWrap = { position:'relative', width:380, display:'flex', flexDirection:'column', gap:16 };
+// My news 전용 스타일 (Subscribe 화면과 동일한 absolute positioning 사용)
+const myHeroArea = { position: 'relative', width: CANVAS_W, height: 917, zIndex: 1 };
+const myHeroImage = { position: 'absolute', width: 120, height: 120, left: 'calc(50% - 60px)', top: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const myHeadline = { position: 'absolute', width: 244, height: 24, left: 'calc(50% - 122px)', top: 432, textAlign: 'center', fontFamily: 'Roboto, sans-serif', fontWeight: 700, fontSize: 20, lineHeight: '24px', letterSpacing: '-0.02em', color: '#000000', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const mySubCopy = { position: 'absolute', width: 256, height: 44, left: 'calc(50% - 128px)', top: 476, textAlign: 'center', fontFamily: 'Roboto, sans-serif', fontWeight: 400, fontSize: 14, lineHeight: '22px', letterSpacing: '-0.02em', color: '#4D4D4D', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const myCardsWrap = { position: 'absolute', width: 380, height: 272, left: 16, top: 589, display: 'flex', flexDirection: 'column', gap: 16 };
 const myFeatureCard = { boxSizing:'border-box', background:'linear-gradient(#FFFFFF,#FFFFFF) padding-box, linear-gradient(90deg,#448FFF 0%,#4833D0 100%) border-box', border:'1px solid transparent', borderRadius:16, padding:'11px 16px', width:380, height:72, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'flex-start', gap:10, boxShadow:'0 4px 10px -2px rgba(56,111,255,0.12)' };
-const myFeatureInnerRow = { display:'flex', flexDirection:'row', alignItems:'center', gap:16, width:265, height:48 };
-const myFeatureInnerRowWide = { display:'flex', flexDirection:'row', alignItems:'center', gap:16, width:325, height:48 };
-const myIconBox = { width:40, height:40, borderRadius:12, background:'#F0F6FF', display:'flex', alignItems:'center', justifyContent:'center' };
-const myFeatureTextCol = { display:'flex', flexDirection:'column', gap:4, width:209, height:48 };
-const myFeatureTextColWide = { display:'flex', flexDirection:'column', gap:4, width:269, height:48 };
-const myFeatureTitle = { width:209, height:22, fontFamily:'Roboto, sans-serif', fontWeight:700, fontSize:14, lineHeight:'22px', letterSpacing:'-0.02em', color:'#000', display:'flex', alignItems:'center' };
-const myFeatureDesc = { width:209, height:22, fontFamily:'Roboto, sans-serif', fontWeight:400, fontSize:14, lineHeight:'22px', letterSpacing:'-0.02em', color:'#474747', display:'flex', alignItems:'center', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' };
-const myCTAButton = { position:'absolute', left:'50%', transform:'translateX(-50%)', bottom:CTA_WITH_NAV_BOTTOM, width:380, maxWidth:'90%', height:60, background:'linear-gradient(91.43deg,#448FFF 0%,#4833D0 100%)', borderRadius:8, border:'none', color:'#FFFFFF', fontFamily:'Roboto, sans-serif', fontWeight:700, fontSize:18, cursor:'pointer', letterSpacing:'-0.02em' };
+const myFeatureInnerRow = { display:'flex', flexDirection:'row', alignItems:'center', gap:16, width:'100%', height:48 };
+const myFeatureInnerRowWide = { display:'flex', flexDirection:'row', alignItems:'center', gap:16, width:'100%', height:48 };
+const myIconBox = { width:48, height:48, display:'flex', alignItems:'center', justifyContent:'center' };
+const myFeatureTextCol = { display:'flex', flexDirection:'column', gap:4, width:300, height:48 };
+const myFeatureTextColWide = { display:'flex', flexDirection:'column', gap:4, width:300, height:48 };
+const myFeatureTitle = { width:'100%', height:22, fontFamily:'Roboto, sans-serif', fontWeight:700, fontSize:14, lineHeight:'22px', letterSpacing:'-0.02em', color:'#000', display:'flex', alignItems:'center' };
+const myFeatureDesc = { width:'100%', height:22, fontFamily:'Roboto, sans-serif', fontWeight:400, fontSize:14, lineHeight:'22px', letterSpacing:'-0.02em', color:'#474747', display:'flex', alignItems:'center', wordBreak:'keep-all', overflowWrap:'break-word' };
+const myCTAButton = { position:'absolute', left:'50%', transform:'translateX(-50%)', top: 881, width:380, maxWidth:'90%', height:60, background:'linear-gradient(91.43deg,#448FFF 0%,#4833D0 100%)', borderRadius:8, border:'none', color:'#FFFFFF', fontFamily:'Roboto, sans-serif', fontWeight:700, fontSize:18, cursor:'pointer', letterSpacing:'-0.02em' };
 
 const topicDivider = { position:'absolute', top:144, left:0, width:CANVAS_W, height:2, background:'#E6EBF2' };
 const topicFlow = { position:'absolute', top:146, left:0, width:CANVAS_W, height:768, display:'flex', flexDirection:'column' };

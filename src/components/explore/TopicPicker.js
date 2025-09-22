@@ -26,7 +26,7 @@ export default function TopicPicker({ onConfirm }) {
   return (
     <div
       style={{
-        maxWidth: "412px",
+        maxWidth: "auto",
         width: "100%",
         margin: "0 auto",
         padding: "60px 16px 140px 16px", // 상단 60px, 하단 고정 버튼 여유
@@ -44,11 +44,12 @@ export default function TopicPicker({ onConfirm }) {
           fontSize: '30px',
           lineHeight: '100%',
           letterSpacing: '0',
-          marginBottom: '98px', // 유지: 첫 카드까지 간격
+          marginBottom: '98px', // 원래 간격 유지
           color: '#000',
         }}
       >
-        내가 고른 주제, <br /> 깊이 있게 배워봐요!
+        내가 고른 주제, <br />
+        깊이 있게 배워 봐요!
       </h1>
 
       {topics.map((topic) => (

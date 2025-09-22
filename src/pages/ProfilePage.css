@@ -1,5 +1,5 @@
 
-.profile-page { position:relative; width:100%; max-width:412px; min-height:100vh; margin:0 auto; background:#F4F6FA; font-family:'Roboto', sans-serif; }
+.profile-page { position:relative; width:100%; max-width:412px; min-height:'auto'; margin:0 auto; background:#F4F6FA; font-family:'Roboto', sans-serif; }
 .profile-scroll { position:relative; width:100%; min-height:100%; padding-bottom:80px; }
 .profile-top-bar { position:sticky; top:0; height:64px; display:flex; align-items:flex-end; padding:0 16px 12px; box-sizing:border-box; background:#F4F6FA; z-index:10; }
 .profile-title { margin:0; font-size:18px; line-height:21px; font-weight:700; letter-spacing:-0.02em; color:#474747; }

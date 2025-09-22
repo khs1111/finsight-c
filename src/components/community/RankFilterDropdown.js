@@ -8,11 +8,10 @@ import React from 'react';
  */
 const RANKS = ['마스터','다이아','플레티넘','골드','실버','브론즈'];
 
-export default function RankFilterDropdown({ top = 192, left = 314, onSelect, selected }) {
+export default function RankFilterDropdown({ onSelect, selected }) {
   return (
     <div
       className="rank-filter-dropdown"
-      style={{ top, left }}
       role="listbox"
       aria-label="랭크 필터"
     >

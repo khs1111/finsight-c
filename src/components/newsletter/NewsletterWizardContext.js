@@ -6,7 +6,10 @@ const WizardContext = createContext(null);
 
 export function NewsletterWizardProvider({ children }) {
   const [econTopics, setEconTopics] = useState(() => loadArray(STORAGE_KEYS.ECON));
-  const [techTopics, setTechTopics] = useState(() => loadArray(STORAGE_KEYS.TECH));
+  const [techTopics, setTechTopics] = useState(() => {
+    const stored = loadArray(STORAGE_KEYS.TECH);
+    return stored.length > 0 ? stored : ['테크']; // 기본값으로 '테크' 설정
+  });
   const [companyInterests, setCompanyInterests] = useState(() => loadArray(STORAGE_KEYS.COMPANIES));
   const [finalTopics, setFinalTopics] = useState(() => loadArray(STORAGE_KEYS.FINAL_TOPICS));
 

@@ -1,0 +1,79 @@
+/* Search.css — 검색 페이지 (피그마 스타일)
+  - 상단 바: 뒤로가기, 밑줄형 입력창, 우측 검색 아이콘
+  - 본문: 최근검색어 섹션 (empty state 포함)
+  - 규격: 좌우 16px + iOS safe-area 대응
+*/
+
+:root { --gutter: 16px; }
+
+.search-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: #fff;
+}
+
+/* 상단 바 */
+.search-topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* 뒤로가기 화살표와 입력창 간격: 8px */
+  /* 위/아래 패딩은 0으로 두고, 텍스트 기준 간격(20.5px)은 입력 래퍼에서 관리 */
+  padding: 0 calc(var(--gutter) + env(safe-area-inset-right, 0px)) 0 calc(var(--gutter) + env(safe-area-inset-left, 0px));
+  background: #FFFFFF;
+  position: relative; /* 전체 폭 밑줄용 기준 */
+}
+.search-topbar::after { /* 상단바 전체폭 파란 밑줄 (양옆 마진 없음) */
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 1px;
+  background: #448FFF;
+}
+.search-back-btn {
+  background: none;
+  border: none;
+  padding: 0; /* 아이콘이 좌측 16px에 정확히 맞도록 내부 여백 제거 */
+  width: 24px; height: 24px; /* 아이콘 크기와 동일 */
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.search-input-wrap {
+  display: flex; align-items: center; gap: 8px;
+  flex: 1 1 auto; min-width: 0;
+  height: auto;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  /* 텍스트 상단 20.5px, 파란 밑줄과도 20.5px */
+  padding: 20.5px 0 20.5px 0;
+  /* 밑줄은 상단바 ::after에서 처리 (전체폭) */
+}
+
+.search-input {
+  flex: 1 1 auto; min-width: 0;
+  border: none; outline: none; background: transparent;
+  /* Title4_Roboto_R_16 */
+  font-family: Roboto, system-ui, -apple-system, Segoe UI, Noto Sans KR, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  color: #333;
+}
+.search-input::placeholder { color: var(--disable_text_Color, #9B9B9B); }
+.search-submit-btn {
+  background: none; border: none; padding: 0; width: 24px; height: 24px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* 본문 영역 */
+.search-content {
+  flex: 1 1 auto;
+  padding: 12px calc(var(--gutter) + env(safe-area-inset-right, 0px)) 16px calc(var(--gutter) + env(safe-area-inset-left, 0px));
+}
+.section-title {
+  font-size: 14px; color: #6B7280; margin: 8px 0 12px;
+}
+.empty-recent {
+  font-size: 16px; color: #9B9B9B;
+}

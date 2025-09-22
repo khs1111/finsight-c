@@ -547,7 +547,7 @@ export default function QuizQuestion({ current,
             marginBottom: "16px",
           }}
         >
-          {question?.stemMd || "문제를 불러오는 중입니다..."}
+          {question?.stemMd || question?.question || "문제를 불러오는 중입니다..."}
         </h2>
 
         {/* 문제와 기사 이미지 사이 안내 문구 (요청 사양) */}
@@ -710,7 +710,7 @@ if (isCorrect === true) {
             wordBreak: "keep-all",
           }}
         >
-          {opt.contentMd || opt.content || opt}
+          {opt.contentMd || opt.content || opt.text || opt}
         </div>
       </div>
     </div>
@@ -789,7 +789,7 @@ if (isCorrect === true) {
         whiteSpace: "pre-line", // 줄바꿈(\n)을 유지하면서 라인 간격을 넓힘
       }}
     >
-      {question.answerExplanationMd || "해설이 준비되지 않았습니다."}
+      {question.answerExplanationMd || question.explanation || "해설이 준비되지 않았습니다."}
     </div>
   </div>
 )}

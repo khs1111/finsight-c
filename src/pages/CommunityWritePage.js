@@ -12,6 +12,7 @@ export default function CommunityWritePage() {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [category, setCategory] = useState(null);
   const [content, setContent] = useState('');
+  const [focused, setFocused] = useState(false);
 
   const canSubmit = content.trim().length > 0 && category;
 
@@ -68,8 +69,8 @@ export default function CommunityWritePage() {
         </div>
       )}
 
-      {content.length === 0 && (
-        <div className="write-info-card" aria-hidden={content.length > 0}>
+      {content.length === 0 && !focused && (
+        <div className="write-info-card" aria-hidden={content.length > 0 || focused}>
           <div className="write-info-inner">
             <div className="write-info-title">글 작성하기 전에 알려드려요.</div>
             <div className="write-info-body">{INFO_TEXT}</div>
@@ -78,10 +79,12 @@ export default function CommunityWritePage() {
       )}
 
       <textarea
-        className={"write-body-area" + (content.length === 0 ? ' with-info' : '')}
+        className={"write-body-area" + (content.length === 0 && !focused ? ' with-info' : '')}
         placeholder="금융·경제 관련 질문이나 이야기를 해보세요."
         value={content}
         onChange={e => setContent(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
       />
 
       <div className="write-bottom-spacer" />

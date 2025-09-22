@@ -3,6 +3,10 @@ import React, { useState } from 'react';
 import BackIcon from './BackIcon';
 import { useNavigate } from 'react-router-dom';
 import { STORAGE_KEYS } from './wizardSteps';
+import newsIcon from '../../assets/news-icon.png';
+import targetIcon from '../../assets/target-icon.png';
+import financeIcon from '../../assets/finance-icon.png';
+import bellIcon from '../../assets/bell-icon.png';
 
 // Subscribe: 구독 온보딩 첫 화면
 export default function Subscribe() {
@@ -24,23 +28,25 @@ export default function Subscribe() {
       <div style={canvas}> {/* Simulated 412x917 design canvas centered */}
         <Header onBack={() => navigate(-1)} onSkip={() => proceed(true)} />
         <div style={scrollArea}>
-          {/* 파란 네모 영역 (원래 placeholder 복원) */}
-          <div style={heroImage} aria-label="뉴스레터 아이콘" />
+          {/* 뉴스 아이콘이 포함된 히어로 영역 */}
+          <div style={heroImage} aria-label="뉴스레터 아이콘">
+            <img src={newsIcon} alt="뉴스 아이콘" style={{ width: 120, height: 120 }} />
+          </div>
           <h1 style={headline}>나만의 뉴스레터를 만나보세요</h1>
           <p style={subCopy}>관심 분야와 투자 성향에 맞는 맞춤형 뉴스레터를 구독하고 더 스마트한 투자자가 되어보세요!</p>
           <div style={cardsWrap}>
             <FeatureCard
-              icon={<IconTarget />}
+              icon={<img src={targetIcon} alt="타겟 아이콘" style={{ width: 48, height: 48 }} />}
               title="맞춤형 콘텐츠"
               desc="나에게 필요한 정보만 받을 수 있어요."
             />
             <FeatureCard
-              icon={<IconFinance />}
+              icon={<img src={financeIcon} alt="금융 아이콘" style={{ width: 48, height: 48 }} />}
               title="무제한 퀴즈"
               desc="재미있게 경제 공부를 핀사이트에서 시작하세요."
             />
             <FeatureCard
-              icon={<IconBell />}
+              icon={<img src={bellIcon} alt="벨 아이콘" style={{ width: 48, height: 48 }} />}
               title="카카오톡 알림"
               desc="실시간 맞춤 알림 서비스 제공해요."
             />
@@ -79,15 +85,6 @@ function FeatureCard({ icon, title, desc }) {
     </div>
   );
 }
-
-const baseSvg = (path) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d={path} stroke="#448FFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-const IconTarget = () => baseSvg('M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Zm0-4a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-3a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z');
-const IconFinance = () => baseSvg('M3 12h18M6 9l6-6 6 6M6 15l6 6 6-6');
-const IconBell = () => baseSvg('M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16l-2-2Zm-6 5a2 2 0 0 0 2-2H10a2 2 0 0 0 2 2Z');
 
 const outerWrap = {
   width: '100%',
@@ -179,32 +176,41 @@ const scrollArea = {
 };
 
 const heroImage = {
+  position: 'absolute',
   width: 120,
   height: 120,
-  borderRadius: 24,
-  background: 'linear-gradient(137.91deg, #448FFF 5.02%, #4833D0 91.85%)',
+  left: 'calc(50% - 60px)', // 중앙 정렬 (120px의 절반)
+  top: 206,
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: 52,
-  boxShadow: '0 4px 14px rgba(56,111,255,0.35)'
+  justifyContent: 'center'
 };
 
 const headline = {
-  maxWidth: 244,
+  position: 'absolute',
+  width: 293,
+  height: 22,
+  left: 'calc(50% - 146.5px)', // 중앙 정렬
+  top: 358,
   textAlign: 'center',
   fontFamily: 'Roboto, sans-serif',
   fontWeight: 700,
-  fontSize: 20,
-  lineHeight: '24px',
+  fontSize: 24,
+  lineHeight: '22px',
   letterSpacing: '-0.02em',
-  color: '#000',
-  margin: '0 0 24px',
-  whiteSpace: 'nowrap' 
+  color: '#000000',
+  margin: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
 };
 
 const subCopy = {
-  width: 210, 
+  position: 'absolute',
+  width: 256,
+  height: 44,
+  left: 'calc(50% - 128px)', // 중앙 정렬
+  top: 396,
   textAlign: 'center',
   fontFamily: 'Roboto, sans-serif',
   fontWeight: 400,
@@ -212,15 +218,18 @@ const subCopy = {
   lineHeight: '22px',
   letterSpacing: '-0.02em',
   color: '#4D4D4D',
-  margin: '0 0 40px',
-  wordBreak: 'keep-all', 
-  overflowWrap: 'break-word'
+  margin: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
 };
 
 const cardsWrap = {
-  position: 'relative',
+  position: 'absolute',
   width: 380,
-  maxWidth: '90%',
+  height: 272,
+  left: 16,
+  top: 509,
   display: 'flex',
   flexDirection: 'column',
   gap: 16
@@ -263,10 +272,8 @@ const featureTextCol = {
 };
 
 const iconBox = {
-  width: 40,
-  height: 40,
-  borderRadius: 12,
-  background: '#F0F6FF',
+  width: 48,
+  height: 48,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center'
@@ -305,7 +312,7 @@ const ctaButton = {
   position: 'absolute',
   left: '50%',
   transform: 'translateX(-50%)',
-  bottom: 16,
+  top: 801, // 카드 끝(509 + 272) + 20px 간격
   width: 380,
   maxWidth: '90%',
   height: 60,

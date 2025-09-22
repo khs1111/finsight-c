@@ -6,8 +6,6 @@ import TopicSelection from './TopicSelection';
 import Feed from './Feed';
 import Detail from './Detail';
 import StepEconomyTopics from './StepEconomyTopics';
-import StepTechTopics from './StepTechTopics';
-import StepTechTopicsRedesign from './StepTechTopicsRedesign';
 import StepCompanyInterest from './StepCompanyInterest';
 import PostSubscribe from './PostSubscribe';
 import { NewsletterWizardProvider } from './NewsletterWizardContext';
@@ -30,7 +28,6 @@ export default function NewsletterRoot() {
           <Route index element={<Feed />} />
           <Route path="subscribe" element={<Subscribe />} />
           <Route path="econ" element={<StepEconomyTopics />} />
-          <Route path="tech" element={<StepTechTopicsRedesign />} />
           <Route path="companies" element={<StepCompanyInterest />} />
           <Route path="subscriber" element={<PostSubscribe />} />
           <Route path="onboarding" element={<Onboarding />} />

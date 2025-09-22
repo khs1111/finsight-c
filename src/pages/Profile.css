@@ -1,7 +1,7 @@
 .profile-spec { position:relative; width:100%; max-width:412px; margin:0 auto; background:#F4F6FA; font-family:Roboto,'Noto Sans KR',sans-serif; color:#282828; padding:37.08px 0 calc(17px + env(safe-area-inset-bottom, 0px)); }
 body.profile-route { background:#F4F6FA; }
-html.profile-route, body.profile-route, body.profile-route #root { background:#474747; }
-.profile-route #root { min-height:100vh; }
+html.profile-route, body.profile-route, body.profile-route #root { background:#F4F6FA; }
+.profile-route #root { min-height:'auto'; }
 body.profile-route { margin:0 !important; }
 
 /* 상단 타이틀 바 (Frame 86) */
@@ -9,7 +9,7 @@ body.profile-route { margin:0 !important; }
 	position: static; /* 박스 밖으로: 오버레이 제거 */
 	width: 380px;
 	height: 21px;
-	margin: 64px auto 0; /* 위로 64px 간격, 가운데 정렬 */
+	margin: 4px auto 0; /* 위로 64px 간격, 가운데 정렬 */
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -54,25 +54,213 @@ body.profile-route { margin:0 !important; }
 .stat-icon.badge .badge-inner { display:flex; align-items:center; justify-content:center; width:100%; height:100%; font-size:16px; }
 .badge-inner.count { font-size:18px; letter-spacing:-0.02em; }
 .stat-label { font-size:12px; font-weight:700; text-align:center; color:#999; }
-.p-calendar-wrapper { margin:16px auto 55px; width:380px; background:#FFF; box-shadow:0 0 12px rgba(0,0,0,.08); border-radius:16px; padding:12px 12px 20px; }
-.p-calendar-head { display:flex; align-items:center; justify-content:space-between; padding:0 4px 12px; }
-.month-label { font-size:14px; font-weight:700; color:#999; letter-spacing:-0.04em; }
-.nav-btn { background:none; border:none; font-size:16px; cursor:pointer; color:#999; line-height:1; }
-.p-calendar-grid { display:grid; grid-template-columns:repeat(7,32px); grid-auto-rows:32px; gap:8px 22px; justify-content:center; }
-.cal-cell { width:32px; height:32px; font-size:10px; font-weight:500; display:flex; align-items:center; justify-content:center; text-align:center; }
-.cal-cell.header { height:12px; line-height:12px; font-weight:700; font-size:10px; }
-.cal-cell.header.sun { color:#FF5252; }
-.cal-cell.header.sat { color:#448FFF; }
-.cal-cell.day.empty { opacity:0; }
+/* 달력 전체 래퍼 */
+.p-calendar-wrapper { 
+  margin: 16px auto 55px; 
+  width: 380px; 
+  height: 372px;
+  background: #FFFFFF; 
+  box-shadow: 0px 0px 12px rgba(0, 0, 0, 0.08); 
+  border-radius: 16px; 
+  position: relative;
+}
 
-.cal-cell.day.outside { color:#DADADA; font-weight:400; }
+/* 달력 헤더 (년월 + 화살표) */
+.p-calendar-head { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  padding: 16px; 
+  width: 346px;
+  height: 24px;
+  gap: 128px;
+  position: relative;
+}
 
-.cal-cell.day { position:relative; }
-.cal-cell.day .cal-star { position:absolute; top:0; left:50%; transform:translate(-50%, -2px); width:22px; height:22px; display:flex; align-items:center; justify-content:center; pointer-events:none; }
-.cal-cell.day .cal-day-number { display:inline-block; font-size:10px; font-weight:500; position:relative; z-index:1; }
-.cal-cell.day.active { padding-top:14px; }
-.cal-cell.day.today { background:#1D6DFF; color:#fff; border-radius:50%; font-weight:700; font-size:10px; position:relative; }
-.cal-cell.day.today .cal-day-number { font-weight:700; }
+/* 구분선 */
+.p-calendar-head::after {
+  content: '';
+  position: absolute;
+  width: 380px;
+  height: 0px;
+  left: -16px;
+  bottom: -12px;
+  border: 1px solid #DFDFDF;
+}
+
+.month-label { 
+  width: 42px;
+  height: 16px;
+  font-family: 'Roboto', sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 16px;
+  letter-spacing: -0.04em;
+  color: #999999;
+  text-align: center;
+}
+
+.nav-btn { 
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999999;
+  font-size: 14px;
+}
+
+/* 달력 그리드 */
+.p-calendar-grid { 
+  display: grid; 
+  grid-template-columns: repeat(7, 32px); 
+  grid-auto-rows: auto; 
+  gap: 8px 22px; 
+  justify-content: center;
+  position: absolute;
+  width: 356px;
+  height: 316px;
+  left: 12px;
+  top: 74px;
+}
+
+/* 달력 셀 기본 */
+.cal-cell { 
+  width: 32px; 
+  font-size: 10px; 
+  font-weight: 500; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  text-align: center; 
+}
+
+/* 요일 헤더 */
+.cal-cell.header { 
+  height: 12px; 
+  line-height: 12px; 
+  font-weight: 700; 
+  font-size: 10px;
+  color: #767676;
+}
+
+.cal-cell.header.sun { color: #FF5252; }
+.cal-cell.header.sat { color: #448FFF; }
+
+.cal-cell.day.empty { opacity: 0; }
+
+/* 날짜 셀 */
+.cal-cell.day { 
+  height: 56px;
+  flex-direction: column;
+  position: relative;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.cal-cell.day.outside { 
+  color: #DADADA; 
+  font-weight: 400; 
+}
+
+/* 날짜 컨테이너 */
+.cal-date-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 32px;
+  height: 56px;
+}
+
+/* 날짜 숫자 */
+.cal-day-number { 
+  width: 32px;
+  height: 20px;
+  font-family: 'Roboto', sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 10px;
+  line-height: 20px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #282828;
+  position: relative;
+  z-index: 2;
+}
+
+.cal-cell.day.outside .cal-day-number {
+  color: #DADADA;
+}
+
+.cal-cell.day.today .cal-day-number {
+  color: #FFFFFF;
+  font-weight: 500;
+}
+
+/* 표시 영역 */
+.cal-indicator {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* 오늘 날짜 파란 원 */
+.today-circle {
+  width: 19px;
+  height: 19px;
+  background: #448FFF;
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+/* 출석한 날 노란 별 */
+.cal-star {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cal-star svg {
+  width: 25px;
+  height: 24px;
+}
+
+/* 출석하지 않은 날 회색 원 */
+.no-attendance-circle {
+  width: 32px;
+  height: 32px;
+  background: #F7F7F7;
+  border-radius: 50%;
+}
+
+/* 기존 스타일 정리 */
+.cal-cell.day.active { 
+  padding-top: 0; 
+}
+
+.cal-cell.day.today { 
+  background: transparent; 
+  color: inherit; 
+  border-radius: 0; 
+  font-weight: 500; 
+  font-size: 10px; 
+}
 .p-actions { width:380px; margin:0 auto; display:flex; flex-direction:column; gap:16px; }
 .action-row { width:100%; display:flex; align-items:center; gap:10px; background:#FFF; border:none; box-shadow:0 0 12px rgba(0,0,0,.08); border-radius:16px; padding:16px; font-size:14px; letter-spacing:-0.01em; color:#282828; text-align:left; cursor:pointer; }
 

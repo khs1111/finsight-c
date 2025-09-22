@@ -1,5 +1,5 @@
 import { useWrongNoteStore } from './useWrongNoteStore';
-import Illustration from '../../assets/wrongNoteIllustration.svg';
+import Illustration from '../../assets/study/wrongNoteIllustration.svg';
 
 const CATEGORY_ORDER = ['은행', '투자', '세금/절세', '암호화폐'];
 

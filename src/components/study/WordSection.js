@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWordStore } from './useWordStore.js';
-import HeaderCharacter from '../../assets/wordHeaderCharacter.svg';
+import HeaderCharacter from '../../assets/study/wordHeaderCharacter.svg';
 
 export default function WordSection({ deleteMode = false, onExitDelete }) {
   const { words, removeMany } = useWordStore();

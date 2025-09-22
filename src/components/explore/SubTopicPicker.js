@@ -6,9 +6,9 @@ export default function SubTopicPicker({ topic, onConfirm }) {
   return (
     <div
       style={{
-        maxWidth: "412px", 
+        maxWidth: "auto", 
         width: "100%",
-        minHeight: "100vh",
+        minHeight: "auto",
         margin: "0 auto",
         background: "#F4F6FA",
         padding: "276px 16px 16px", 

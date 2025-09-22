@@ -11,50 +11,189 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
 */
 
 /* ===== 레이아웃 ===== */
+:root { --nav-h: 56px; }
+
 .home-container,
 .explore-container {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+  /* Ensure 16px left/right gutter + safe-area */
+  padding: 20px calc(16px + env(safe-area-inset-right)) calc(20px + var(--nav-h) + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left));
+  width: 100%;
+  max-width: none; /* remove desktop fixed width to keep 16px gutters */
+  margin: 0;
+}
+
+/* ===== Search bar (Figma spec) ===== */
+.home-search-wrapper { display: flex; justify-content: flex-start; margin: 12px 0 16px; }
+.home-search {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  height: 44px;
+  padding: 13px 16px;
+  align-items: center;
+  gap: 16px;
+  border-radius: 30px;
+  border: 1px solid var(--Primary_color, #448FFF);
+  background: var(--Background, #F9F9F9);
+  box-shadow: inset 0 0 4px 0 rgba(255, 255, 255, 0.25);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.home-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--disable_text_Color, #9B9B9B);
+  font-family: Roboto, Pretendard, system-ui, -apple-system, sans-serif;
+  font-size: 14px; /* Roboto_R_14 */
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+.home-search-input::placeholder {
+  color: var(--disable_text_Color, #9B9B9B);
+  opacity: 1;
+}
+.home-search-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
 .section-title {
   font-size: 28px;
   font-weight: bold;
-  margin-bottom: 20px;
+  /* Remove default h1 top margin to tighten spacing below header */
+  margin: 0 0 20px;
 }
 
 /* ===== 카드 ===== */
 .news-card {
   display: flex;
-  align-items: flex-start;
-  background-color: #f3f4f6;
-  padding: 16px;
+  flex-direction: column;
+  background-color: #ffffff;
   border-radius: 12px;
   margin-bottom: 16px;
-  box-shadow: 0 2px 4px rgba(0,0,0,.1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  overflow: hidden;
 }
 
-.news-card .emoji { font-size: 32px; margin-right: 16px; }
-.news-card .content { flex: 1; }
+.news-image-container {
+  position: relative;
+  width: 100%;
+  height: 140px; /* fixed height per spec */
+  padding: 16px; /* internal spacing */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  align-self: stretch;
+  /* Figma shows rectangular image (no inner rounded corners); outer .news-card already has radius */
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--news-image-fallback, #d9d9d9);
+}
 
-.news-title {
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 6px;
+/* Absolutely positioned background image */
+.news-image-container img.news-image-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+/* Gradient overlay */
+.news-image-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.00) 0%, rgba(0, 0, 0, 0.60) 107.14%);
+  z-index: 1;
+}
+/* Foreground content wrapper */
+.news-image-overlay-content { z-index: 2; color: #fff; width: 100%; }
+/* Utility row */
+.news-image-row { display:flex; align-items:center; gap:8px; width:100%; }
+
+.hot-label {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: #ff3b30;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.news-card .content {
+  padding: 16px;
+  flex: 1;
+}
+
+.news-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.news-image-container {
+  display: flex;
+  height: 140px;
+  padding: 16px;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  align-self: stretch;
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+}
+
+.view-count {
+  color: #666;
+}
+
+/* 더 보기 버튼 */
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.load-more-button {
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 20px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.load-more-button:hover {
+  background-color: #e0e0e0;
 }
 
 .error { color: red; }
 .loading { color: gray; }
 
-/* ===== 상단 카테고리 네비(데스크탑) ===== */
+/* ===== 하단 고정 탭 네비 (모든 화면 폭에서 하단 고정) ===== */
 .category-nav {
-  display: flex;
-  justify-content: flex-start;
-  padding: 16px 32px;
-  gap: 24px;
-  border-bottom: 1px solid #e5e7eb;
-  background-color: #fff;
+  position: fixed;
+  inset: auto 0 0 0;
+  height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+  padding: 8px 0 env(safe-area-inset-bottom, 0px);
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  display: flex; justify-content: space-around; align-items: center;
+  gap: 0; z-index: 100;
   font-family: 'Pretendard', sans-serif;
 }
 
@@ -79,6 +218,7 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
   position: absolute;
   bottom: 0; left: 0;
   width: 100%; height: 2px;
+  /* ⬇️ 문법 오타 수정: linear-gradient 사용 */
   background: linear-gradient(to right, rgba(68,143,255,1), rgba(72,51,208,1));
   border-radius: 1px;
 }
@@ -110,7 +250,7 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
 }
 
 .explore-main {
-  padding: 40px 20px; max-width: 600px; margin: 0 auto; text-align: center;
+  padding: 40px 20px; max-width: 100%; margin: 0 auto; text-align: center;
 }
 
 .explore-date { font-size: 14px; color: #666; text-align: left; margin-bottom: 8px; }
@@ -134,25 +274,29 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
 
 .step-text { font-size: 16px; color: #333; text-align: left; }
 
+/* ===== 모바일(≤767px) ===== */
 @media (max-width: 767px) {
   :root {
     --header-px: 16px;
     --header-py: 14px;
     --radius-lg: 16px;
-    --nav-h: 56px; 
+    --nav-h: 56px; /* 하단 탭바 높이 */
   }
 
-
+  /* 콘텐츠 컨테이너 2종 모두 보정(겹침 방지) */
   .home-container,
   .explore-container {
     background: #fff;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     overflow: hidden;
-    min-height: 100dvh; 
-    min-height: 100vh;  
+    min-height: 100dvh; /* 주소창 변화 대응 */
+    min-height: 100vh;  /* 폴백 */
     padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
   }
+  /* Tighten top gap between header and title on mobile */
+  .home-container { padding-top: 0; }
 
+  /* 헤더: 클래스가 실제 DOM에 있어야 적용됨! */
   .news-header {
     display: flex;
     flex-direction: row;
@@ -164,16 +308,7 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
   .news-header .search { flex: 1 1 auto; min-width: 0; margin: 0; order: 0; }
   .news-header .icon-bell { flex: 0 0 auto; margin-left: 4px; touch-action: manipulation; order: 0; }
 
-  .category-nav {
-    position: fixed;
-    inset: auto 0 0 0;
-    height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
-    padding: 8px 0 env(safe-area-inset-bottom, 0px);
-    background: #fff;
-    border-top: 1px solid #e5e7eb;
-    display: flex; justify-content: space-around; align-items: center;
-    gap: 0; z-index: 100;
-  }
+  /* .category-nav는 모든 화면에서 하단 고정이므로 별도 정의 불필요 */
   .category-nav .category-button {
     flex: 1;
     font-size: clamp(12px, 3.4vw, 14px);
@@ -182,6 +317,7 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
     padding: 8px 0; margin: 0;
   }
 
+  /* 카드 열→행 전환 */
   .news-card {
     flex-direction: column;
   }
@@ -191,6 +327,7 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
   }
 }
 
+/* 초소형 기기(≤380px): 헤더 세로 스택 */
 @media (max-width: 380px) {
   .news-header {
     flex-direction: column; align-items: stretch; gap: 8px;

@@ -1,0 +1,50 @@
+/* Category tabs pill styles (Figma spec approximation) */
+.category-tabs {
+  display: flex;
+  padding: 0 0 12px 0; /* bottom spacing under pills */
+  align-items: flex-start;
+  gap: 8px; /* pill gap */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.category-tab {
+  /* Spec note: Provided padding 18px 10px with fixed height 32px is impossible vertically.
+     Using height:32px with horizontal padding 10px and center alignment; vertical padding omitted. */
+  flex: 0 0 auto;
+  /* Spec: height 32px; padding: 18px 10px (horizontal). Using min-height + horizontal padding; vertical padding limited by height */
+  display: flex;
+  align-items: center;
+  gap: 10px; /* icon/text gap per spec */
+  height: 32px;
+  padding: 0 10px; /* Only horizontal padding to satisfy fixed height */
+  border-radius: 30px;
+  background: #F1F1F1;
+  color: #333;
+  font-family: Roboto, Pretendard, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  border: 1px solid #E3E3E3;
+  transition: background .2s, color .2s, box-shadow .2s;
+  white-space: nowrap;
+}
+.category-tab:hover:not(.active) { background: #E7E7E7; }
+.category-tab.active {
+  background: linear-gradient(104deg, #448FFF -6.51%, #4833D0 105.13%);
+  color: #fff;
+  font-weight: 700;
+  border: 1px solid transparent;
+  box-shadow: 0 2px 4px rgba(72,51,208,0.18);
+}
+/* Icon inside tab (Son.svg) */
+.category-tab .tab-icon {
+  display: inline-flex;
+  width: 19.71px; /* from measurement ~0.92? using 18 for clarity */
+  height: 19.71px;
+}
+.category-tab .tab-icon img, .category-tab .tab-icon svg { width: 100%; height: 100%; display: block; }
+@media (max-width: 767px) {
+  .category-tab { font-size: 12px; padding: 6px 12px; }
+  .category-tabs { gap: 8px; }
+}

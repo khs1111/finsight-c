@@ -100,7 +100,8 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
           color: "#000",
         }}
       >
-        단계별로 맞춘 집중학습, <br /> 함께 시작해요!
+        내가 고른 주제, <br />
+        깊이 있게 배워 봐요!
       </h1>
 
       {/* 서브 타이틀 */}
