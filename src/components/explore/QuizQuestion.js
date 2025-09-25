@@ -195,7 +195,13 @@ export default function QuizQuestion({ current,
   const naturalSizeRef = useRef({ w: null, h: null });
   const [imgError, setImgError] = useState(false);
   const [imgSrc, setImgSrc] = useState(null);
-  const q4Fallbacks = ['/assets/q4-article.png','/assets/q4-article.jpg','/assets/q4-article.jpeg','/assets/q4-article.webp','/assets/q4-article.svg'];
+  const q4Fallbacks = React.useMemo(() => [
+    '/assets/q4-article.png',
+    '/assets/q4-article.jpg',
+    '/assets/q4-article.jpeg',
+    '/assets/q4-article.webp',
+    '/assets/q4-article.svg'
+  ], []);
   const q4FallbackIndexRef = useRef(0);
 
   /**
@@ -281,7 +287,7 @@ export default function QuizQuestion({ current,
     } else {
       setImgSrc(null);
     }
-  }, [current]);
+  }, [current, q4Fallbacks, question?.image, question?.type]);
 
   // 학습하기가 열릴 때 백엔드에서 받은 퀴즈 데이터의 키포인트를 사용
   useEffect(() => {
@@ -317,7 +323,7 @@ export default function QuizQuestion({ current,
       // 🚨 학습 내용 로드 실패 처리
       console.error('학습 내용 로드 실패:', e);
     }
-  }, [showLearning, question]); // 학습 모드 토글 또는 문제 변경 시 실행
+  }, [showLearning, question, current]); // 학습 모드 토글 또는 문제 변경 시 실행
 
   /**
    * 📱 칠판 레이아웃 반응형 계산 useEffect
