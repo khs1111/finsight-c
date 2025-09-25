@@ -43,7 +43,7 @@ export default function ProgressHeader({
               background: "transparent",
               border: "none",
               cursor: "pointer",
-              marginLeft: -16
+              marginLeft: 0
             }}
           >
             {/* SVG는 교체 가능 */}
@@ -60,7 +60,12 @@ export default function ProgressHeader({
               alignItems: "center",
               gap: 8,
               height: 16,
-              width: 340,
+              width: "100%",
+              marginLeft: 0,
+              marginRight: 0,
+              boxSizing: "border-box",
+              paddingLeft: 0,
+              paddingRight: 0,
             }}
           >
             {Array.from({ length: total }).map((_, i) => (

@@ -77,43 +77,19 @@ export default function FloatingQuizCTA({
   const bottom = baseBottom + (stackIndex * (buttonHeight + stackGap));
 
   return (
-    <div data-floating-cta
-      style={{
-        position: 'fixed',
-        left: '50%',
-        bottom,
-        transform: 'translateX(-50%)',
-        width: '100%',
-        maxWidth: 412,
-        zIndex: 120,
-        pointerEvents: 'none',
-        padding: '0 16px',
-        boxSizing: 'border-box',
-        ...style,
-      }}
+    <div
+      data-floating-cta
+      className="floating-quiz-cta-wrap"
+      style={{ bottom, ...style }}
     >
       <div
+        className={
+          'floating-quiz-cta-btn' +
+          (gradient ? ' floating-quiz-cta-btn-gradient' : ' floating-quiz-cta-btn-outline') +
+          (shadow ? ' floating-quiz-cta-btn-shadow' : '')
+        }
         onClick={onClick}
-        style={{
-          pointerEvents: 'auto',
-          width: '100%',
-          height: buttonHeight,
-          borderRadius: 8,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          fontSize: 18,
-          fontWeight: 700,
-          letterSpacing: '-0.02em',
-          cursor: 'pointer',
-          boxShadow: shadow ? '0 4px 16px rgba(0,0,0,0.15)' : 'none',
-          background: gradient
-            ? 'linear-gradient(104.45deg,#448FFF -6.51%, #4833D0 105.13%)'
-            : '#FFFFFF',
-          color: gradient ? '#FFFFFF' : '#4D4D4D',
-          border: gradient ? 'none' : '1px solid #ddd',
-          ...buttonStyle,
-        }}
+        style={{ height: buttonHeight, ...buttonStyle }}
       >
         {label}
       </div>

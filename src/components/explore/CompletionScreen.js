@@ -361,9 +361,7 @@ export default function CompletionScreen({
           }}
         >
           {results.map((r, idx) => {
-            // 문제 정답
-            const answer = (questions?.[idx]?.answer ?? 0);
-            const isCorrect = r && r.selected === answer;
+            const isCorrect = r && r.correct === true;
             return (
               <div
                 key={idx}

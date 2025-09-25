@@ -12,7 +12,7 @@ import {
 const API_BASE =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE) ||
   process.env.REACT_APP_API_BASE ||
-  (process.env.NODE_ENV === 'production' ? 'https://your-backend-domain.com/api' : '/api');
+  'http://localhost:8081/api';
 
 // 백엔드 연결 상태 확인
 let isBackendConnected = false;
@@ -42,7 +42,7 @@ async function checkBackendConnection() {
     isBackendConnected = false;
     console.log('🔄 백엔드 서버 연결 안됨 - 더미 데이터로 디자인 확인 모드');
     console.log(`   API_BASE: ${API_BASE}`);
-    console.log(`   더미 퀴즈 ${dummyQuestionsData.length}개 준비됨`);
+    console.log(`   더미 퀴즈 ${dummyQuizzes.length}개 준비됨`);
     return false;
   }
 }
@@ -86,63 +86,97 @@ async function http(path, opts = {}) {
 
 // ========================================
 // � 백엔드 API 엔드포인트들
-// ========================================
 
-// 퀴즈 조회 - 백엔드: GET /api/quizzes/{id}
-export const getQuiz = async (quizId) => {
-  try {
-    const quiz = await http(`/quizzes/${quizId}`);
-    console.log('✅ 백엔드에서 퀴즈 로드됨 - ID:', quizId);
-    return {
-      success: true,
-      data: quiz
-    };
-  } catch (error) {
-    console.log('🎯 더미 퀴즈 데이터 사용 - ID:', quizId);
-    
-    // 더미 데이터에서 해당 퀴즈 찾기
-    const dummyQuiz = dummyQuizzes.find(q => q.id === parseInt(quizId)) || dummyQuizzes[0];
-    console.log('   → 더미 퀴즈 제목:', dummyQuiz.question || dummyQuiz.title);
-    
-    return {
-      success: true,
-      data: dummyQuiz,
-      isDummy: true
-    };
-  }
+// =============================
+// Finsight 백엔드 API 엔드포인트
+// =============================
+
+// 1. 섹터(대분류) 목록 조회
+export const getSectors = async () => {
+  if (!isBackendConnected) return [];
+  return http('/sectors');
 };
 
-// 답안 제출 - 백엔드: POST /api/quizzes/submit-answer
-export const submitAnswer = async (questionId, selectedOptionId) => {
-  try {
-    const result = await http("/quizzes/submit-answer", {
-      method: "POST",
-      body: JSON.stringify({
-        questionId: questionId,
-        selectedOptionId: selectedOptionId
-      })
-    });
+// 2. 서브섹터(소분류) 상세 조회
+export const getSubsector = async (id) => {
+  if (!isBackendConnected) return null;
+  return http(`/subsectors/${id}`);
+};
+
+// 3. 레벨별 퀴즈 목록 및 상태 조회
+export const getLevelQuizzes = async (levelId, userId) => {
+  if (!isBackendConnected) return [];
+  return http(`/levels/${levelId}/quizzes?userId=${userId}`);
+};
+
+// 4. 레벨별 진행도 조회
+export const getLevelProgress = async (levelId, userId) => {
+  if (!isBackendConnected) return null;
+  return http(`/levels/${levelId}/progress?userId=${userId}`);
+};
+
+// 5. 퀴즈 상세 조회
+export const getQuiz = async (quizId) => {
+  if (!isBackendConnected) {
+    // 더미 데이터 반환
+    const dummyQuiz = dummyQuizzes.find(q => q.id === parseInt(quizId)) || dummyQuizzes[0];
+    return dummyQuiz;
+  }
+  return http(`/quizzes/${quizId}`);
+};
+
+// 6. 답안 제출
+export const submitAnswer = async ({ questionId, selectedOptionId }) => {
+  if (!isBackendConnected) {
+    // 더미 응답 생성
+    const isCorrect = Math.random() > 0.4;
     return {
-      success: true,
-      data: result
-    };
-  } catch (error) {
-    console.log('🎯 더미 답안 제출 응답 사용:', error.message);
-    
-    // 더미 응답 생성 (정답 여부 랜덤)
-    const isCorrect = Math.random() > 0.4; // 60% 확률로 정답
-    
-    return {
-      success: true,
-      data: {
-        ...dummySubmitResponse,
-        correct: isCorrect,
-        selectedOptionId: selectedOptionId,
-        correctOptionId: isCorrect ? selectedOptionId : (selectedOptionId % 4) + 1
-      },
-      isDummy: true
+      ...dummySubmitResponse,
+      correct: isCorrect,
+      selectedOptionId,
+      correctOptionId: isCorrect ? selectedOptionId : (selectedOptionId % 4) + 1
     };
   }
+  return http('/quizzes/submit-answer', {
+    method: 'POST',
+    body: JSON.stringify({ questionId, selectedOptionId })
+  });
+};
+
+// 7. 퀴즈 결과 조회
+export const getQuizResult = async (quizId, userId) => {
+  if (!isBackendConnected) return null;
+  return http(`/quizzes/${quizId}/result?userId=${userId}`);
+};
+
+// 8. 퀴즈 완료 처리
+export const completeQuiz = async (quizId, userId) => {
+  if (!isBackendConnected) return { success: true };
+  return http(`/quizzes/${quizId}/complete?userId=${userId}`, { method: 'POST' });
+};
+
+// 9. 레벨 완료 처리
+export const completeLevel = async (levelId, userId) => {
+  if (!isBackendConnected) return { success: true };
+  return http(`/levels/${levelId}/complete?userId=${userId}`, { method: 'POST' });
+};
+
+// 10. 레벨 시작 처리
+export const startLevel = async (levelId, userId) => {
+  if (!isBackendConnected) return { success: true };
+  return http(`/levels/${levelId}/start?userId=${userId}`, { method: 'POST' });
+};
+
+// 11. 대시보드 조회
+export const getDashboard = async (userId) => {
+  if (!isBackendConnected) return null;
+  return http(`/dashboard?userId=${userId}`);
+};
+
+// 12. 뱃지 조회
+export const getBadgesReal = async (userId) => {
+  if (!isBackendConnected) return [];
+  return http(`/badges/user/${userId}`);
 };
 
 // 회원가입 - 백엔드: POST /api/auth/signup
@@ -228,8 +262,8 @@ export const getQuestions = async ({ topicId, levelId } = {}) => {
   if (!isBackendConnected) {
     console.log('🎯 더미 questions 데이터 사용');
     return {
-      questions: dummyQuestionsData,
-      totalCount: dummyQuestionsData.length
+      questions: dummyQuizzes,
+      totalCount: dummyQuizzes.length
     };
   }
   
@@ -241,8 +275,8 @@ export const getQuestions = async ({ topicId, levelId } = {}) => {
   } catch (error) {
     console.log('🎯 백엔드 연결 실패 - 더미 questions 데이터 사용:', error.message);
     return {
-      questions: dummyQuestionsData,
-      totalCount: dummyQuestionsData.length
+      questions: dummyQuizzes,
+      totalCount: dummyQuizzes.length
     };
   }
 };

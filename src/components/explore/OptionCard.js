@@ -1,4 +1,6 @@
+
 import React from "react";
+import "./OptionCard.css";
 
 export default function OptionCard({
   index,
@@ -11,59 +13,22 @@ export default function OptionCard({
   const isCorrect = index === correctIndex;
   const isWrongSelected = isSelected && !isCorrect;
 
-  const baseBox = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "19px 16px",
-    width: "100%",
-    background: "#FFFFFF",
-    borderRadius: 8,
-    boxShadow: "0px 0px 2px rgba(0,0,0,0.25)",
-    cursor: selectedIndex == null ? "pointer" : "default",
-    userSelect: "none",
-    transition: "box-shadow .12s, border .12s",
-  };
-
-  const styleBox = {
-    ...baseBox,
-    ...(isSelected && isCorrect
-      ? { border: "1px solid #1EE000", boxShadow: "0px 0px 2px #1EE000" }
-      : {}),
-    ...(isWrongSelected
-      ? { border: "1px solid #EE3030", boxShadow: "0px 0px 2px #EE3030" }
-      : {}),
-  };
-
-  const baseCircle = {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: 700,
-    fontSize: 18,
-    color: "#fff",
-    background: "#448FFF",
-  };
-
-  const styleCircle = {
-    ...baseCircle,
-    ...(isSelected && isCorrect ? { background: "#1EE000" } : {}),
-    ...(isWrongSelected ? { background: "#EE3030" } : {}),
-  };
+  let cardClass = "option-card";
+  if (isSelected && isCorrect) cardClass += " selected-correct";
+  else if (isWrongSelected) cardClass += " selected-wrong";
+  const isDisabled = selectedIndex != null;
 
   return (
     <div
-      style={styleBox}
+      className={cardClass}
+      aria-disabled={isDisabled}
       onClick={() => {
-        if (selectedIndex == null) onClick(index);
+        if (!isDisabled) onClick(index);
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <div style={styleCircle}>{String.fromCharCode(65 + index)}</div>
-        <span style={{ fontSize: 14, color: "#4D4D4D" }}>{text}</span>
+      <div className="option-card-inner">
+        <div className="option-card-circle">{String.fromCharCode(65 + index)}</div>
+        <span className="option-card-text">{text}</span>
       </div>
     </div>
   );

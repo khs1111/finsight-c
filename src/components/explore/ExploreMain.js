@@ -1,10 +1,12 @@
 // 탐험 메인화면
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
+
 import FloatingQuizCTA from './FloatingQuizCTA';
 import useProgress from '../useProgress';
 import { getQuestions } from '../../api/explore';
 import antCharacter from '../../assets/explore/antCharacter.svg';
+import './ExploreMain.css';
 
 // ExploreMain: 학습 진입 전 개요 UI
 export default function ExploreMain({ onStart }) {
@@ -96,31 +98,26 @@ const steppingStoneLine = (
   }, []);
 
   return (
-  <div style={{ position: 'relative', width: 412, minHeight: 853, background: '#F4F6FA', fontFamily: 'Roboto, sans-serif', margin: '0 auto' }} data-explore-root>
-      <div style={{ position: 'absolute', left: 16, top: 64, width: 380, height: 30, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div
+      className="explore-main-container"
+      data-explore-root
+    >
+      {/* 상단 필터/메뉴 영역 */}
+      <div className="explore-main-filter">
         <button
           type="button"
+          className="explore-main-filter-btn"
           onClick={() => setFilterOpen(o => !o)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            height: 30,
-            border: 'none',
-            background: 'transparent',
-            padding: 0,
-            cursor: 'pointer'
-          }}
         >
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '8px 12px', background: selectedLevel ? 'linear-gradient(104.45deg,#448FFF -6.51%,#4833D0 105.13%)' : '#EEF2F6', borderRadius: 8, minWidth: 58, height: 30 }}>
-            <span style={{ color: selectedLevel ? '#FFFFFF' : '#626262', fontSize: 12, fontWeight: 700 }}>{selectedLevel || '난이도'}</span>
+          <div className={`explore-main-level-chip${selectedLevel ? ' selected' : ''}`}>
+            <span>{selectedLevel || '난이도'}</span>
           </div>
-          <span style={{ fontSize: 18, fontWeight: 700, color: '#474747', letterSpacing: '-0.02em' }}>{selectedTopic} - {selectedSubTopic}</span>
-          <div style={{ width: 20, height: 20, transform: filterOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>
+          <span className="explore-main-topic">{selectedTopic} - {selectedSubTopic}</span>
+          <div className={`explore-main-filter-arrow${filterOpen ? ' open' : ''}`}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M17.0173 5C16.6805 5 16.3436 5.12807 16.0866 5.38509L9.99975 11.4728L3.9129 5.38509C3.39887 4.87193 2.56553 4.87193 2.05149 5.38509C1.53834 5.89912 1.53834 6.73246 2.05149 7.24649L9.06905 14.264C9.58308 14.7772 10.4164 14.7772 10.9305 14.264L17.948 7.24649C18.4612 6.73246 18.4612 5.89912 17.948 5.38509C17.691 5.12807 17.3541 5 17.0173 5Z" fill="#474747"/></svg>
           </div>
         </button>
-        <div style={{ width: 24, height: 24, position: 'relative', cursor: 'pointer' }} onClick={() => setMenuOpen(!menuOpen)}>
+        <div className="explore-main-menu-btn" onClick={() => setMenuOpen(!menuOpen)}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 18C3.44772 18 3 17.5523 3 17C3 16.4477 3.44772 16 4 16H20C20.5523 16 21 16.4477 21 17C21 17.5523 20.5523 18 20 18H4ZM4 13C3.44772 13 3 12.5523 3 12C3 11.4477 3.44772 11 4 11H20C20.5523 11 21 11.4477 21 12C21 12.5523 20.5523 13 20 13H4ZM4 8C3.44772 8 3 7.55228 3 7C3 6.44772 3.44772 6 4 6H20C20.5523 6 21 6.44772 21 7C21 7.55228 20.5523 8 20 8H4Z" fill="#474747"/></svg>
           {menuOpen && (
             <div
@@ -192,15 +189,15 @@ const steppingStoneLine = (
       />
 
       {/* 출석 카드  */}
-      <div style={{ position: 'absolute', left: '50%', top: 106, transform: 'translateX(-50%)', width: 380, height: 80, background: '#FFFFFF', boxShadow: '0 0 2px rgba(0,0,0,0.25)', borderRadius: 16, padding: '12px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+      <div className="explore-main-attendance-card">
+  <div className="explore-main-attendance-dates">
           {weekDates.map(date => (
-            <div key={date} style={{ width: 18, textAlign: 'center', fontSize: 10, fontWeight: 500, color: date === today ? '#448FFF' : '#B2B2B2' }}>{date}</div>
+            <div key={date} className={date === today ? 'explore-main-attendance-date today' : 'explore-main-attendance-date'}>{date}</div>
           ))}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 8 }}>
+  <div className="explore-main-attendance-icons">
           {weekDates.map(date => (
-            <div key={date}>
+            <div key={date} className="explore-main-attendance-icon">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M10.1244 4.55018C10.4124 3.61856 11.2793 2.9877 12.2544 3.00018C13.2349 2.99033 14.1036 3.63063 14.3844 4.57018L15.0444 6.57018C15.3408 7.49581 16.2025 8.12289 17.1744 8.12018H19.2544C20.2492 8.08249 21.1495 8.70582 21.4643 9.65023C21.7791 10.5946 21.4328 11.6335 20.6144 12.2002L18.9044 13.4502C18.1162 14.0163 17.7846 15.0272 18.0844 15.9502L18.7444 17.9502C18.9712 18.6425 18.8487 19.4019 18.4157 19.9878C17.9827 20.5737 17.2928 20.9137 16.5644 20.9002C16.092 20.8966 15.6331 20.7425 15.2544 20.4602L13.6144 19.2102C12.8279 18.6365 11.7609 18.6365 10.9744 19.2102L9.25439 20.4602C8.87111 20.7686 8.39625 20.9409 7.90439 20.9502C7.17067 20.9563 6.48006 20.6042 6.05396 20.0069C5.62785 19.4095 5.51978 18.642 5.76439 17.9502L6.42439 15.9502C6.74237 15.03 6.42662 14.0098 5.64439 13.4302L3.93439 12.1802C3.14176 11.6115 2.8083 10.5953 3.10992 9.66755C3.41154 8.73983 4.27889 8.11399 5.25439 8.12018H7.33439C8.31172 8.12014 9.17514 7.48372 9.46439 6.55018L10.1244 4.55018Z" fill={solvedDates.includes(date) ? '#FFBC02' : '#B0B0B0'} /></svg>
             </div>
           ))}
@@ -208,27 +205,29 @@ const steppingStoneLine = (
       </div>
 
       {/* 진행도 바 배경  */}
-      <div id="explore-progress-bar" style={{ position: 'absolute', top: 210, left: '50%', transform: 'translateX(-50%)', width: 355, height: 12, background: '#DDEBFF', borderRadius: 50, overflow: 'hidden' }}>
-        <div style={{ width: `${progressPercent}%`, height: '100%', background: 'linear-gradient(104.45deg,#448FFF -6.51%,#4833D0 105.13%)', borderRadius: 50, transition: 'width .3s' }} />
-      </div>
-      {/* 진행도 바  */}
-      <div style={{ position: 'absolute', top: 200, left: 16, width: 32, height: 32, background: '#448FFF', borderRadius: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 0 2px #448FFF' }}>
-        <span style={{ fontSize: 18, fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.02em' }}>1</span>
-      </div>
-      <div style={{ position: 'absolute', top: 200, left: 364, width: 32, height: 32, background: '#DDEAFF', borderRadius: 16, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <span style={{ fontSize: 18, fontWeight: 700, color: '#ADC5EB', letterSpacing: '-0.02em' }}>2</span>
+      <div id="explore-progress-bar" className="explore-main-progress-bar">
+        <div className="explore-main-progress-bar-inner" style={{ width: `${progressPercent}%` }} />
       </div>
 
-      {/* 개미 캐릭터는 스크롤 영역 내부로 이동 (버튼처럼 고정 아님) */}
+      {/* 진행도 바 양쪽 숫자 */}
+      <div className="explore-main-progress-numbers">
+        <div className="explore-main-progress-number active">1</div>
+        <div className="explore-main-progress-number">2</div>
+      </div>
 
       {/* 징검다리 스크롤 영역 */}
-      <SteppingStonesScrollable
-        totalStages={totalStages}
-        activeStage={activeStage}
-        answeredCount={answeredCount}
-        currentIndex={currentIndex}
-      />
-      <FloatingQuizCTA onClick={onStart} label="퀴즈 풀러가기" />
+  <div className="explore-main-steppingstones-wrap">
+        <SteppingStonesScrollable
+          totalStages={totalStages}
+          activeStage={activeStage}
+          answeredCount={answeredCount}
+          currentIndex={currentIndex}
+        />
+      </div>
+
+      <div className="explore-main-cta-fixed">
+        <FloatingQuizCTA onClick={onStart} label="퀴즈 풀러가기" />
+      </div>
     </div>
   );
 }

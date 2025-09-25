@@ -94,7 +94,7 @@ export default function Explore() {
       if (current <= 0) setStep(3);
       else setQid(current - 1);
     };
-    const currentResult = results[current] || { selected: null, checked: false };
+    const currentResult = results[current] || { selected: null, checked: false, correct: null };
     content = (
       <QuizQuestion
         current={current}
@@ -109,7 +109,15 @@ export default function Explore() {
         }}
         onCheck={() => {
           const newResults = [...results];
-          newResults[current] = { ...currentResult, checked: true };
+          // Determine correctness
+          const question = questions[current];
+          let correctIdx = -1;
+          if (question && question.options) {
+            const correctOption = question.options.find(option => option.isCorrect);
+            correctIdx = correctOption ? question.options.indexOf(correctOption) : -1;
+          }
+          const isCorrect = currentResult.selected === correctIdx;
+          newResults[current] = { ...currentResult, checked: true, correct: isCorrect };
           setResults(newResults);
         }}
         onComplete={() => setStep(5)}

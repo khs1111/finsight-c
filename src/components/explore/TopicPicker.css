@@ -1,0 +1,212 @@
+.topic-picker-container {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: #F4F6FA;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 60px 16px 140px 16px;
+  position: relative;
+}
+.topic-picker-title {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 900;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #000;
+  margin-bottom: 98px;
+  text-align: left;
+  padding: 0;
+}
+.topic-picker-list {
+  margin: 7vw 0 0 0;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0;
+}
+.topic-picker-card {
+  width: 100%;
+  max-width: 412px;
+  min-height: 68px;
+  padding: 18px 18px 14px 18px;
+  background: #fff;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  border: 1px solid #e5e5e5;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin: 0 auto 12px auto;
+}
+.topic-picker-card.selected {
+  background: linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%);
+  box-shadow: 0 2px 12px rgba(68,143,255,0.13);
+  border: 2px solid #448FFF;
+  color: #fff;
+}
+.topic-picker-card-title {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 1.2;
+  color: inherit;
+  margin-bottom: 2px;
+  word-break: keep-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topic-picker-card-desc {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 1rem;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: inherit;
+  word-break: keep-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+
+}
+
+/* --- Explore TopicPicker custom blocks --- */
+.topic-picker-topic-block {
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 420px;
+.topic-picker-card-arrow {
+  margin-left: auto;
+  display: block;
+}
+.topic-picker-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+}
+
+.topic-picker-subtopic-list {
+  background: #fff;
+  border: 1px solid #F0F0F0;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0px 0px 4px rgba(0,0,0,0.1);
+  margin-top: -8px;
+  width: 100%;
+  max-width: 412px;
+  overflow: hidden;
+}
+
+.topic-picker-subtopic-item {
+  padding: 14px 16px;
+  cursor: pointer;
+  background: #fff;
+  color: #333;
+  font-size: 16px;
+  transition: background 0.15s, color 0.15s;
+}
+.topic-picker-subtopic-item.selected {
+  background: #EAF2FF;
+  color: #448FFF;
+}
+
+.topic-picker-confirm-btn {
+  position: fixed;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  max-width: 412px;
+  width: 380px;
+  height: 60px;
+  background: #CACACA;
+  color: #fff;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.3;
+  text-align: center;
+  border: none;
+  border-radius: 8px;
+  cursor: not-allowed;
+  box-shadow: none;
+  z-index: 120;
+  display: block;
+  padding: 0;
+  box-sizing: border-box;
+  transition: background 0.15s;
+@media (max-width: 600px) {
+  .topic-picker-container {
+    max-width: 100vw;
+    padding: 0 0 80px 0;
+  }
+  .topic-picker-confirm-btn {
+    max-width: 100vw;
+    width: calc(100vw - 24px);
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+  }
+  .topic-picker-title {
+    font-size: 1.2rem;
+    padding: 0 10px;
+    max-width: 100vw;
+  }
+  .topic-picker-card {
+    max-width: 100vw;
+    padding: 14px 10px 12px 10px;
+    border-radius: 10px;
+  }
+  .topic-picker-topic-block {
+    max-width: 100vw;
+  }
+  .topic-picker-subtopic-list {
+    max-width: 100vw;
+  }
+}
+}
+.topic-picker-confirm-btn.active {
+  background: linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0,0,0,0.25);
+@media (max-width: 600px) {
+  .topic-picker-container {
+    max-width: 100vw;
+    padding: 40px 4vw 100px 4vw;
+  }
+  .topic-picker-title {
+    font-size: 20px;
+    margin-bottom: 48px;
+    padding: 0;
+  }
+  .topic-picker-card {
+    max-width: 100vw;
+    padding: 14px 10px 12px 10px;
+    border-radius: 10px;
+  }
+  .topic-picker-subtopic-list {
+    max-width: 100vw;
+  }
+  .topic-picker-confirm-btn {
+    max-width: 100vw;
+    width: calc(100vw - 24px);
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    height: 48px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+}
+}

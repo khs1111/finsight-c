@@ -20,24 +20,6 @@ export const dummyQuizzes = [
   },
   {
     id: 2,
-    type: 'articleImage',
-    question: '다음 뉴스 기사를 보고 답하세요. 한국은행이 기준금리를 인상했을 때 나타날 수 있는 현상은?',
-    image: '/assets/q4-article.png',
-    options: [
-      { id: 1, text: '예금 이자율 상승, 대출 이자율 하락', isCorrect: false },
-      { id: 2, text: '예금 이자율 하락, 대출 이자율 상승', isCorrect: false },
-      { id: 3, text: '예금 이자율 상승, 대출 이자율 상승', isCorrect: true },
-      { id: 4, text: '예금 이자율 하락, 대출 이자율 하락', isCorrect: false }
-    ],
-    correctAnswer: 2,
-    explanation: '기준금리가 인상되면 일반적으로 예금 이자율과 대출 이자율이 모두 상승합니다.',
-    hint: '기준금리는 시중 금리의 기준이 됩니다.',
-    level: 'intermediate',
-    topic: '은행',
-    subTopic: '금융권'
-  },
-  {
-    id: 3,
     type: 'normal',
     question: '신용카드 사용 시 주의해야 할 점으로 가장 적절한 것은?',
     options: [
@@ -54,7 +36,7 @@ export const dummyQuizzes = [
     subTopic: '신용카드'
   },
   {
-    id: 4,
+    id: 3,
     type: 'normal',
     question: '다음 중 소득공제에 해당하는 것은?',
     options: [
@@ -71,21 +53,22 @@ export const dummyQuizzes = [
     subTopic: '소득세'
   },
   {
-    id: 5,
-    type: 'normal',
-    question: '주식 투자의 기본 원칙으로 가장 적절한 것은?',
+    id: 4,
+    type: 'articleImage',
+    question: '다음 뉴스 기사를 보고 답하세요. 한국은행이 기준금리를 인상했을 때 나타날 수 있는 현상은?',
+    image: '/assets/q4-article.png',
     options: [
-      { id: 1, text: '단기간에 큰 수익을 얻는 것이 목표다', isCorrect: false },
-      { id: 2, text: '한 종목에 모든 자금을 투자해야 한다', isCorrect: false },
-      { id: 3, text: '분산투자를 통해 리스크를 관리해야 한다', isCorrect: true },
-      { id: 4, text: '주가가 오를 때만 투자해야 한다', isCorrect: false }
+      { id: 1, text: '예금 이자율 상승, 대출 이자율 하락', isCorrect: false },
+      { id: 2, text: '예금 이자율 하락, 대출 이자율 상승', isCorrect: false },
+      { id: 3, text: '예금 이자율 상승, 대출 이자율 상승', isCorrect: true },
+      { id: 4, text: '예금 이자율 하락, 대출 이자율 하락', isCorrect: false }
     ],
     correctAnswer: 2,
-    explanation: '분산투자는 투자 리스크를 관리하는 기본적인 방법입니다.',
-    hint: '계란을 한 바구니에 담지 말라는 격언을 생각해보세요.',
-    level: 'beginner',
-    topic: '투자',
-    subTopic: '주식'
+    explanation: '기준금리가 인상되면 일반적으로 예금 이자율과 대출 이자율이 모두 상승합니다.',
+    hint: '기준금리는 시중 금리의 기준이 됩니다.',
+    level: 'intermediate',
+    topic: '은행',
+    subTopic: '금융권'
   }
 ];
 

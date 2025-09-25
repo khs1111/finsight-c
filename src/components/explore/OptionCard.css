@@ -1,0 +1,62 @@
+.option-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto 16px auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.10);
+  padding: 18px 18px;
+  cursor: pointer;
+  user-select: none;
+  transition: box-shadow .12s, border .12s;
+  box-sizing: border-box;
+  border: none;
+}
+.option-card.selected-correct {
+  border: 1px solid #1EE000;
+  box-shadow: 0px 0px 2px #1EE000;
+}
+.option-card.selected-wrong {
+  border: 1px solid #EE3030;
+  box-shadow: 0px 0px 2px #EE3030;
+}
+.option-card-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+.option-card-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  color: #fff;
+  background: #448FFF;
+  flex-shrink: 0;
+}
+.option-card.selected-correct .option-card-circle {
+  background: #1EE000;
+}
+.option-card.selected-wrong .option-card-circle {
+  background: #EE3030;
+}
+.option-card-text {
+  font-family: 'Roboto', 'Pretendard', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  color: #222;
+  line-height: 22px;
+  font-weight: 500;
+  flex: 1;
+  word-break: keep-all;
+}
+.option-card[aria-disabled="true"] {
+  cursor: default;
+}

@@ -1,0 +1,106 @@
+.subtopic-header {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 380px;
+  height: 24px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  padding: 0;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+.subtopic-header-arrow {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.subtopic-header-title {
+  font-family: 'Pretendard', 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 21px;
+  color: #474747;
+  height: 21px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.subtopic-picker-container {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: #F4F6FA;
+  padding: 8vw 4vw 24vw 4vw;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.subtopic-topic-card {
+  margin-bottom: 12px;
+}
+.subtopic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 380px;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.10);
+  border-radius: 0 0 12px 12px;
+  margin-top: -1px;
+  overflow: hidden;
+}
+.subtopic-list-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  min-height: 48px;
+  font-family: 'Roboto', 'Pretendard', sans-serif;
+  font-size: 16px;
+  line-height: 22px;
+  color: #333;
+  border-bottom: 1px solid #F5F5F5;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 400;
+  transition: background 0.15s, color 0.15s;
+}
+.subtopic-list-item.selected {
+  background: #EAF2FF;
+  color: #448FFF;
+  font-weight: 700;
+}
+.subtopic-list-item:last-child {
+  border-bottom: none;
+}
+.subtopic-confirm-btn {
+  margin-top: 24px;
+  width: 100%;
+  max-width: 380px;
+  height: 56px;
+  background: #CACACA;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  cursor: not-allowed;
+  box-shadow: none;
+  display: block;
+}
+.subtopic-confirm-btn.enabled {
+  background: linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0,0,0,0.15);
+}

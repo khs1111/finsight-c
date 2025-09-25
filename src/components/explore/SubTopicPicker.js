@@ -1,74 +1,50 @@
-//주제 상세
+import { useState } from "react";
+import "./SubTopicPicker.css";
+import TopicCard from "./TopicCard";
+
 export default function SubTopicPicker({ topic, onConfirm }) {
   const [selectedSub, setSelectedSub] = useState(null);
   const subTopics = subTopicMap[topic] || [];
 
   return (
-    <div
-      style={{
-        maxWidth: "auto", 
-        width: "100%",
-        minHeight: "auto",
-        margin: "0 auto",
-        background: "#F4F6FA",
-        padding: "276px 16px 16px", 
-      }}
-    >
-      <TopicCard title={topic} active={true} />
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-          width: "100%",        
-          background: "#FFFFFF",
-          boxShadow: "0px 0px 4px rgba(0,0,0,0.25)",
-          borderRadius: "0px 0px 8px 8px",
-          marginTop: "-1px",     
-        }}
-      >
+    <div className="subtopic-picker-container">
+      <div className="subtopic-header">
+        <div className="subtopic-header-arrow" onClick={() => window.history.back()}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10.9498 19.5201C11.0931 19.6553 11.2828 19.7304 11.4798 19.7301C11.6761 19.7318 11.8643 19.6521 11.9998 19.5101C12.1428 19.3708 12.2234 19.1797 12.2234 18.9801C12.2234 18.7805 12.1428 18.5894 11.9998 18.4501L6.29975 12.75H19.52C19.9342 12.75 20.27 12.4142 20.27 12C20.27 11.5858 19.9342 11.25 19.52 11.25H6.29756L12.0098 5.52006C12.1528 5.38077 12.2334 5.18965 12.2334 4.99006C12.2334 4.79048 12.1528 4.59935 12.0098 4.46006C11.717 4.16761 11.2426 4.16761 10.9498 4.46006L3.94981 11.4601C3.65736 11.7529 3.65736 12.2272 3.94981 12.5201L10.9498 19.5201Z" fill="#1B1B1B"/>
+          </svg>
+        </div>
+        <span className="subtopic-header-title">{topic}</span>
+      </div>
+      <div className="subtopic-topic-card">
+        <TopicCard title={topic} active={true} />
+      </div>
+      <div className="subtopic-list">
         {subTopics.map((st, idx) => (
           <div
             key={st}
+            className={
+              'subtopic-list-item' +
+              (selectedSub === st ? ' selected' : '') +
+              (idx === subTopics.length - 1 ? ' last' : '')
+            }
             onClick={() => setSelectedSub(st)}
             style={{
-              display: "flex",
-              alignItems: "center",
-              padding: "16px",
-              height: "53px",
-              fontFamily: "Roboto, sans-serif",
-              fontSize: "18px",
-              lineHeight: "21px",
-              color: "#474747",
               borderBottom:
-                idx !== subTopics.length - 1 ? "1px solid #F5F5F5" : "none",
-              background: selectedSub === st ? "#EAF2FF" : "#FFFFFF",
-              cursor: "pointer",
+                idx !== subTopics.length - 1 ? undefined : 'none',
             }}
           >
             {st}
           </div>
         ))}
       </div>
-
       <button
         onClick={() => onConfirm(selectedSub)}
         disabled={!selectedSub}
-        style={{
-          marginTop: "20px",
-          width: "100%",          
-          height: "60px",
-          background: selectedSub
-            ? "linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%)"
-            : "#CACACA",
-          color: "#fff",
-          fontSize: "18px",
-          fontWeight: "700",
-          border: "none",
-          borderRadius: "8px",
-          cursor: selectedSub ? "pointer" : "not-allowed",
-        }}
+        className={
+          'subtopic-confirm-btn' +
+          (selectedSub ? ' enabled' : '')
+        }
       >
         확인
       </button>

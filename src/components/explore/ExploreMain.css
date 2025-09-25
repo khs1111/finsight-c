@@ -1,0 +1,230 @@
+/* 퀴즈 풀러가기 CTA 버튼 (FloatingQuizCTA.js) */
+.floating-quiz-cta-wrap {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 412px;
+  z-index: 120;
+  pointer-events: none;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+.floating-quiz-cta-btn {
+  pointer-events: auto;
+  width: 100%;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.floating-quiz-cta-btn-gradient {
+  background: linear-gradient(104.45deg,#448FFF -6.51%, #4833D0 105.13%);
+  color: #FFFFFF;
+  border: none;
+}
+.floating-quiz-cta-btn-outline {
+  background: #FFFFFF;
+  color: #4D4D4D;
+  border: 1px solid #ddd;
+}
+.floating-quiz-cta-btn-shadow {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+/* 출석 카드 */
+.explore-main-attendance-card {
+  width: calc(100vw - 32px);
+  max-width: 100%;
+  margin: 24px auto 0 auto;
+  background: #FFFFFF;
+  box-shadow: 0 0 2px rgba(0,0,0,0.25);
+  border-radius: 16px;
+  padding: 12px 0;
+  box-sizing: border-box;
+}
+.explore-main-attendance-dates {
+  display: flex;
+  justify-content: space-around;
+}
+.explore-main-attendance-date {
+  width: 18px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 500;
+  color: #B2B2B2;
+}
+.explore-main-attendance-date.today {
+  color: #448FFF;
+}
+.explore-main-attendance-icons {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 8px;
+}
+.explore-main-attendance-icon {
+  /* for svg wrapper */
+}
+
+/* 진행도 바 */
+.explore-main-progress-bar {
+  width: calc(100vw - 32px);
+  max-width: 100%;
+  margin: 24px auto 0 auto;
+  height: 12px;
+  background: #DDEBFF;
+  border-radius: 50px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.explore-main-progress-bar-inner {
+  height: 100%;
+  background: linear-gradient(104.45deg,#448FFF -6.51%,#4833D0 105.13%);
+  border-radius: 50px;
+  transition: width .3s;
+}
+
+/* 진행도 바 양쪽 숫자 */
+.explore-main-progress-numbers {
+  width: calc(100vw - 32px);
+  max-width: 100%;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  top: -22px;
+}
+.explore-main-progress-number {
+  width: 32px;
+  height: 32px;
+  background: #DDEAFF;
+  border-radius: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ADC5EB;
+  letter-spacing: -0.02em;
+  box-shadow: none;
+}
+.explore-main-progress-number.active {
+  background: #448FFF;
+  color: #FFFFFF;
+  box-shadow: 0 0 2px #448FFF;
+}
+
+/* 징검다리 영역 래퍼 */
+.explore-main-steppingstones-wrap {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: #F4F6FA;
+  font-family: 'Roboto', sans-serif;
+  box-sizing: border-box;
+  padding: 0 0 80px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto; /* 추가 */
+}
+
+/* 하단 고정 CTA 버튼 */
+.explore-main-cta-fixed {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 88px;
+  width: calc(100vw - 32px);
+  max-width: 100%;
+  z-index: 100;
+  margin: 0 auto;
+}
+.explore-main-container {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: #F4F6FA;
+  font-family: 'Roboto', sans-serif;
+  box-sizing: border-box;
+  padding: 0 0 80px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.explore-main-filter {
+  padding-left: 16px;
+  padding-right: 4vw;
+  width: 100%;
+  max-width: 100%;
+  margin: 32px auto 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 4vw;
+}
+
+.explore-main-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.explore-main-level-chip {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  min-width: 58px;
+  height: 30px;
+  background: #EEF2F6;
+}
+.explore-main-level-chip.selected {
+  background: linear-gradient(104.45deg,#448FFF -6.51%,#4833D0 105.13%);
+}
+.explore-main-level-chip span {
+  color: #626262;
+  font-size: 12px;
+  font-weight: 700;
+}
+.explore-main-level-chip.selected span {
+  color: #fff;
+}
+
+.explore-main-topic {
+  font-size: 18px;
+  font-weight: 700;
+  color: #474747;
+  letter-spacing: -0.02em;
+}
+
+.explore-main-filter-arrow {
+  width: 20px;
+  height: 20px;
+  transition: transform .2s;
+}
+.explore-main-filter-arrow.open {
+  transform: rotate(180deg);
+}
+
+.explore-main-menu-btn {
+  width: 24px;
+  height: 24px;
+  position: relative;
+  cursor: pointer;
+}

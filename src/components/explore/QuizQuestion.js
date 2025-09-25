@@ -12,7 +12,8 @@
  * - getQuiz(): 퀴즈 데이터 조회
  * - submitAnswer(): 답안 제출 및 채점
  */
-import React, { useState, useRef, useEffect } from "react"; 
+import React, { useState, useRef, useEffect } from "react";
+import "./QuizQuestion.css";
 import { getQuiz, submitAnswer } from "../../api/explore";
 import ProgressHeader from "./ProgressHeader";
 
@@ -344,12 +345,13 @@ export default function QuizQuestion({ current,
     if (!chalkTextRef.current) return;
 
     // 📏 칠판 레이아웃 상수 정의
-    const TOP_PAD = 24;             // 상단 패딩
-    const SIDE_PAD = 16;            // 좌우 패딩
-    const CONTENT_GAP = 16;         // 콘텐츠 간격
-    const CHALK_BAND_HEIGHT = 6;    // 분필 라인 높이
-    const BOTTOM_BAR_HEIGHT = 19;   // 하단 바 높이
-    const BOARD_OVERLAP = 6;        // 칠판 배경 오버랩
+  const TOP_PAD = 24;             // 상단 패딩
+  const SIDE_PAD = 16;            // 좌우 패딩
+  const CONTENT_GAP = 16;         // 콘텐츠 간격
+  const CHALK_BAND_HEIGHT = 6;    // 분필 라인 높이
+  const BOTTOM_BAR_HEIGHT = 19;   // 하단 바 높이
+  const BOARD_OVERLAP = 6;        // 칠판 배경 오버랩
+  const BOTTOM_EXTRA = 11;        // 분필 아래 칠판 끝까지 거리
 
     /**
      * 📐 칠판 크기 측정 및 레이아웃 계산 함수
@@ -361,21 +363,19 @@ export default function QuizQuestion({ current,
       const raw = chalkTextRef.current.scrollHeight;
       const textHeight = Math.max(0, raw - TOP_PAD); 
 
-      // 🧮 전체 칠판 높이 계산
-      const totalHeight = TOP_PAD + textHeight + CONTENT_GAP + CHALK_BAND_HEIGHT + BOTTOM_BAR_HEIGHT;
-      
       // 📍 분필 라인 Y 위치 계산
-      const chalkY = TOP_PAD + textHeight + CONTENT_GAP; 
-      
-      // 📏 칠판 배경 높이 계산
-      const boardRectHeight = (chalkY + CHALK_BAND_HEIGHT + BOARD_OVERLAP);
+      const chalkY = TOP_PAD + textHeight + CONTENT_GAP;
+      // 🧮 전체 칠판 높이 계산 (분필 아래 11px 추가)
+      const totalHeight = chalkY + CHALK_BAND_HEIGHT + BOTTOM_EXTRA + BOTTOM_BAR_HEIGHT;
+      // 📏 칠판 배경 높이 계산 (분필 아래 11px 추가)
+      const boardRectHeight = chalkY + CHALK_BAND_HEIGHT + BOARD_OVERLAP + BOTTOM_EXTRA;
 
       // 💾 계산된 레이아웃 정보 저장
       setChalkLayout({
         totalHeight,
         chalkY,
         boardRectHeight,
-        constants: { TOP_PAD, SIDE_PAD, CONTENT_GAP, CHALK_BAND_HEIGHT, BOTTOM_BAR_HEIGHT, BOARD_OVERLAP }
+        constants: { TOP_PAD, SIDE_PAD, CONTENT_GAP, CHALK_BAND_HEIGHT, BOTTOM_BAR_HEIGHT, BOARD_OVERLAP, BOTTOM_EXTRA }
       });
     };
 
@@ -486,17 +486,10 @@ export default function QuizQuestion({ current,
    */
   if (!question) {
     return (
-      <div style={{ padding: "16px", textAlign: "center" }}>
+      <div className="quiz-question-header" style={{ textAlign: "center" }}>
         <h2>문제를 불러오는 중입니다...</h2>
         <p>백엔드 서버와 연결을 확인해주세요.</p>
-        <button onClick={onBack} style={{ 
-          padding: "10px 20px", 
-          backgroundColor: "#448FFF", 
-          color: "white", 
-          border: "none", 
-          borderRadius: "5px", 
-          cursor: "pointer" 
-        }}>
+        <button onClick={onBack} className="quiz-question-bottom-btn" style={{ width: "auto", padding: "10px 20px", borderRadius: 5, background: "#448FFF" }}>
           뒤로 가기
         </button>
       </div>
@@ -516,17 +509,8 @@ export default function QuizQuestion({ current,
   return (
     <div
       ref={containerRef}
-      style={{
-        width: "100%",
-        minHeight: "100vh",
-        maxWidth: "390px",
-        margin: "0 auto",
-        background: "#F4F6FA",
-        paddingBottom: bottomPad,
-        boxSizing: "border-box",
-        overflowY: "auto", // 스크롤 영역
-        position: "relative",
-      }}
+      className="quiz-question-container"
+      style={{ paddingBottom: bottomPad }}
     >
       {/* 상단 진행도 */}
      <ProgressHeader
@@ -535,50 +519,27 @@ export default function QuizQuestion({ current,
       onBack={onBack}
  />
       {/* 문제 */}
-      <div style={{ padding: "16px" }}>
-        <h2
-          style={{
-            fontFamily: "Roboto, sans-serif",
-            fontWeight: 700,
-            fontSize: "1.5rem",
-            lineHeight: "2.125rem",
-            letterSpacing: "-0.04em",
-            color: "#1B1B1B",
-            marginBottom: "16px",
-          }}
-        >
+      <div className="quiz-question-header">
+        <h2 className="quiz-question-title">
           {question?.stemMd || question?.question || "문제를 불러오는 중입니다..."}
         </h2>
 
         {/* 문제와 기사 이미지 사이 안내 문구 (요청 사양) */}
         {question?.type === 'articleImage' && (
-          <div
-            style={{
-              width: '100%', // 컨테이너 폭에 맞춤 (원안 380px)
-              height: 16,
-              fontFamily: 'Roboto, sans-serif',
-              fontStyle: 'normal',
-              fontWeight: 400,
-              fontSize: 14,
-              lineHeight: '16px',
-              color: '#9B9B9B',
-              marginBottom: 12,
-            }}
-          >
+          <div className="quiz-question-article-guide">
             ( 6개월 이상 쓸 계획이 없는 1,000 만원 가진 경우)
           </div>
         )}
 
         {/* 기사 이미지 타입이면 제목 아래에 이미지(또는 플레이스홀더) */}
         {question.type === 'articleImage' && (
-          <div ref={articleImgWrapperRef} style={{ width:'100%', marginBottom:16, position:'relative' }}>
+          <div ref={articleImgWrapperRef} className="quiz-question-article-img-wrapper">
             {imgSrc && !imgError ? (
               <img
                 src={imgSrc}
                 alt="기사 이미지"
                 onLoad={handleArticleImgLoad}
                 onError={() => {
-                  // Q4에선 확장자 자동 시도
                   if (question?.id === 4 && q4FallbackIndexRef.current < q4Fallbacks.length - 1) {
                     q4FallbackIndexRef.current += 1;
                     setImgSrc(q4Fallbacks[q4FallbackIndexRef.current]);
@@ -586,34 +547,11 @@ export default function QuizQuestion({ current,
                     setImgError(true);
                   }
                 }}
-                style={{
-                  width:'100%',
-                
-                  height: articleImgHeight ? articleImgHeight : ARTICLE_IMG_MIN,
-                  borderRadius:12,
-                  display:'block',
-                  objectFit:'cover',
-                  transition:'height 0.25s ease'
-                }}
+                className="quiz-question-article-img"
+                style={{ height: articleImgHeight ? articleImgHeight : ARTICLE_IMG_MIN }}
               />
             ) : (
-              <div style={{
-                width:'100%',
-                minHeight: ARTICLE_IMG_MIN,
-                height: articleImgHeight ? articleImgHeight : ARTICLE_IMG_MIN,
-                border:'2px dashed #C2CBD6',
-                borderRadius:12,
-                background:'#F1F4F8',
-                display:'flex',
-                flexDirection:'column',
-                alignItems:'center',
-                justifyContent:'center',
-                color:'#647184',
-                fontSize:13,
-                gap:8,
-                padding:'24px 12px',
-                boxSizing:'border-box'
-              }}>
+              <div className="quiz-question-article-img-placeholder" style={{ height: articleImgHeight ? articleImgHeight : ARTICLE_IMG_MIN }}>
                 <span style={{ fontWeight:600 }}>기사 이미지 영역</span>
                 {!imgError ? (
                   <span style={{ opacity:0.7, fontSize:12 }}>업로드 시 비율에 맞춰 최대 {ARTICLE_IMG_MAX}px 까지 확장</span>
@@ -636,181 +574,56 @@ export default function QuizQuestion({ current,
         )}
 
         {question?.options?.map((opt, idx) => {
-const isSelected = selected === idx;
-
-// 채점 후에만 정답/오답 표시
-const isCorrect = showResult && isSelected && idx === correctIdx;
-const isWrong = showResult && isSelected && idx !== correctIdx;
-
-// 카드 스타일
-const borderColor = isCorrect ? "#1EE000" : isWrong ? "#EE3030" : (isSelected ? "#448FFF" : "transparent");
-const shadowColor = isCorrect ? "#1EE000" : isWrong ? "#EE3030" : (isSelected ? "#448FFF" : "rgba(0,0,0,0.25)");
-
-  // 배지 색
-  let badgeBg = "#448FFF";  
-
-if (isCorrect === true) {
-  badgeBg = "#1EE000";    
-} else if (isWrong === true) {
-  badgeBg = "#FF5959";   
-}
-  
-  const badgeColor = "#FFFFFF";
-
-  const badgeLetter = String.fromCharCode(65 + idx);
-
-  return (
-    <div
-      key={idx}
-      onClick={() => handleSelect(idx)}
-      style={{
-        width: "100%",
-        padding: "19px 16px",
-        borderRadius: "8px",
-        background: "#fff",
-        marginBottom: "16px",
-        cursor: showResult ? "not-allowed" : (selected === null ? "pointer" : "default"),
-        border: `1px solid ${borderColor}`,
-        boxShadow: `0px 0px 2px ${shadowColor}`,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-        <div
-          style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "18px",
-            background: badgeBg,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 700,
-            fontSize: "18px",
-            lineHeight: "21px",
-            color: badgeColor,
-            flexShrink: 0,
-          }}
-        >
-          {badgeLetter}
-        </div>
-
-        {/* 옵션 텍스트 */}
-        <div
-          style={{
-            fontFamily: "Roboto, sans-serif",
-            fontWeight: 400,
-            fontStyle: "normal",
-            fontSize: "14px",
-            lineHeight: "20px",
-            letterSpacing: "-0.01em",
-            color: "#4D4D4D",
-            flex: 1,
-            whiteSpace: "normal",
-            overflowWrap: "break-word",
-            wordBreak: "keep-all",
-          }}
-        >
-          {opt.contentMd || opt.content || opt.text || opt}
-        </div>
-      </div>
-    </div>
-  );
-})}
+          const isSelected = selected === idx;
+          const isCorrect = showResult && isSelected && idx === correctIdx;
+          const isWrong = showResult && isSelected && idx !== correctIdx;
+          let cardClass = "quiz-question-option-card";
+          if (isCorrect) cardClass += " correct";
+          else if (isWrong) cardClass += " wrong";
+          else if (isSelected) cardClass += " selected";
+          let badgeClass = "quiz-question-option-badge";
+          if (isCorrect) badgeClass += " correct";
+          else if (isWrong) badgeClass += " wrong";
+          const badgeLetter = String.fromCharCode(65 + idx);
+          return (
+            <div
+              key={idx}
+              onClick={() => handleSelect(idx)}
+              className={cardClass}
+              style={{ cursor: showResult ? "not-allowed" : (selected === null ? "pointer" : "default") }}
+            >
+              <div className="quiz-question-option-row">
+                <div className={badgeClass}>{badgeLetter}</div>
+                <div className="quiz-question-option-text">
+                  {opt.contentMd || opt.content || opt.text || opt}
+                </div>
+              </div>
+            </div>
+          );
+        })}
 
         {/* 정답 해설*/}
         {showResult && selected === correctIdx && (
-  <div
-    style={{
-      marginTop: "16px",
-      background: "#E6F0FF",
-      borderRadius: "8px",
-      padding: "16px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-    }}
-  >
-    {/* 상단: 정답 + 배지 */}
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        alignItems: "center",
-        gap: "8px",
-      }}
-    >
-      <span
-        style={{
-          fontFamily: "Roboto, sans-serif",
-          fontWeight: 700,
-          fontSize: "12px",
-          lineHeight: "14px",
-          color: "#474747",
-        }}
-      >
-        정답
-      </span>
-
-      {/* 정답 배지 */}
-      <div
-        style={{
-          width: "24px",
-          height: "24px",
-          borderRadius: "18px",
-          background: "#448FFF",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "Roboto, sans-serif",
-            fontWeight: 700,
-            fontSize: "12px",
-            lineHeight: "14px",
-            color: "#fff",
-          }}
-        >
-          {String.fromCharCode(65 + correctIdx)} 
-        </span>
-      </div>
-    </div>
-
-    {/* 해설 텍스트 */}
-    <div
-      style={{
-        fontFamily: "Roboto, sans-serif",
-        fontWeight: 400,
-        fontSize: "14px",
-        lineHeight: "18px",
-        letterSpacing: "-0.02em",
-        color: "#647184",
-        whiteSpace: "pre-line", // 줄바꿈(\n)을 유지하면서 라인 간격을 넓힘
-      }}
-    >
-      {question.answerExplanationMd || question.explanation || "해설이 준비되지 않았습니다."}
-    </div>
-  </div>
-)}
+          <div className="quiz-question-explanation">
+            <div className="quiz-question-explanation-header">
+              <span className="quiz-question-explanation-label">정답</span>
+              <div className="quiz-question-explanation-badge">
+                <span className="quiz-question-explanation-badge-text">{String.fromCharCode(65 + correctIdx)}</span>
+              </div>
+            </div>
+            <div className="quiz-question-explanation-text">
+              {question.answerExplanationMd || question.explanation || "해설이 준비되지 않았습니다."}
+            </div>
+          </div>
+        )}
 
   {!showResult && (
-    <div style={{ marginTop: "16px" }}> 
+    <div style={{ marginTop: "16px" }}>
       <div
         onClick={() => setShowLearning(!showLearning)}
-        style={{
-          width: "100%",
-          padding: "16px",
-          borderRadius: "8px",
-          background: "#FFFFFF",
-          boxShadow: "0px 0px 12px rgba(0,0,0,0.08)",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          cursor: "pointer",
-        }}
+        className="quiz-question-learn-btn"
       >
-        <span style={{ fontFamily: "Roboto, sans-serif", fontWeight: 700, fontSize: 18, lineHeight: "21px", letterSpacing: "-0.02em", color: "#000" }}>🏫 학습하기</span>
+        <span className="quiz-question-learn-btn-label">🏫 학습하기</span>
         {showLearning ? (
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 16.7498C11.801 16.7508 11.6099 16.6715 11.47 16.5298L3.47003 8.52985C3.19467 8.23434 3.2028 7.77384 3.48841 7.48823C3.77402 7.20261 4.23452 7.19449 4.53003 7.46985L12 14.9398L19.47 7.46985C19.7655 7.19449 20.226 7.20261 20.5117 7.48823C20.7973 7.77384 20.8054 8.23434 20.53 8.52985L12.53 16.5298C12.3901 16.6715 12.1991 16.7508 12 16.7498Z" fill="black"/></svg>
         ) : (
@@ -818,13 +631,13 @@ if (isCorrect === true) {
         )}
       </div>
       {showLearning && (
-        <div style={{ marginTop:16, width:"100%", position:"relative" }}>
-          <div style={{ position:"relative", width:"100%", height:66 }}> 
-            <div style={{ position:"relative", left:8, top:0, width:272, height:38 }}> 
+        <div className="quiz-question-learning-wrap">
+          <div className="quiz-question-learning-svg-wrap">
+            <div className="quiz-question-learning-svg-inner">
               <svg width="272" height="38" viewBox="0 0 272 38" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ position:"absolute", inset:0 }}>
                 <path d="M255.04 0C259.458 0.000105391 263.04 3.58179 263.04 8V25.6475C266.305 28.6428 269.633 31.6972 271.675 33.5654C272.356 34.1885 271.898 35.3493 270.976 35.3496H260.987C259.523 36.9765 257.401 37.9999 255.04 38H8C3.58173 38 3.22139e-08 34.4183 0 30V8C0 3.58172 3.58172 8.05699e-08 8 0H255.04Z" fill="#448FFF" />
               </svg>
-              <div style={{ position:"absolute", left:15, top:12, height:14, display:"flex", alignItems:"center", fontFamily:"Roboto, sans-serif", fontWeight:700, fontSize:12, lineHeight:"14px", color:"#FFFFFF" }}>이 문제는 말 그대로 용어의 정의를 묻고 있어요!</div>
+              <div className="quiz-question-learning-svg-label">이 문제는 말 그대로 용어의 정의를 묻고 있어요!</div>
             </div>
             <div style={{ position:"absolute", right:0, top:-16, width:72, height:72, zIndex:5 }}> 
               <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" style={{ position:"absolute", inset:0, filter:'drop-shadow(0 2px 4px rgba(0,0,0,0.25))' }}>
@@ -836,16 +649,16 @@ if (isCorrect === true) {
               </svg>
             </div>
           </div>
-          <div style={{ marginBottom:1 }} /> 
-          <div style={{ width:"100%", position:"relative", marginTop:-19 }}>
-            <div style={{ position:'relative', width:380, margin:'0 auto', transform:'translateX(-10px)', height: chalkLayout ? chalkLayout.totalHeight : 'auto' }}>
+          <div style={{ marginBottom:1 }} />
+          <div className="quiz-question-learning-chalkboard-wrap">
+            <div className="quiz-question-learning-chalkboard-inner" style={{ height: chalkLayout ? chalkLayout.totalHeight : 'auto' }}>
               <svg
-                width={380}
+                width={chalkLayout ? '100%' : 380}
                 height={chalkLayout ? chalkLayout.totalHeight : 0}
                 viewBox={`0 0 380 ${chalkLayout ? chalkLayout.totalHeight : 0}`}
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                style={{ position:'absolute', left:0, top:0, width:380, height:chalkLayout ? chalkLayout.totalHeight : 0, pointerEvents:'none', zIndex:0 }}
+                style={{ position:'absolute', left:0, top:0, width:'100%', height:chalkLayout ? chalkLayout.totalHeight : 0, pointerEvents:'none', zIndex:0 }}
               >
                 {chalkLayout && (() => {
                   const { chalkY, boardRectHeight, totalHeight, constants } = chalkLayout;
@@ -862,21 +675,7 @@ if (isCorrect === true) {
               </svg>
               <div
                 ref={chalkTextRef}
-                style={{
-                  position:'relative',
-                  zIndex:1,
-                  padding:'24px 16px 0 16px',
-                  fontFamily:'Roboto, sans-serif',
-                  fontWeight:400,
-                  fontSize:18,
-                  lineHeight:'26px', 
-                  letterSpacing:'-0.02em',
-                  color:'#FFFFFF',
-                  wordBreak:'keep-all',
-                  boxSizing:'border-box',
-                  width:364, 
-                  marginLeft:8
-                }}
+                className="quiz-question-learning-chalkboard-text"
               >
                 {renderLearningContent()}
               </div>
@@ -889,32 +688,20 @@ if (isCorrect === true) {
 
   {/* 핵심 포인트 */}
   {!showResult && (
-    <div style={{ marginTop: showLearning ? 16 : 24 }}>
-      <div style={{
-        background: "#FFE478",
-        boxShadow: "0px 0px 12px rgba(0,0,0,0.08)",
-        borderRadius: "12px",
-        padding: "16px",
-        position: "relative"
-      }}>
-        <div style={{ marginBottom: "16px" }}>
-          <span style={{ fontFamily: "Roboto, sans-serif", fontWeight: 800, fontSize: "24px", lineHeight: "21px", letterSpacing: "-0.02em", color: "#000" }}>💡 핵심 포인트</span>
-        </div>
+    <div className="quiz-question-point-wrap" style={{ marginTop: showLearning ? 16 : 24 }}>
+      <div className="quiz-question-point-card">
+        <div className="quiz-question-point-title">💡 핵심 포인트</div>
         {(() => {
-          // 백엔드에서 받은 힌트 데이터 사용
           const hintContent = question?.hintMd || "힌트가 준비되지 않았습니다.";
-          
           return (
-            <div style={{ width:348, margin:'0 auto', fontFamily: 'Roboto, sans-serif', fontSize:14, lineHeight:'20px', letterSpacing:'-0.03em', color:'#000' }}>
-              <div style={{ whiteSpace: 'pre-line' }}>
-                {hintContent}
-              </div>
+            <div className="quiz-question-point-content">
+              <div className="quiz-question-point-content-pre">{hintContent}</div>
             </div>
           );
         })()}
         {!showHint && (
-          <div style={{ position: "absolute", inset: 0, borderRadius: "12px", backdropFilter: "blur(6px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
-            <button onClick={() => setShowHint(true)} style={{ borderRadius: "12px", background: "transparent", fontWeight: 700, fontSize: "14px", border: "none", cursor: "pointer" }}>
+          <div className="quiz-question-point-hint-blur">
+            <button onClick={() => setShowHint(true)} className="quiz-question-point-hint-btn">
               <svg width="266" height="85" viewBox="0 0 266 85" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect width="266" height="85" rx="16" fill="white" fillOpacity="0.8" />
                 <path d="M132 13.5098C134.023 13.5098 135.671 13.9835 136.971 14.8623C138.27 15.7397 139.104 16.9418 139.636 18.1992C140.325 19.8258 140.542 21.6457 140.612 23.1885H141.169C142.295 23.1886 143.207 24.1013 143.207 25.2266V37.4521C143.206 38.5773 142.295 39.4891 141.169 39.4893H122.831C121.706 39.489 120.794 38.5772 120.793 37.4521V25.2266C120.793 24.1014 121.705 23.1887 122.831 23.1885H123.375C123.449 21.3902 123.69 19.4337 124.47 17.7656C125.038 16.5524 125.902 15.4547 127.195 14.6758C128.478 13.9027 130.074 13.5098 132 13.5098ZM132 16.5664C130.487 16.5664 129.47 16.8733 128.772 17.2939C128.083 17.7088 127.594 18.3002 127.239 19.0605C126.707 20.1984 126.51 21.626 126.438 23.1885H137.55C137.485 21.8833 137.308 20.5396 136.822 19.3906C136.465 18.5472 135.964 17.87 135.26 17.3945C134.559 16.9206 133.537 16.5665 132 16.5664Z" fill="black" />
@@ -934,49 +721,21 @@ if (isCorrect === true) {
   {/* 하단 버튼 */}
       <div
         ref={buttonRef}
-        style={{
-          position: "fixed",     
-    bottom: 0,        
-    left: 0,
-    right: 0,
-    maxWidth: "390px",     
-    margin: "0 auto",
-    background: "rgba(244, 246, 250, 1)",  
-    padding: "16px",
-    boxSizing: "border-box",
-    display: "flex",
-    justifyContent: "center",
-    zIndex: 10,
-        }}
+        className="quiz-question-bottom-btn-wrap"
       >
         <button
-  disabled={selected === null}   
-onClick={() => {
-    if (!showResult) {
-      onCheck();
-    } else {
-      handleNext();
-    }
-  }}
-
-  style={{
-    width: "100%",
-    padding: "16px",
-    borderRadius: "8px",
-    border: "none",
-    background:
-      selected === null
-        ? "#CACACA" // 선택 전 → 회색
-        : "linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%)",
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: "18px",
-    cursor: selected === null ? "not-allowed" : "pointer",
-  }}
->
-  {showResult ? "다음" : "채점하기"}
-</button>
-
+          disabled={selected === null}
+          onClick={() => {
+            if (!showResult) {
+              onCheck();
+            } else {
+              handleNext();
+            }
+          }}
+          className="quiz-question-bottom-btn"
+        >
+          {showResult ? "다음" : "채점하기"}
+        </button>
       </div>
     </div>
   );
