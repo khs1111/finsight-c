@@ -4,7 +4,6 @@ import {
   dummyProgress, 
   dummyBadges, 
   dummyTopicStats,
-  dummyQuizResponse,
   dummySubmitResponse,
   dummyQuestionsData
 } from '../utils/testData.js';

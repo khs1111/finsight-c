@@ -66,25 +66,6 @@ const totalStages = Math.max(0, totalProblems || 0);
 // active 단계: 현재 푸는 문제 index (모두 끝나면 -1 로 처리)
 const activeStage = currentIndex < totalStages ? currentIndex : -1;
 
-const svgWidth = 336;
-const svgHeight = 627;
-
-// 징검다리 라인
-const steppingStoneLine = (
-  <svg width={svgWidth} height={svgHeight} viewBox={`0 0 ${svgWidth} ${svgHeight}`} fill="none" style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none" }}>
-    <path d="M173.5 594.057C222 588.391 319 554.957 319 466.557C319 378.157 222 359.391 173.5 361.057C124.333 362.89 26.2 350.557 27 286.557C28 206.557 73 170.557 157.5 172.057C242 173.557 314.5 152.057 319 102.557C323.5 53.057 292.5 2.05698 157.5 4.05698"
-      stroke="url(#paint0_linear_903_5358)" strokeWidth="8" strokeDasharray="15 15"
-    />
-    <defs>
-      <linearGradient id="paint0_linear_903_5358" x1="173.203" y1="4" x2="173.203" y2="594.057" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#DEECFF"/>
-        <stop offset="0.764423" stopColor="#DEECFF"/>
-        <stop offset="1" stopColor="#448FFF"/>
-      </linearGradient>
-    </defs>
-  </svg>
-);
-
 // 각 단계별 원(스테이지) 렌더 함수
 
   // 징검다리 스크롤 ref

@@ -1,7 +1,7 @@
 .topic-picker-container {
   width: 100%;
-  max-width: 420px;
-  min-height: 100vh;
+  max-width: 100%;
+  min-height: 100%;
   margin: 0 auto;
   background: #F4F6FA;
   box-sizing: border-box;
@@ -34,7 +34,7 @@
 }
 .topic-picker-card {
   width: 100%;
-  max-width: 412px;
+  max-width: 100%;
   min-height: 68px;
   padding: 18px 18px 14px 18px;
   background: #fff;
@@ -85,7 +85,7 @@
 .topic-picker-topic-block {
   margin-bottom: 24px;
   width: 100%;
-  max-width: 420px;
+  max-width: 100%;
 .topic-picker-card-arrow {
   margin-left: auto;
   display: block;
@@ -127,7 +127,7 @@
   left: 50%;
   bottom: 72px;
   transform: translateX(-50%);
-  max-width: 412px;
+  max-width: 100%;
   width: 380px;
   height: 60px;
   background: #CACACA;
@@ -152,8 +152,8 @@
     padding: 0 0 80px 0;
   }
   .topic-picker-confirm-btn {
-    max-width: 100vw;
-    width: calc(100vw - 24px);
+    max-width: 100%;
+    width: calc(100vw - 32px);
     left: 50%;
     bottom: 16px;
     transform: translateX(-50%);
@@ -161,18 +161,18 @@
   .topic-picker-title {
     font-size: 1.2rem;
     padding: 0 10px;
-    max-width: 100vw;
+    max-width: 100%;
   }
   .topic-picker-card {
-    max-width: 100vw;
+    max-width: 100%;
     padding: 14px 10px 12px 10px;
     border-radius: 10px;
   }
   .topic-picker-topic-block {
-    max-width: 100vw;
+    max-width: 100%;
   }
   .topic-picker-subtopic-list {
-    max-width: 100vw;
+    max-width: 100%;
   }
 }
 }
@@ -182,7 +182,7 @@
   box-shadow: 0 0 8px rgba(0,0,0,0.25);
 @media (max-width: 600px) {
   .topic-picker-container {
-    max-width: 100vw;
+    max-width: 100%;
     padding: 40px 4vw 100px 4vw;
   }
   .topic-picker-title {
@@ -191,16 +191,16 @@
     padding: 0;
   }
   .topic-picker-card {
-    max-width: 100vw;
+    max-width: 100%;
     padding: 14px 10px 12px 10px;
     border-radius: 10px;
   }
   .topic-picker-subtopic-list {
-    max-width: 100vw;
+    max-width: 100%;
   }
   .topic-picker-confirm-btn {
-    max-width: 100vw;
-    width: calc(100vw - 24px);
+    max-width: 100%;
+    width: calc(100% - 24px);
     left: 50%;
     bottom: 16px;
     transform: translateX(-50%);

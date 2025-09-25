@@ -143,7 +143,7 @@ html { box-sizing: border-box; }
   font-size: 16px;
   font-style: normal;
   font-weight: 400;
-  line-height: 100%;
+  line-height: 1.2; /* avoid ascender clipping */
   letter-spacing: 0;
 }
 
@@ -154,7 +154,7 @@ html { box-sizing: border-box; }
   font-size: 20px;
   font-style: normal;
   font-weight: 700;
-  line-height: 100%;
+  line-height: 1.2; /* avoid clipping at normal zoom */
   letter-spacing: 0;
   white-space: pre-line;
   max-width: 100%;
@@ -212,7 +212,7 @@ html { box-sizing: border-box; }
 /* 꺾은선 차트 전체 컨테이너 (흰색 박스) */
 .line-chart-wrap {
   position: relative;
-  background-color: white;
+  background-color: #F9F9F9;
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 10px;
@@ -351,7 +351,7 @@ html { box-sizing: border-box; }
   color: #616161;
   line-height: 1.5;
   margin-top: 14px;
-  margin-left: 8px;
+  margin-left: 4px;
   margin-bottom: -4px;
 }
 
@@ -401,7 +401,7 @@ html { box-sizing: border-box; }
   font-size: 18px;
   font-style: normal;
   font-weight: 700;
-  line-height: normal; /* keep natural metrics */
+  line-height: 1.2; /* avoid ascender clipping at normal zoom */
   letter-spacing: -0.36px;
   white-space: nowrap;
   overflow: hidden;
@@ -417,7 +417,7 @@ html { box-sizing: border-box; }
   font-size: 14px; /* Roboto_R_14 */
   font-style: normal;
   font-weight: 400;
-  line-height: normal;
+  line-height: 1.5; /* better readability and avoid visual clipping */
 }
 
 /* 용어(Glossary) 카드 – 바깥 흰 박스 컨테이너 */
@@ -441,6 +441,7 @@ html { box-sizing: border-box; }
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  padding-top: 2px; /* prevent top glyph clipping */
 }
 
 /* 북마크 버튼 */
@@ -479,6 +480,7 @@ html { box-sizing: border-box; }
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  padding-top: 2px; /* prevent top glyph clipping */
 }
 
 /* 배경지식 카드: 제목 텍스트 */
@@ -488,7 +490,7 @@ html { box-sizing: border-box; }
   font-size: 20px; /* Title2_Roboto_B_20 */
   font-style: normal;
   font-weight: 700;
-  line-height: 100%;
+  line-height: 1.2; /* give breathing room for ascenders */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -503,6 +505,6 @@ html { box-sizing: border-box; }
   font-size: 14px; /* Roboto_R_14 */
   font-style: normal;
   font-weight: 400;
-  line-height: normal;
+  line-height: 1.5; /* natural paragraph rhythm */
   margin-left: 32px;
 }

@@ -7,7 +7,6 @@ import './CommunityPage.css';
 import RankFilterDropdown from '../components/community/RankFilterDropdown';
 import FeedSection from '../components/community/FeedSection';
 import { useNavigate } from 'react-router-dom';
-import Logo from '../components/common/Logo';
 
 // 카테고리 목록 (디자인 스펙 기반) - '오늘의 뉴스' = 전체 개념
 const CATEGORIES = ['오늘의 뉴스', '시황', '채권', '부동산', '원자재'];

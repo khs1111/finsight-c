@@ -31,8 +31,6 @@ function App() {
   };
   
   const isExplore = location.pathname.startsWith('/explore');
-  const isNewsDetail = location.pathname.startsWith("/news/");
-  const isSearch = location.pathname === "/search" || location.pathname.startsWith("/search/");
   const isStudy = location.pathname.startsWith('/study');
   const isAddWord = location.pathname.startsWith('/study/words/add');
   const isCommunity = location.pathname.startsWith('/community');

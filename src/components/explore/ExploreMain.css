@@ -4,7 +4,7 @@
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 412px;
+  max-width: 100%;
   z-index: 120;
   pointer-events: none;
   padding: 0 16px;
@@ -38,7 +38,7 @@
 }
 /* 출석 카드 */
 .explore-main-attendance-card {
-  width: calc(100vw - 32px);
+  width: calc(100% - 32px);
   max-width: 100%;
   margin: 24px auto 0 auto;
   background: #FFFFFF;
@@ -72,7 +72,7 @@
 
 /* 진행도 바 */
 .explore-main-progress-bar {
-  width: calc(100vw - 32px);
+  width: calc(100% - 32px);
   max-width: 100%;
   margin: 24px auto 0 auto;
   height: 12px;
@@ -90,7 +90,7 @@
 
 /* 진행도 바 양쪽 숫자 */
 .explore-main-progress-numbers {
-  width: calc(100vw - 32px);
+  width: calc(100% - 32px);
   max-width: 100%;
   margin: 0 auto;
   display: flex;
@@ -121,9 +121,9 @@
 
 /* 징검다리 영역 래퍼 */
 .explore-main-steppingstones-wrap {
-  width: 100%;
-  max-width: 420px;
-  min-height: 100vh;
+  width: calc(100% - 32px);
+  max-width: 100%;
+  min-height: 100%;
   margin: 0 auto;
   background: #F4F6FA;
   font-family: 'Roboto', sans-serif;

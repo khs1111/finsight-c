@@ -115,7 +115,7 @@ export default function Home() {
             title={item.title}
             description={item.description}
             image={item.image_url}
-            tags={item.tags || []}
+            tags={Array.isArray(item.hashtags) ? item.hashtags : []}
             onClick={() => navigate(`/news/${item.id}`)}
           />
         ))}
@@ -138,5 +138,3 @@ export default function Home() {
     </div>
   );
 }
-
-

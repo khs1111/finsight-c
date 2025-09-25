@@ -71,6 +71,10 @@
   flex: 1 1 auto;
   padding: 12px calc(var(--gutter) + env(safe-area-inset-right, 0px)) 16px calc(var(--gutter) + env(safe-area-inset-left, 0px));
 }
+.live-results {
+  display: flex;
+  flex-direction: column;
+}
 .section-title {
   font-size: 14px; color: #6B7280; margin: 8px 0 12px;
 }

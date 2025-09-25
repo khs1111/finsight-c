@@ -1,4 +1,5 @@
 import './NewsCard.css';
+import React, { useState } from 'react';
 
 // Props:
 // - title: string
@@ -8,6 +9,7 @@ import './NewsCard.css';
 // - tags: array of strings (optional display above description)
 // - onClick: handler
 export default function NewsCard({ title, description, date, image, tags = [], onClick }) {
+  const [showAllTags, setShowAllTags] = useState(false);
   const bgImage = image || 'https://via.placeholder.com/400x200?text=News';
   // Fallback trimming in case line clamp unsupported or description extremely long
   const MAX_LEN = 160; // approx 2 lines on mobile
@@ -16,7 +18,7 @@ export default function NewsCard({ title, description, date, image, tags = [], o
     : description;
 
   return (
-    <div className="news-card gradient-border" onClick={onClick}>
+    <div className="news-card" onClick={onClick}>
       <div
         className="news-card__image-header"
         style={{
@@ -27,10 +29,21 @@ export default function NewsCard({ title, description, date, image, tags = [], o
       </div>
       <div className="news-card__body">
         {tags.length > 0 && (
-          <div className="news-card__tags-row">
-            {tags.map((t) => (
-              <span key={t}>{t}</span>
+          <div className="news-card__tags-row" onClick={(e) => e.stopPropagation()}>
+            {(showAllTags ? tags : tags.slice(0, 3)).map((t, i) => (
+              <span key={`${t}-${i}`} className="news-card__tag-chip">
+                <span className="news-card__tag-text">{t}</span>
+              </span>
             ))}
+            {tags.length > 3 && !showAllTags && (
+              <button
+                type="button"
+                className="news-card__tag-chip news-card__tag-more"
+                onClick={(e) => { e.stopPropagation(); setShowAllTags(true); }}
+              >
+                <span className="news-card__tag-text">더보기...</span>
+              </button>
+            )}
           </div>
         )}
   <p className="news-card__description">{truncatedDescription}</p>
@@ -41,4 +54,3 @@ export default function NewsCard({ title, description, date, image, tags = [], o
     </div>
   );
 }
-

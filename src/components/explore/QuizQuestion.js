@@ -14,7 +14,7 @@
  */
 import React, { useState, useRef, useEffect } from "react";
 import "./QuizQuestion.css";
-import { getQuiz, submitAnswer } from "../../api/explore";
+
 import ProgressHeader from "./ProgressHeader";
 
 /**
@@ -44,8 +44,7 @@ export default function QuizQuestion({ current,
   const [showLearning, setShowLearning] = useState(false);        // 학습 모드 표시 여부
   const [showHint, setShowHint] = useState(false);               // 힌트 표시 여부
   const [learningText, setLearningText] = useState("");          // 학습 모드 텍스트
-  const [learningLoading, setLearningLoading] = useState(false); // 학습 모드 로딩 상태
-  const [learningError, setLearningError] = useState(null);      // 학습 모드 에러 상태
+
 
   // 📚 문제 데이터 처리
   const questionList = questions && questions.length > 0 ? questions : [];
@@ -70,14 +69,7 @@ export default function QuizQuestion({ current,
    * @param {string} text - 정규화할 텍스트
    * @returns {string} - 정규화된 텍스트
    */
-  const normalizeLearning = (text) => {
-    if (!text) return '';
-    return text
-      .replace(/\r\n?/g, '\n')          // 윈도우 CRLF -> LF
-      .replace(/[\u2028\u2029]/g, '\n') // line / paragraph separator -> LF
-      // 의도치 않은 3개 이상 연속 공백 줄은 2줄로 축소 
-      .replace(/\n{3,}/g, '\n\n');
-  };
+
 
   /**
    * 🎨 학습 콘텐츠 렌더링 함수
@@ -279,8 +271,7 @@ export default function QuizQuestion({ current,
     setChalkLayout(null);
     setImgError(false);
     setLearningText("");
-    setLearningLoading(false);
-    setLearningError(null);
+
     
     // 🖼️ 기사 이미지 타입의 경우 이미지 소스 설정 (Q4 폴백 지원)
     if (question?.type === 'articleImage') {
@@ -299,9 +290,12 @@ export default function QuizQuestion({ current,
     
     try {
       // 🔄 로딩 상태 시작
-      setLearningLoading(true);
-      setLearningError(null);
-      
+
+      // 문제 1번(인덱스 0)일 때 더미 텍스트 적용
+      if (current === 0) {
+        setLearningText("• 더미 문제 1번의 학습 칠판 텍스트입니다.\n• 핵심 개념을 여기에 입력하세요.\n→ 추가 설명이나 예시도 가능합니다.");
+        return;
+      }
       // 📚 백엔드에서 받은 퀴즈 데이터에서 학습 내용 추출 (우선순위 순)
       let text = "";
       if (q.solvingKeypointsMd) {
@@ -317,16 +311,11 @@ export default function QuizQuestion({ current,
         // ⚠️ 학습 내용이 없는 경우 기본 메시지
         text = "이 문제에 대한 학습 내용이 준비되지 않았습니다.";
       }
-      
       // ✅ 추출된 학습 텍스트 설정
       setLearningText(text);
     } catch (e) {
       // 🚨 학습 내용 로드 실패 처리
       console.error('학습 내용 로드 실패:', e);
-      setLearningError(e);
-    } finally {
-      // 🔄 로딩 상태 해제
-      setLearningLoading(false);
     }
   }, [showLearning, question]); // 학습 모드 토글 또는 문제 변경 시 실행
 
@@ -365,14 +354,13 @@ export default function QuizQuestion({ current,
 
       // 📍 분필 라인 Y 위치 계산
       const chalkY = TOP_PAD + textHeight + CONTENT_GAP;
-      // 🧮 전체 칠판 높이 계산 (분필 아래 11px 추가)
-      const totalHeight = chalkY + CHALK_BAND_HEIGHT + BOTTOM_EXTRA + BOTTOM_BAR_HEIGHT;
+  // 🧮 전체 칠판 높이 계산 (분필 아래 11px 추가)
+  // totalHeight 제거 (boardRectHeight만 사용)
       // 📏 칠판 배경 높이 계산 (분필 아래 11px 추가)
       const boardRectHeight = chalkY + CHALK_BAND_HEIGHT + BOARD_OVERLAP + BOTTOM_EXTRA;
 
       // 💾 계산된 레이아웃 정보 저장
       setChalkLayout({
-        totalHeight,
         chalkY,
         boardRectHeight,
         constants: { TOP_PAD, SIDE_PAD, CONTENT_GAP, CHALK_BAND_HEIGHT, BOTTOM_BAR_HEIGHT, BOARD_OVERLAP, BOTTOM_EXTRA }
@@ -651,17 +639,17 @@ export default function QuizQuestion({ current,
           </div>
           <div style={{ marginBottom:1 }} />
           <div className="quiz-question-learning-chalkboard-wrap">
-            <div className="quiz-question-learning-chalkboard-inner" style={{ height: chalkLayout ? chalkLayout.totalHeight : 'auto' }}>
+            <div className="quiz-question-learning-chalkboard-inner" style={{ height: chalkLayout ? chalkLayout.boardRectHeight : 'auto' }}>
               <svg
                 width={chalkLayout ? '100%' : 380}
-                height={chalkLayout ? chalkLayout.totalHeight : 0}
-                viewBox={`0 0 380 ${chalkLayout ? chalkLayout.totalHeight : 0}`}
+                height={chalkLayout ? chalkLayout.boardRectHeight : 0}
+                viewBox={`0 0 380 ${chalkLayout ? chalkLayout.boardRectHeight : 0}`}
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                style={{ position:'absolute', left:0, top:0, width:'100%', height:chalkLayout ? chalkLayout.totalHeight : 0, pointerEvents:'none', zIndex:0 }}
+                style={{ position:'absolute', left:0, top:0, width:'100%', height:chalkLayout ? chalkLayout.boardRectHeight : 0, pointerEvents:'none', zIndex:0 }}
               >
                 {chalkLayout && (() => {
-                  const { chalkY, boardRectHeight, totalHeight, constants } = chalkLayout;
+                  const { chalkY, boardRectHeight, constants } = chalkLayout;
                   const { CHALK_BAND_HEIGHT, BOTTOM_BAR_HEIGHT } = constants;
                   return (
                     <g>

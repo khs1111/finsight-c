@@ -8,8 +8,8 @@ import EllipsePoint from '../assets/newspng/Ellipse 212.svg';
 
 // --- 1단계: 단위(Unit) 매핑 객체 및 함수 추가 ---
 const INDICATOR_UNITS = {
-  "kr.cpi.headline.m": "(2024=100)", // 소비자물가지수
-  "kr.ppi.m": "(2024=100)",          // 생산자물가지수
+  "kr.cpi.headline.m": "(2020=100)", // 소비자물가지수
+  "kr.ppi.m": "(2020=100)",          // 생산자물가지수
   "kr.base.rate.d": "%",             // 기준금리
   "fx.usdkrw.m": "원",               // 환율
   "kr.current.account.m": "백만 달러", // 경상수지
@@ -39,13 +39,18 @@ const parseToDate = (d) => {
 const monthsBetween = (a, b) => (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
 
 const isRegularTimeSeries = (frequency, observations) => {
+  // 일(D) 빈도: 주말 등 불규칙한 간격이 있어도 꺾은선 차트로 표시하도록 처리
+  if (frequency === 'D') {
+    return Array.isArray(observations) && observations.length >= 2;
+  }
+
   if (!Array.isArray(observations) || observations.length < 4) return false;
   const dates = observations
     .map(o => parseToDate(o.date))
     .filter(Boolean)
     .sort((a, b) => a - b);
   if (dates.length < 4) return false;
-  const expectedStep = frequency === 'M' ? 1 : frequency === 'Q' ? 3 : 12; // default: yearly
+  const expectedStep = frequency === 'M' ? 1 : frequency === 'Q' ? 3 : 12;
   for (let i = 1; i < dates.length; i++) {
     const step = monthsBetween(dates[i - 1], dates[i]);
     if (step !== expectedStep) return false;
@@ -173,7 +178,13 @@ const LineChart = ({ title, description, data }) => {
             if (d) {
               if (String(p.date).includes('~')) {
                 label = p.date;
+              } else if (data.frequency === 'D') {
+                // 일 단위: 관측 날짜 기준으로 일자 표기 (예: 9월 22일)
+                const m = d.getMonth() + 1;
+                const day = d.getDate();
+                label = `${m}월 ${day}일`;
               } else {
+                // 월/분기 등: 기존 로직 유지
                 const m = d.getMonth() + 1;
                 label = m === 1 ? d.getFullYear() : `${m}월`;
               }

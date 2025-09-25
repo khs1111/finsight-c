@@ -72,6 +72,39 @@
   font-size: 12px;
 }
 
+.news-card__tag-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px; /* 위/아래 4px 유지 */
+  border-radius: 30px; /* 알약 모양 유지 */
+  background: #DCEAFF; /* 기존 pill 배경 복원 */
+  border: 0; /* pill 테두리는 배경으로 표현 */
+  font-family: Roboto, sans-serif; /* Typography 규격 */
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1; /* 콘텐츠 박스를 글자 크기에 맞춰 정확히 중앙 정렬 */
+  white-space: nowrap;
+}
+
+.news-card__tag-more {
+  border: 0;
+  background: #DCEAFF; /* pill 배경 동일 */
+  cursor: pointer;
+}
+
+/* 칩 안의 텍스트를 그라데이션 처리 */
+.news-card__tag-text {
+  background: var(--button_color, linear-gradient(104deg, #234E8F));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  display: inline-block;
+  line-height: 12px; /* 글자크기와 동일하게 맞춰 정확히 중앙 */
+}
+
 .news-card__description {  
   font-family: Roboto, sans-serif;
   font-size: 14px;

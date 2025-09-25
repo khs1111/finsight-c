@@ -61,6 +61,17 @@ export const getArticleDetail = async (articleId) => {
 };
 
 /**
+ * 키워드/해시태그 검색
+ * @param {string} q - 검색어
+ * @param {number} skip - 건너뛰기
+ * @param {number} limit - 개수(최대 100)
+ */
+export const searchArticles = async (q, skip = 0, limit = 20) => {
+  const encoded = encodeURIComponent(q);
+  return await apiRequest(`/api/articles/search?q=${encoded}&skip=${skip}&limit=${limit}`);
+};
+
+/**
  * 카테고리 매핑 (한글 카테고리명을 서버에서 사용하는 카테고리명으로 변환)
  */
 export const CATEGORY_MAPPING = {
