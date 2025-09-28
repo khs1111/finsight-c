@@ -3,7 +3,7 @@
 .quiz-question-container {
   width: 100%;
   min-height: 100vh;
-  max-width: 390px;
+  max-width: 100%;
   margin: 0 auto;
   background: #F4F6FA;
   box-sizing: border-box;
@@ -36,18 +36,27 @@
   margin-bottom: 12px;
 }
 
+
 .quiz-question-article-img-wrapper {
   width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   margin-bottom: 16px;
   position: relative;
+  box-sizing: border-box;
+  padding: 0;
+  display: flex;
+  justify-content: center;
 }
 
 .quiz-question-article-img {
-  width: 100%;
-  border-radius: 12px;
+  width: calc(100vw - 32px);
+  max-width: 100%;
+  border-radius: 10px;
   display: block;
   object-fit: cover;
   transition: height 0.25s ease;
+  box-sizing: border-box;
 }
 
 .quiz-question-article-img-placeholder {
@@ -137,6 +146,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-left: 24px;
 }
 .quiz-question-explanation-header {
   display: flex;
@@ -201,19 +211,22 @@
   margin-top: 16px;
   width: 100%;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-.quiz-question-learning-svg-wrap + .quiz-question-learning-chalkboard-wrap {
-  margin-top: 16px;
-}
+
 .quiz-question-learning-svg-wrap {
-  position: relative;
-  width: 100%;
-  min-height: 0;
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  /* Ant and speech bubble gap set to 10px */
+  justify-content: space-between;
+  gap: 12px; /* 말풍선-개미 간격 */
+  margin-top: 8px; /* 칠판 위 12px */
+  padding-left: 24px; /* 왼쪽 여백 */
+  padding-right: 39px; /* 오른쪽 여백 (개미 위치 보정) */
+  width: 100%;
+  box-sizing: border-box;
 }
 /* Speech bubble and ant wrapper */
 /* 원래 코드로 복원: 래퍼 제거 */
@@ -221,34 +234,17 @@
 
 /* Speech bubble */
 .quiz-question-learning-svg-inner {
-  position: relative;
-  left: 0px;
-  top: 0;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: 38px;
-  max-width: 100%;
-  min-width: 160px;
   box-sizing: border-box;
-  margin-right: 0;
-  flex: 1 1 auto;
-  /* Speech bubble width is now responsive */
 }
 
 /* Ant character responsive class */
 .quiz-question-learning-ant {
-  position: relative;
   width: 72px;
   height: 72px;
-  min-width: 40px;
-  min-height: 40px;
-  max-width: 18vw;
-  max-height: 18vw;
-  box-sizing: border-box;
-  margin-left: 0;
-  margin-bottom: 0;
-  margin-right: 39px;
-  flex: 0 0 auto;
-  /* Ant character margin-right set to 39px */
+  flex-shrink: 0;
 }
 
 
@@ -413,18 +409,18 @@
     width: 100%;
   }
   .quiz-question-learning-svg-wrap {
-    gap: 1px;
+    gap: 10px;
+    padding-left: 24px;
   }
   .quiz-question-learning-svg-inner {
-    left: 8px;
-    width: 60vw;
-    min-width: 120px;
-    max-width: 220px;
-    margin-right: 0;
-    flex: 0 0 auto;
+    left: 0;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 auto;
   }
   .quiz-question-learning-ant {
-    left: 0px;
+    left: 0;
     width: 48px;
     height: 48px;
     min-width: 32px;
@@ -433,6 +429,7 @@
     max-height: 16vw;
     margin-left: 0;
     margin-bottom: 12px;
+    margin-right: 39px;
     flex: 0 0 auto;
   }
   .quiz-question-learning-chalkboard-wrap {

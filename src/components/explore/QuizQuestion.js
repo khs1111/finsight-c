@@ -373,8 +373,9 @@ export default function QuizQuestion({ current,
       });
     };
 
-    const raf = requestAnimationFrame(measure);
-    return () => cancelAnimationFrame(raf);
+  measure(); // 초기 1회 실행
+  window.addEventListener('resize', measure);
+  return () => window.removeEventListener('resize', measure);
   }, [showLearning, current, question?.id]);
 
   /**
@@ -645,7 +646,7 @@ export default function QuizQuestion({ current,
           </div>
           <div style={{ marginBottom:1 }} />
           <div className="quiz-question-learning-chalkboard-wrap">
-            <div className="quiz-question-learning-chalkboard-inner" style={{ height: chalkLayout ? chalkLayout.boardRectHeight : 'auto' }}>
+            <div className="quiz-question-learning-chalkboard-inner" style={{ minHeight: chalkLayout ? chalkLayout.boardRectHeight : 120 }}>
               <svg
                 width={chalkLayout ? '100%' : 380}
                 height={chalkLayout ? chalkLayout.boardRectHeight : 0}

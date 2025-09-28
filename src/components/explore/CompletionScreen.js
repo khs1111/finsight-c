@@ -46,7 +46,7 @@ export default function CompletionScreen({
     <div
       style={{
         width: "100%",
-        maxWidth: "412px",
+        maxWidth: "100%",
         minHeight: "917px",
         margin: "0 auto",
         background: "#F4F6FA",
@@ -57,10 +57,15 @@ export default function CompletionScreen({
       {/* ===== Status Bar ===== */}
       <div
         style={{
+          position: "absolute",
+          top: "98px", // speech bubble top (138px) - 40px
+          left: 0,
+          width: "100%",
           height: "48px",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
+          zIndex: 3,
         }}
       ></div>
 
@@ -69,9 +74,9 @@ export default function CompletionScreen({
         style={{
           position: "absolute",
           top: "138px", // 상태바(48px) 아래 40px 간격 => 48 + 40 = 88
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "165px",
+          left: "24px",
+          right: "24px",
+          width: "calc(100% - 48px)",
           height: "88px",
           filter: "drop-shadow(0px 0px 12px rgba(0,0,0,0.08))",
           display: "flex",

@@ -1,64 +1,6 @@
 // 주제 선택
 import { useState } from "react";
 
-// TopicCard inlined for local use (Figma spec: font 400, center)
-function TopicCard({ title, onClick, active }) {
-  return (
-      <div
-        onClick={onClick}
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          width: 'calc(100vw - 32px)',
-          maxWidth: 380,
-          height: 60,
-          padding: 0,
-          margin: '0 auto',
-          boxSizing: 'border-box',
-          borderRadius: 8,
-          boxShadow: active
-            ? '0 0 0 2px #2D6FF2'
-            : '0 0 2px 0 rgba(0,0,0,0.10)',
-          background: active ? '#F5F8FF' : '#FFF',
-          cursor: 'pointer',
-          fontFamily: 'Roboto',
-          fontWeight: 400,
-          fontSize: 18,
-          color: '#4D4D4D',
-          transition: 'box-shadow 0.2s, background 0.2s',
-        }}
-      >
-        <span style={{
-          flex: 1,
-          textAlign: 'left',
-          fontFamily: 'Roboto',
-          fontWeight: 400,
-          fontStyle: 'normal',
-          fontSize: 18,
-          lineHeight: '100%',
-          letterSpacing: 0,
-          color: '#4D4D4D',
-          userSelect: 'none',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          paddingLeft: 16,
-          display: 'flex',
-          alignItems: 'center',
-          height: '100%',
-        }}>{title}</span>
-        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingRight: 16 }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6 9L12 15L18 9" stroke="#BDBDBD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-      </div>
-  );
-}
-
-
 const subTopicMap = {
   은행: ["예금/적금", "계좌 종류와 기능", "인터넷/모바일 뱅킹", "은행 수수료", "대출 기초 이해"],
   카드: ["체크카드", "신용카드", "선불카드"],

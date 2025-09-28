@@ -381,9 +381,9 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
   
   const subTopicMap = {
     '은행': ['예금/적금', '금융권', '계좌의 종류와 기능', '인터넷/모바일 뱅킹', '대출의 기초 이해'],
-    '카드': ['신용카드', '체크카드', '카드 혜택', '카드 관리'],
-    '세금/절세': ['소득세', '부가가치세', '절세 방법', '세금 신고'],
-    '투자': ['주식', '펀드', '부동산', '채권']
+    '카드': ['체크카드', '신용카드', '선불카드', ],
+    '투자': ['주식', '채권', '펀드'],
+    '세금/절세': ['소득세', '절세 전략']
   };
 
   React.useEffect(() => {
@@ -408,326 +408,64 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
   return (
     <>
       {/* 배경 오버레이 */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.3)',
-          zIndex: 50
-        }}
-        onClick={onClose}
-      />
-      
+      <div className="explore-main-overlay" onClick={onClose} />
+
       {/* 주제/레벨 선택 박스 */}
-      <div style={{
-        position: 'absolute',
-        width: 326,
-        height: subTopicDropdownOpen ? 502 : 326,
-        left: 16,
-        top: 64,
-        background: '#FFFFFF',
-        boxShadow: '0px 0px 8px rgba(10, 26, 51, 0.18)',
-        borderRadius: 8,
-        zIndex: 51,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        padding: 16,
-        gap: 10,
-        boxSizing: 'border-box',
-        transition: 'height 0.3s ease'
-      }}>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
-          padding: 0,
-          gap: 16,
-          width: 294,
-          height: subTopicDropdownOpen ? 469 : 293,
-          flex: 'none',
-          order: 0,
-          alignSelf: 'stretch',
-          flexGrow: 0
-        }}>
-          
+      <div className={`explore-main-selector-box${subTopicDropdownOpen ? ' open' : ''}`}> 
+        <div className={`explore-main-selector-content${subTopicDropdownOpen ? ' open' : ''}`}> 
           {/* 난이도 선택 섹션 */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-            padding: 0,
-            gap: 12,
-            width: 294,
-            height: 63,
-            flex: 'none',
-            order: 0,
-            alignSelf: 'stretch',
-            flexGrow: 0
-          }}>
-            <div style={{
-              width: 294,
-              height: 19,
-              fontFamily: 'Roboto',
-              fontStyle: 'normal',
-              fontWeight: 700,
-              fontSize: 16,
-              lineHeight: '19px',
-              letterSpacing: '-0.02em',
-              color: '#1B1B1B',
-              flex: 'none',
-              order: 0,
-              alignSelf: 'stretch',
-              flexGrow: 0
-            }}>
-              난이도 선택
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 0,
-              gap: 8,
-              width: 294,
-              height: 32,
-              flex: 'none',
-              order: 1,
-              alignSelf: 'stretch',
-              flexGrow: 0
-            }}>
+          <div className="explore-main-level-section">
+            <div className="explore-main-level-title">난이도 선택</div>
+            <div className="explore-main-level-row">
               {levels.map((level) => (
                 <button
                   key={level}
+                  className={`explore-main-level-btn${tempLevel === level ? ' selected' : ''}`}
                   onClick={() => setTempLevel(level)}
-                  style={{
-                    boxSizing: 'border-box',
-                    display: 'flex',
-                    flexDirection: 'row',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    padding: '8px 10px',
-                    gap: 10,
-                    width: '92.67px',
-                    height: 32,
-                    background: tempLevel === level ? '#F4F6FA' : '#E5EFFF',
-                    borderRadius: 8,
-                    border: 'none',
-                    cursor: 'pointer',
-                    flex: 'none',
-                    order: levels.indexOf(level),
-                    flexGrow: 1
-                  }}
                 >
-                  <span style={{
-                    fontFamily: 'Roboto',
-                    fontStyle: 'normal',
-                    fontWeight: tempLevel === level ? 700 : 400,
-                    fontSize: 14,
-                    lineHeight: '16px',
-                    letterSpacing: '-0.04em',
-                    color: tempLevel === level ? 'transparent' : '#234E8F',
-                    background: tempLevel === level ? 'linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%)' : 'none',
-                    WebkitBackgroundClip: tempLevel === level ? 'text' : 'none',
-                    WebkitTextFillColor: tempLevel === level ? 'transparent' : '#234E8F',
-                    backgroundClip: tempLevel === level ? 'text' : 'none',
-                    textFillColor: tempLevel === level ? 'transparent' : '#234E8F'
-                  }}>
-                    {level}
-                  </span>
+                  <span className={`explore-main-level-btn-text${tempLevel === level ? ' selected' : ''}`}>{level}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* 학습 주제 선택 섹션 */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-            padding: 0,
-            gap: 12,
-            width: 294,
-            height: 63,
-            flex: 'none',
-            order: 1,
-            alignSelf: 'stretch',
-            flexGrow: 0
-          }}>
-            <div style={{
-              width: 294,
-              height: 19,
-              fontFamily: 'Roboto',
-              fontStyle: 'normal',
-              fontWeight: 700,
-              fontSize: 16,
-              lineHeight: '19px',
-              letterSpacing: '-0.02em',
-              color: '#1B1B1B',
-              flex: 'none',
-              order: 0,
-              alignSelf: 'stretch',
-              flexGrow: 0
-            }}>
-              학습 주제
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 0,
-              gap: 8,
-              width: 294,
-              height: 32,
-              flex: 'none',
-              order: 1,
-              alignSelf: 'stretch',
-              flexGrow: 0
-            }}>
+          <div className="explore-main-topic-section">
+            <div className="explore-main-topic-title">학습 주제</div>
+            <div className="explore-main-topic-row">
               {topics.map((topic) => (
                 <button
                   key={topic}
+                  className={`explore-main-topic-btn${tempTopic === topic ? ' selected' : ''}`}
+                  type="button"
                   onClick={() => {
                     setTempTopic(topic);
-                    // 주제가 바뀌면 첫 번째 서브토픽으로 자동 설정
                     const firstSubTopic = subTopicMap[topic]?.[0];
                     if (firstSubTopic) {
                       setTempSubTopic(firstSubTopic);
                     }
                   }}
-                  style={{
-                    boxSizing: 'border-box',
-                    display: 'flex',
-                    flexDirection: 'row',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    padding: '8px 10px',
-                    gap: 10,
-                    width: '67.5px',
-                    height: 32,
-                    background: tempTopic === topic ? '#F4F6FA' : '#E5EFFF',
-                    borderRadius: 8,
-                    border: 'none',
-                    cursor: 'pointer',
-                    flex: 'none',
-                    order: topics.indexOf(topic),
-                    flexGrow: 1
-                  }}
                 >
-                  <span style={{
-                    fontFamily: 'Roboto',
-                    fontStyle: 'normal',
-                    fontWeight: tempTopic === topic ? 700 : 400,
-                    fontSize: 14,
-                    lineHeight: '16px',
-                    letterSpacing: '-0.04em',
-                    color: tempTopic === topic ? 'transparent' : '#234E8F',
-                    background: tempTopic === topic ? 'linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%)' : 'none',
-                    WebkitBackgroundClip: tempTopic === topic ? 'text' : 'none',
-                    WebkitTextFillColor: tempTopic === topic ? 'transparent' : '#234E8F',
-                    backgroundClip: tempTopic === topic ? 'text' : 'none',
-                    textFillColor: tempTopic === topic ? 'transparent' : '#234E8F'
-                  }}>
-                    {topic}
-                  </span>
+                  <span className="explore-main-topic-btn-text">{topic}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* 세부 주제 섹션 */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-            padding: 0,
-            gap: 8,
-            width: 294,
-            height: 19,
-            flex: 'none',
-            order: 2,
-            alignSelf: 'stretch',
-            flexGrow: 0
-          }}>
-            <div style={{
-              width: 294,
-              height: 19,
-              fontFamily: 'Roboto',
-              fontStyle: 'normal',
-              fontWeight: 700,
-              fontSize: 16,
-              lineHeight: '19px',
-              letterSpacing: '-0.02em',
-              color: '#1B1B1B',
-              flex: 'none',
-              order: 0,
-              alignSelf: 'stretch',
-              flexGrow: 0
-            }}>
-              세부 주제
-            </div>
+          <div className="explore-main-subtopic-section">
+            <div className="explore-main-subtopic-title">세부 주제</div>
           </div>
 
           {/* 세부 주제 드롭다운 컨테이너 */}
-          <div style={{
-            boxSizing: 'border-box',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            padding: 0,
-            width: 294,
-            height: subTopicDropdownOpen ? 220 : 44,
-            border: '1px solid #9B9B9B',
-            borderRadius: 8,
-            flex: 'none',
-            order: 3,
-            alignSelf: 'stretch',
-            flexGrow: 0,
-            transition: 'height 0.3s ease'
-          }}>
+          <div className={`explore-main-subtopic-dropdown${subTopicDropdownOpen ? ' open' : ''}`}> 
             {/* 드롭다운 헤더 */}
             <button
+              className={`explore-main-subtopic-dropdown-header${subTopicDropdownOpen ? ' open' : ''}`}
               onClick={() => setSubTopicDropdownOpen(!subTopicDropdownOpen)}
-              style={{
-                boxSizing: 'border-box',
-                display: 'flex',
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '14px 16px',
-                gap: 10,
-                width: 294,
-                height: 44,
-                background: '#FFFFFF',
-                border: subTopicDropdownOpen ? '1px solid #9B9B9B' : 'none',
-                borderRadius: subTopicDropdownOpen ? '8px 8px 0px 0px' : 8,
-                cursor: 'pointer',
-                flex: 'none',
-                order: 0,
-                alignSelf: 'stretch',
-                flexGrow: 0
-              }}
             >
-              <span style={{
-                fontFamily: 'Roboto',
-                fontStyle: 'normal',
-                fontWeight: 500,
-                fontSize: 14,
-                lineHeight: '16px',
-                color: '#4D4D4D'
-              }}>
-                {tempSubTopic}
-              </span>
-              <div style={{
-                width: 16,
-                height: 16,
-                transform: subTopicDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s'
-              }}>
+              <span className="explore-main-subtopic-dropdown-text">{tempSubTopic}</span>
+              <div className={`explore-main-subtopic-dropdown-arrow${subTopicDropdownOpen ? ' open' : ''}`}> 
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M4 6L8 10L12 6" stroke="#999999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
@@ -738,92 +476,20 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
             {subTopicDropdownOpen && subTopicMap[tempTopic]?.slice(1).map((subTopic, index) => (
               <button
                 key={subTopic}
+                className={`explore-main-subtopic-dropdown-option${index === subTopicMap[tempTopic].length - 2 ? ' last' : ''}`}
                 onClick={() => {
                   setTempSubTopic(subTopic);
                   setSubTopicDropdownOpen(false);
                 }}
-                style={{
-                  boxSizing: 'border-box',
-                  display: 'flex',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  padding: '14px 16px',
-                  gap: 10,
-                  width: index === subTopicMap[tempTopic].length - 2 ? 294 : 292,
-                  height: 44,
-                  background: '#FFFFFF',
-                  borderBottom: index === subTopicMap[tempTopic].length - 2 ? 'none' : '1px solid #F5F5F5',
-                  borderLeft: index === subTopicMap[tempTopic].length - 2 ? '1px solid #9B9B9B' : 'none',
-                  borderRight: index === subTopicMap[tempTopic].length - 2 ? '1px solid #9B9B9B' : 'none',
-                  borderTop: 'none',
-                  borderBottomLeftRadius: index === subTopicMap[tempTopic].length - 2 ? 8 : 0,
-                  borderBottomRightRadius: index === subTopicMap[tempTopic].length - 2 ? 8 : 0,
-                  cursor: 'pointer',
-                  flex: 'none',
-                  order: index + 1,
-                  flexGrow: 0,
-                  alignSelf: index === subTopicMap[tempTopic].length - 2 ? 'stretch' : 'auto'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = '#F9F9F9';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = '#FFFFFF';
-                }}
               >
-                <span style={{
-                  fontFamily: 'Roboto',
-                  fontStyle: 'normal',
-                  fontWeight: 500,
-                  fontSize: 14,
-                  lineHeight: '16px',
-                  color: '#4D4D4D',
-                  flex: 'none',
-                  order: 0,
-                  flexGrow: 0
-                }}>
-                  {subTopic}
-                </span>
+                <span className="explore-main-subtopic-dropdown-option-text">{subTopic}</span>
               </button>
             ))}
           </div>
 
           {/* 확인 버튼 */}
-          <button
-            onClick={handleConfirm}
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              justifyContent: 'center',
-              alignItems: 'center',
-              padding: '11px 101px',
-              gap: 10,
-              width: 294,
-              height: 40,
-              background: 'linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%)',
-              borderRadius: 8,
-              border: 'none',
-              cursor: 'pointer',
-              flex: 'none',
-              order: 4,
-              alignSelf: 'stretch',
-              flexGrow: 0
-            }}
-          >
-            <span style={{
-              fontFamily: 'Roboto',
-              fontStyle: 'normal',
-              fontWeight: 700,
-              fontSize: 14,
-              lineHeight: '16px',
-              letterSpacing: '-0.02em',
-              color: '#FFFFFF',
-              flex: 'none',
-              order: 0,
-              flexGrow: 0
-            }}>
-              확인
-            </span>
+          <button className="explore-main-selector-confirm-btn" onClick={handleConfirm}>
+            <span className="explore-main-selector-confirm-btn-text">확인</span>
           </button>
         </div>
       </div>
