@@ -8,7 +8,7 @@ const TOPICS = ['경제','증시','부동산','AI','테크','기업','ETF','원�
 
 export default function TopicSelection() {
   const [selected, setSelected] = useState([]);
-  const { econTopics, techTopics, companyInterests, commitFinalTopics } = useWizard();
+  const { econTopics, techTopics, commitFinalTopics } = useWizard();
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('newsletterSelectedTopics') || '[]');

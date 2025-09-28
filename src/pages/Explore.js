@@ -6,7 +6,7 @@ import ExploreMain from "../components/explore/ExploreMain";
 import QuizQuestion from "../components/explore/QuizQuestion";
 import CompletionScreen from "../components/explore/CompletionScreen";
 
-import { getQuiz, getQuestions as apiGetQuestions } from "../api/explore";
+import {getQuestions as apiGetQuestions } from "../api/explore";
 import { dummyQuizzes } from "../utils/testData.js";
 import CategoryNav from "../components/news/CategoryNav";
 import { useNavVisibility } from "../components/navigation/NavVisibilityContext";

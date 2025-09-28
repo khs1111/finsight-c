@@ -9,7 +9,6 @@ import StepEconomyTopics from './StepEconomyTopics';
 import StepCompanyInterest from './StepCompanyInterest';
 import PostSubscribe from './PostSubscribe';
 import { NewsletterWizardProvider } from './NewsletterWizardContext';
-import { STORAGE_KEYS } from './wizardSteps';
 
 export default function NewsletterRoot() {
   const navigate = useNavigate();
