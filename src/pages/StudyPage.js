@@ -25,7 +25,7 @@ export default function StudyPage() {
     if (current && current !== tab) {
       setTab(current === 'wrong' ? 'wrong' : 'words');
     }
-  }, [tab]); // 의존성 배열에 tab 추가
+  }, [tab, searchParams]); // ESLint: searchParams 의존성 추가
 
   const handleChange = (next) => {
     // 탭 바꿀 때 삭제/추가 폼 상태 초기화

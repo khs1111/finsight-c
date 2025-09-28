@@ -110,11 +110,11 @@ function useMissionSet(year, month) {
 
   const now = new Date();
   const isCurrent = now.getFullYear() === year && now.getMonth() === month;
-  const base = ['1','2','3','4','5','6','7','8','9','10','11','13','15','16','17','18','19'];
   return useMemo(() => {
+    const base = ['1','2','3','4','5','6','7','8','9','10','11','13','15','16','17','18','19'];
     if (!isCurrent) return new Set();
     return new Set(base.map(d => `${year}-${z(month+1)}-${z(parseInt(d,10))}`));
-  }, [year, month, isCurrent, base]);
+  }, [year, month, isCurrent]);
 }
 
 function Calendar() {
