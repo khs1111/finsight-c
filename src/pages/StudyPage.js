@@ -25,12 +25,12 @@ export default function StudyPage() {
     if (current && current !== tab) {
       setTab(current === 'wrong' ? 'wrong' : 'words');
     }
-  }, [searchParams]);
+  }, [tab]); // 의존성 배열에 tab 추가
 
   const handleChange = (next) => {
     // 탭 바꿀 때 삭제/추가 폼 상태 초기화
     setTab(next);
-  setDeleteMode(false);
+    setDeleteMode(false);
     setSearchParams({ tab: next });
   };
 

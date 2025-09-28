@@ -65,22 +65,6 @@ export default function StepEconomyTopics() {
   );
 }
 
-const backBtnStyle = {
-  position: 'fixed',
-  top: 16,
-  left: 16,
-  width: 40,
-  height: 40,
-  background: '#fff',
-  border: '1px solid #E2E8F0',
-  borderRadius: 12,
-  fontSize: 20,
-  lineHeight: '36px',
-  textAlign: 'center',
-  cursor: 'pointer',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.06)'
-};
-
 const outer = { width: '100%', minHeight: '100vh', background: '#F4F6FA', display: 'flex', justifyContent: 'center' };
 const canvas = { position: 'relative', width: 412, maxWidth: '100%', minHeight: 917, background: '#F4F6FA', paddingBottom: 120 };
 const titleBlock = { position: 'absolute', top: 152, left: 16, width: 380 };

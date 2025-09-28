@@ -114,7 +114,7 @@ function useMissionSet(year, month) {
   return useMemo(() => {
     if (!isCurrent) return new Set();
     return new Set(base.map(d => `${year}-${z(month+1)}-${z(parseInt(d,10))}`));
-  }, [year, month, isCurrent]);
+  }, [year, month, isCurrent, base]);
 }
 
 function Calendar() {

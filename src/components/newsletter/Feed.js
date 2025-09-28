@@ -196,10 +196,6 @@ const bannerSub = { fontSize:12, fontWeight:400, color:'#122C54', letterSpacing:
 const countText = { position:'absolute', top:258, left:16, fontSize:14, fontWeight:500, color:'#616161', letterSpacing:'-0.04em' };
 const cardsColumn = { position:'absolute', top:290, left:32, width:348, display:'flex', flexDirection:'column', gap:16 };
 // 주제별 전용 레이아웃
-const categoryRow = { position:'absolute', top:162, left:0, width:CANVAS_W, display:'flex', flexWrap:'nowrap', padding:'16px', gap:8, overflowX:'auto' };
-const catBtnBase = { height:32, padding:'0 10px', borderRadius:30, fontSize:14, letterSpacing:'-0.03em', cursor:'pointer', border:'1px solid #DFE5EE', background:'#EEF2F6', color:'#626262', fontFamily:'Roboto, sans-serif', fontWeight:400, flex:'0 0 auto', display:'flex', alignItems:'center' };
-const catBtnActive = { ...catBtnBase, background:'linear-gradient(104.45deg,#448FFF -6.51%,#4833D0 105.13%)', color:'#F9F9F9', fontWeight:700, border:'none', textShadow:'0 0 2px rgba(0,0,0,0.25)' };
-const catBtn = catBtnBase;
 const topicDivider = { position:'absolute', top:144, left:0, width:CANVAS_W, height:2, background:'#E6EBF2' };
 const topicFlow = { position:'absolute', top:146, left:0, width:CANVAS_W, height:768, display:'flex', flexDirection:'column' };
 const topicSectionHeader = { width:CANVAS_W, display:'flex', flexDirection:'column', alignItems:'flex-start' };
