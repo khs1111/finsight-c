@@ -1,9 +1,7 @@
 // 뉴스레터 피드 화면 (HOT / 주제별 / My news 탭)
 import React, { useState, useEffect } from 'react';
-import { CTA_WITH_NAV_BOTTOM } from './layoutConstants';
 import Logo from './Logo';
 import { useNavigate } from 'react-router-dom';
-import { STORAGE_KEYS } from './wizardSteps';
 import { SAMPLE_ARTICLES } from './feedData';
 import newsIcon from '../../assets/news-icon.png';
 import targetIcon from '../../assets/target-icon.png';
@@ -142,15 +140,6 @@ function Tabs({ active, onChange }) {
   );
 }
 
-function CategoryRow({ categories, selected, onSelect }) {
-  return (
-    <div style={categoryRow}>      
-      {categories.map(cat => (
-        <button key={cat} onClick={() => onSelect(cat)} style={cat === selected ? catBtnActive : catBtn}>{cat}</button>
-      ))}
-    </div>
-  );
-}
 
 function Banner() {
   const navigate = useNavigate();
@@ -193,7 +182,6 @@ function ArticleCard({ data, onClick }) {
 const pageOuter = { width: '100%', display: 'flex', justifyContent: 'center', background: '#F4F6FA', minHeight: '100vh', paddingBottom: 120 };
 const canvas = { position: 'relative', width: CANVAS_W, maxWidth: '100%', background: '#F4F6FA', minHeight: 917, fontFamily: 'Roboto, sans-serif' };
 const topBar = { position: 'absolute', top: 64, left: 16, width: CONTENT_W, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 };
-const logoImg = { width:120, height:'auto', objectFit:'contain' };
 const searchIcon = { width:24, height:24, borderRadius:4, border:'1px solid #474747', background:'#fff', position:'relative' };
 const tabsWrap = { position:'absolute', top:108, left:16, width:CONTENT_W, height:38, display:'flex', gap:16, zIndex: 10 };
 const tabCol = { flex:1, display:'flex', flexDirection:'column', alignItems:'center', cursor:'pointer' };
@@ -206,33 +194,12 @@ const bannerTextCol = { display:'flex', flexDirection:'column', gap:8 };
 const bannerTitle = { fontSize:18, fontWeight:700, color:'#10274A', letterSpacing:'-0.02em', lineHeight:'21px' };
 const bannerSub = { fontSize:12, fontWeight:400, color:'#122C54', letterSpacing:'-0.02em', lineHeight:'14px', maxWidth:255 };
 const countText = { position:'absolute', top:258, left:16, fontSize:14, fontWeight:500, color:'#616161', letterSpacing:'-0.04em' };
-const resetWrap = { position:'absolute', top:64, right:16, transform:'translateY(32px)', display:'flex', justifyContent:'flex-end', width:140 };
-const resetBtn = { background:'none', border:'1px solid #CBD5E1', borderRadius:20, padding:'4px 10px', fontSize:11, cursor:'pointer', color:'#475569' };
 const cardsColumn = { position:'absolute', top:290, left:32, width:348, display:'flex', flexDirection:'column', gap:16 };
 // 주제별 전용 레이아웃
 const categoryRow = { position:'absolute', top:162, left:0, width:CANVAS_W, display:'flex', flexWrap:'nowrap', padding:'16px', gap:8, overflowX:'auto' };
 const catBtnBase = { height:32, padding:'0 10px', borderRadius:30, fontSize:14, letterSpacing:'-0.03em', cursor:'pointer', border:'1px solid #DFE5EE', background:'#EEF2F6', color:'#626262', fontFamily:'Roboto, sans-serif', fontWeight:400, flex:'0 0 auto', display:'flex', alignItems:'center' };
 const catBtnActive = { ...catBtnBase, background:'linear-gradient(104.45deg,#448FFF -6.51%,#4833D0 105.13%)', color:'#F9F9F9', fontWeight:700, border:'none', textShadow:'0 0 2px rgba(0,0,0,0.25)' };
 const catBtn = catBtnBase;
-const topicBannerWrap = { position:'absolute', top:224, left:16, width:CONTENT_W };
-const topicCountWrap = { position:'absolute', top:320, left:16, fontSize:14, fontWeight:500, color:'#616161', letterSpacing:'-0.04em' };
-const topicCardsColumn = { position:'absolute', top:352, left:32, width:348, display:'flex', flexDirection:'column', gap:16, paddingBottom:40 };
-// My news 전용 스타일 (Subscribe 화면과 동일한 absolute positioning 사용)
-const myHeroArea = { position: 'relative', width: CANVAS_W, height: 917, zIndex: 1 };
-const myHeroImage = { position: 'absolute', width: 120, height: 120, left: 'calc(50% - 60px)', top: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const myHeadline = { position: 'absolute', width: 244, height: 24, left: 'calc(50% - 122px)', top: 432, textAlign: 'center', fontFamily: 'Roboto, sans-serif', fontWeight: 700, fontSize: 20, lineHeight: '24px', letterSpacing: '-0.02em', color: '#000000', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const mySubCopy = { position: 'absolute', width: 256, height: 44, left: 'calc(50% - 128px)', top: 476, textAlign: 'center', fontFamily: 'Roboto, sans-serif', fontWeight: 400, fontSize: 14, lineHeight: '22px', letterSpacing: '-0.02em', color: '#4D4D4D', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const myCardsWrap = { position: 'absolute', width: 380, height: 272, left: 16, top: 589, display: 'flex', flexDirection: 'column', gap: 16 };
-const myFeatureCard = { boxSizing:'border-box', background:'linear-gradient(#FFFFFF,#FFFFFF) padding-box, linear-gradient(90deg,#448FFF 0%,#4833D0 100%) border-box', border:'1px solid transparent', borderRadius:16, padding:'11px 16px', width:380, height:72, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'flex-start', gap:10, boxShadow:'0 4px 10px -2px rgba(56,111,255,0.12)' };
-const myFeatureInnerRow = { display:'flex', flexDirection:'row', alignItems:'center', gap:16, width:'100%', height:48 };
-const myFeatureInnerRowWide = { display:'flex', flexDirection:'row', alignItems:'center', gap:16, width:'100%', height:48 };
-const myIconBox = { width:48, height:48, display:'flex', alignItems:'center', justifyContent:'center' };
-const myFeatureTextCol = { display:'flex', flexDirection:'column', gap:4, width:300, height:48 };
-const myFeatureTextColWide = { display:'flex', flexDirection:'column', gap:4, width:300, height:48 };
-const myFeatureTitle = { width:'100%', height:22, fontFamily:'Roboto, sans-serif', fontWeight:700, fontSize:14, lineHeight:'22px', letterSpacing:'-0.02em', color:'#000', display:'flex', alignItems:'center' };
-const myFeatureDesc = { width:'100%', height:22, fontFamily:'Roboto, sans-serif', fontWeight:400, fontSize:14, lineHeight:'22px', letterSpacing:'-0.02em', color:'#474747', display:'flex', alignItems:'center', wordBreak:'keep-all', overflowWrap:'break-word' };
-const myCTAButton = { position:'absolute', left:'50%', transform:'translateX(-50%)', top: 881, width:380, maxWidth:'90%', height:60, background:'linear-gradient(91.43deg,#448FFF 0%,#4833D0 100%)', borderRadius:8, border:'none', color:'#FFFFFF', fontFamily:'Roboto, sans-serif', fontWeight:700, fontSize:18, cursor:'pointer', letterSpacing:'-0.02em' };
-
 const topicDivider = { position:'absolute', top:144, left:0, width:CANVAS_W, height:2, background:'#E6EBF2' };
 const topicFlow = { position:'absolute', top:146, left:0, width:CANVAS_W, height:768, display:'flex', flexDirection:'column' };
 const topicSectionHeader = { width:CANVAS_W, display:'flex', flexDirection:'column', alignItems:'flex-start' };
@@ -246,15 +213,17 @@ const topicCountRow = { width:CANVAS_W, height:32, padding:'0 16px 16px', displa
 const topicCountText = { fontSize:14, fontWeight:500, color:'#616161', letterSpacing:'-0.04em' };
 const topicCardsWrap = { width:CANVAS_W, height:576, display:'flex', flexDirection:'row', justifyContent:'center', padding:'0 32px', boxSizing:'border-box' };
 const topicCardsCol = { width:348, display:'flex', flexDirection:'column', gap:16 };
-const articleCard = { width:348, height:280, background:'#FFFFFF', boxShadow:'0 0 8px rgba(10,26,51,0.18)', borderRadius:16, display:'flex', flexDirection:'column', padding:'0 0 14px' };
 const imgCard = { width:348, background:'#FFFFFF', boxShadow:'0 0 8px rgba(10,26,51,0.18)', borderRadius:16, overflow:'hidden', cursor:'pointer' };
-const chipRow = { display:'flex', flexDirection:'column', gap:10 };
-const chip = { display:'inline-flex', padding:'4px 8px', background:'#DCEAFF', borderRadius:30, fontSize:12, color:'#234E8F', letterSpacing:'-0.02em', fontWeight:400 };
-const title = { fontSize:18, fontWeight:700, color:'#000', lineHeight:'22px', letterSpacing:'-0.02em' };
-const summary = { fontSize:12, fontWeight:400, color:'#474747', lineHeight:'14px', letterSpacing:'-0.02em', height:28, overflow:'hidden' };
-const metaRow = { display:'flex', flexDirection:'row', alignItems:'center', gap:4 };
-const metaGroup = { display:'flex', flexDirection:'row', alignItems:'center', gap:4 };
-const calendarIcon = { width:16, height:16, background:'#9B9B9B', borderRadius:4, position:'relative' };
-const timeIcon = { width:16, height:16, background:'#9B9B9B', borderRadius:4 };
-const metaText = { fontSize:10, fontWeight:500, color:'#9B9B9B', lineHeight:'20px' };
 const emptyState = { width:348, padding:40, textAlign:'center', color:'#64748B', background:'#fff', borderRadius:16 };
+const myHeroArea = { position: 'relative', width: CANVAS_W, height: 917, zIndex: 1 };
+const myHeroImage = { position: 'absolute', width: 120, height: 120, left: 'calc(50% - 60px)', top: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const myHeadline = { position: 'absolute', width: 244, height: 24, left: 'calc(50% - 122px)', top: 432, textAlign: 'center', fontFamily: 'Roboto, sans-serif', fontWeight: 700, fontSize: 20, lineHeight: '24px', letterSpacing: '-0.02em', color: '#000000', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const mySubCopy = { position: 'absolute', width: 256, height: 44, left: 'calc(50% - 128px)', top: 476, textAlign: 'center', fontFamily: 'Roboto, sans-serif', fontWeight: 400, fontSize: 14, lineHeight: '22px', letterSpacing: '-0.02em', color: '#4D4D4D', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const myCardsWrap = { position: 'absolute', width: 380, height: 272, left: 16, top: 589, display: 'flex', flexDirection: 'column', gap: 16 };
+const myFeatureCard = { boxSizing:'border-box', background:'linear-gradient(#FFFFFF,#FFFFFF) padding-box, linear-gradient(90deg,#448FFF 0%,#4833D0 100%) border-box', border:'1px solid transparent', borderRadius:16, padding:'11px 16px', width:380, height:72, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'flex-start', gap:10, boxShadow:'0 4px 10px -2px rgba(56,111,255,0.12)' };
+const myFeatureInnerRow = { display:'flex', flexDirection:'row', alignItems:'center', gap:16, width:'100%', height:48 };
+const myIconBox = { width:48, height:48, display:'flex', alignItems:'center', justifyContent:'center' };
+const myFeatureTextCol = { display:'flex', flexDirection:'column', gap:4, width:300, height:48 };
+const myFeatureTitle = { width:'100%', height:22, fontFamily:'Roboto, sans-serif', fontWeight:700, fontSize:14, lineHeight:'22px', letterSpacing:'-0.02em', color:'#000', display:'flex', alignItems:'center' };
+const myFeatureDesc = { width:'100%', height:22, fontFamily:'Roboto, sans-serif', fontWeight:400, fontSize:14, lineHeight:'22px', letterSpacing:'-0.02em', color:'#474747', display:'flex', alignItems:'center', wordBreak:'keep-all', overflowWrap:'break-word' };
+const myCTAButton = { position:'absolute', left:'50%', transform:'translateX(-50%)', top: 881, width:380, maxWidth:'90%', height:60, background:'linear-gradient(91.43deg,#448FFF 0%,#4833D0 100%)', borderRadius:8, border:'none', color:'#FFFFFF', fontFamily:'Roboto, sans-serif', fontWeight:700, fontSize:18, cursor:'pointer', letterSpacing:'-0.02em' };

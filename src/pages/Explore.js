@@ -15,7 +15,7 @@ export default function Explore() {
   const [step, setStep] = useState(1);
   const [mainTopic, setMainTopic] = useState(null);
   const [subTopic, setSubTopic] = useState(null);
-  const [level, setLevel] = useState(null);
+    // const [level, setLevel] = useState(null); // 삭제: 사용하지 않음
   const [current, setQid] = useState(0);
   const [questions, setQuestions] = useState([]);
   const [results, setResults] = useState([]);
@@ -46,7 +46,7 @@ export default function Explore() {
         mainTopic={mainTopic}
         subTopic={subTopic}
         onConfirm={async (lv) => {
-          setLevel(lv);
+    
           try {
             // getQuestions API 사용 (더미 데이터 우선)
             console.log('🎯 퀴즈 데이터 요청 중...');
