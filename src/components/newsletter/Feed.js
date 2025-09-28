@@ -53,7 +53,7 @@ export default function Feed() {
           <div style={topicFlow}> 
             <div style={topicSectionHeader}>
               <div style={topicCategoryRow}>{categories.map(cat => (
-                <button key={cat} onClick={() => setSelectedCategory(cat)} style={cat === selectedCategory ? catBtnActive : catBtn}>{cat}</button>
+                <button key={cat} onClick={() => setSelectedCategory(cat)} style={cat === selectedCategory}>{cat}</button>
               ))}</div>
               <div style={topicBannerBox}><div style={topicBannerInner} onClick={() => navigate('/newsletter/subscribe')}> <div style={bannerImg} /> <div style={topicBannerTextCol}> <div style={topicBannerTitle}>My news 로 맞춤 뉴스 보자!</div><div style={topicBannerSub}>핀래터에서 나의 관심사에 딱 맞는 정보들만 확인해요</div></div></div></div>
               <div style={topicCountRow}><span style={topicCountText}>{filtered.length}개의 소식이 있어요</span></div>
