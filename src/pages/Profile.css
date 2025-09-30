@@ -737,19 +737,17 @@ body.profile-route { background:#F4F6FA; }
 
 /* 출석한 날 노란 별 */
 .cal-star {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  position: static;
   overflow: visible;
-  top: -8px;
 }
 
 .cal-star svg {
-  width: 20px;
-  height: 20px;
+  width: 24.77px;
+  height: 23.93px;
   position: static;
 }
 

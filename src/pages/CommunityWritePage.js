@@ -21,13 +21,6 @@ export default function CommunityWritePage() {
 
   const canSubmit = body.trim().length > 0;
 
-  const handleAddTag = () => {
-    const tag = tagInput.trim();
-    if (tag && !tags.includes(tag)) {
-      setTags([...tags, tag]);
-    }
-    setTagInput('');
-  };
 
   const handleSubmit = async () => {
     if (!canSubmit || loading) return;
