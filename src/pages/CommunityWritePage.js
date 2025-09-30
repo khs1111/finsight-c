@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createCommunityPost } from '../api/community';
 import { useNavigate } from 'react-router-dom';
 import './CommunityPage.css';
 import './CommunityWritePage.css';
@@ -11,15 +12,35 @@ export default function CommunityWritePage() {
   const navigate = useNavigate();
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [category, setCategory] = useState(null);
-  const [content, setContent] = useState('');
+  const [body, setBody] = useState('');
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
   const [focused, setFocused] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const canSubmit = content.trim().length > 0 && category;
+  const canSubmit = body.trim().length > 0;
 
-  const handleSubmit = () => {
-    if (!canSubmit) return;
-    console.log('submit post', { category, content });
-    navigate(-1); 
+  const handleAddTag = () => {
+    const tag = tagInput.trim();
+    if (tag && !tags.includes(tag)) {
+      setTags([...tags, tag]);
+    }
+    setTagInput('');
+  };
+
+  const handleSubmit = async () => {
+    if (!canSubmit || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await createCommunityPost({ body, tags });
+      navigate(-1);
+    } catch (e) {
+      setError('글 등록에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,12 +55,13 @@ export default function CommunityWritePage() {
         <div className="write-header-title">커뮤니티 작성</div>
         <button
           className={"write-header-done" + (canSubmit ? ' active' : '')}
-          disabled={!canSubmit}
+          disabled={!canSubmit || loading}
           onClick={handleSubmit}
         >
-          완료
+          {loading ? '등록 중...' : '완료'}
         </button>
       </div>
+  {error && <div className="write-error-message">{error}</div>}
 
       <div className="write-category-bar">
         <div className="write-category-inner">
@@ -69,8 +91,8 @@ export default function CommunityWritePage() {
         </div>
       )}
 
-      {content.length === 0 && !focused && (
-        <div className="write-info-card" aria-hidden={content.length > 0 || focused}>
+      {body.length === 0 && !focused && (
+        <div className="write-info-card" aria-hidden={body.length > 0 || focused}>
           <div className="write-info-inner">
             <div className="write-info-title">글 작성하기 전에 알려드려요.</div>
             <div className="write-info-body">{INFO_TEXT}</div>
@@ -79,13 +101,25 @@ export default function CommunityWritePage() {
       )}
 
       <textarea
-        className={"write-body-area" + (content.length === 0 && !focused ? ' with-info' : '')}
+        className={"write-body-area" + (body.length === 0 && !focused ? ' with-info' : '')}
         placeholder="금융·경제 관련 질문이나 이야기를 해보세요."
-        value={content}
-        onChange={e => setContent(e.target.value)}
+        value={body}
+        onChange={e => setBody(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
       />
+      <div className="write-tag-bar">
+        <input
+          value={tagInput}
+          onChange={e => setTagInput(e.target.value)}
+          placeholder="태그 입력 후 Enter"
+          onKeyDown={e => {if(e.key==='Enter'){e.preventDefault();handleAddTag();}}}
+        />
+        <button type="button" onClick={handleAddTag}>태그 추가</button>
+      </div>
+      <div className="write-tag-list">
+        {tags.map(tag => <span key={tag} className="write-tag">#{tag}</span>)}
+      </div>
 
       <div className="write-bottom-spacer" />
     </div>

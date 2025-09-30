@@ -64,18 +64,21 @@ export const recheckBackendConnection = async () => {
 // 현재 백엔드 연결 상태 확인
 export const isBackendOnline = () => isBackendConnected;
 
-async function http(path, opts = {}) {
-  // 백엔드 연결 안된 경우 더미 데이터 반환을 위해 에러 발생
+// JWT 토큰을 자동으로 헤더에 포함하는 fetch 함수
+async function http(path, opts = {}, token) {
   if (!isBackendConnected) {
     throw new Error('Backend not connected - using dummy data');
   }
-  
+  // 토큰 우선순위: opts.token > 파라미터 token > localStorage
+  const jwt = opts.token || token || localStorage.getItem('accessToken');
+  const headers = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    ...(opts.headers || {}),
+  };
+  if (jwt) headers["Authorization"] = `Bearer ${jwt}`;
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(opts.headers || {}),
-    },
+    headers,
     credentials: "include",
     ...opts,
   });
@@ -103,15 +106,15 @@ export const getSubsector = async (id) => {
 };
 
 // 3. 레벨별 퀴즈 목록 및 상태 조회
-export const getLevelQuizzes = async (levelId, userId) => {
+export const getLevelQuizzes = async (levelId, userId, token) => {
   if (!isBackendConnected) return [];
-  return http(`/levels/${levelId}/quizzes?userId=${userId}`);
+  return http(`/levels/${levelId}/quizzes?userId=${userId}`, {}, token);
 };
 
 // 4. 레벨별 진행도 조회
-export const getLevelProgress = async (levelId, userId) => {
+export const getLevelProgress = async (levelId, userId, token) => {
   if (!isBackendConnected) return null;
-  return http(`/levels/${levelId}/progress?userId=${userId}`);
+  return http(`/levels/${levelId}/progress?userId=${userId}`, {}, token);
 };
 
 // 5. 퀴즈 상세 조회
@@ -125,57 +128,60 @@ export const getQuiz = async (quizId) => {
 };
 
 // 6. 답안 제출
-export const submitAnswer = async ({ questionId, selectedOptionId }) => {
+// 답안 제출 (백엔드 명세: quizId, userId, answers 배열, JWT 토큰)
+export const submitAnswer = async ({ quizId, userId, answers, token }) => {
   if (!isBackendConnected) {
     // 더미 응답 생성
     const isCorrect = Math.random() > 0.4;
     return {
       ...dummySubmitResponse,
       correct: isCorrect,
-      selectedOptionId,
-      correctOptionId: isCorrect ? selectedOptionId : (selectedOptionId % 4) + 1
+      selectedOptionId: answers?.[0]?.selectedOptionId,
+      correctOptionId: isCorrect ? answers?.[0]?.selectedOptionId : ((answers?.[0]?.selectedOptionId % 4) + 1)
     };
   }
+  // 백엔드 명세: { quizId, userId, answers: [{ questionId, selectedOptionId }] }
   return http('/quizzes/submit-answer', {
     method: 'POST',
-    body: JSON.stringify({ questionId, selectedOptionId })
-  });
+    body: JSON.stringify({ quizId, userId, answers }),
+    token
+  }, token);
 };
 
 // 7. 퀴즈 결과 조회
-export const getQuizResult = async (quizId, userId) => {
+export const getQuizResult = async (quizId, userId, token) => {
   if (!isBackendConnected) return null;
-  return http(`/quizzes/${quizId}/result?userId=${userId}`);
+  return http(`/quizzes/${quizId}/result?userId=${userId}`, {}, token);
 };
 
 // 8. 퀴즈 완료 처리
-export const completeQuiz = async (quizId, userId) => {
+export const completeQuiz = async (quizId, userId, token) => {
   if (!isBackendConnected) return { success: true };
-  return http(`/quizzes/${quizId}/complete?userId=${userId}`, { method: 'POST' });
+  return http(`/quizzes/${quizId}/complete?userId=${userId}`, { method: 'POST' }, token);
 };
 
 // 9. 레벨 완료 처리
-export const completeLevel = async (levelId, userId) => {
+export const completeLevel = async (levelId, userId, token) => {
   if (!isBackendConnected) return { success: true };
-  return http(`/levels/${levelId}/complete?userId=${userId}`, { method: 'POST' });
+  return http(`/levels/${levelId}/complete?userId=${userId}`, { method: 'POST' }, token);
 };
 
 // 10. 레벨 시작 처리
-export const startLevel = async (levelId, userId) => {
+export const startLevel = async (levelId, userId, token) => {
   if (!isBackendConnected) return { success: true };
-  return http(`/levels/${levelId}/start?userId=${userId}`, { method: 'POST' });
+  return http(`/levels/${levelId}/start?userId=${userId}`, { method: 'POST' }, token);
 };
 
 // 11. 대시보드 조회
-export const getDashboard = async (userId) => {
+export const getDashboard = async (userId, token) => {
   if (!isBackendConnected) return null;
-  return http(`/dashboard?userId=${userId}`);
+  return http(`/dashboard?userId=${userId}`, {}, token);
 };
 
 // 12. 뱃지 조회
-export const getBadgesReal = async (userId) => {
+export const getBadgesReal = async (userId, token) => {
   if (!isBackendConnected) return [];
-  return http(`/badges/user/${userId}`);
+  return http(`/badges/user/${userId}`, {}, token);
 };
 
 // 회원가입 - 백엔드: POST /api/auth/signup

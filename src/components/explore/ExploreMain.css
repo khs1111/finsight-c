@@ -280,7 +280,7 @@
   background: #F4F6FA;
   border: 2px solid;
   border-image: linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%) 1;
-  border-radius: 8px;
+  border-radius: 32px;
   box-sizing: border-box;
 }
 .explore-main-level-btn-text {
@@ -369,7 +369,7 @@
   background: #F4F6FA;
   border: 2px solid;
   border-image: linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%) 1;
-  border-radius: 8px;
+  border-radius: 32px;
   box-sizing: border-box;
 }
 .explore-main-topic-btn-text {
@@ -913,7 +913,7 @@
   background: #F4F6FA;
   border: 2px solid;
   border-image: linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%) 1;
-  border-radius: 8px;
+  border-radius: 20px; /* 더 둥글게 하고 싶으면 값 조정 */
   box-sizing: border-box;
 }
 

@@ -39,8 +39,6 @@
 
 .quiz-question-article-img-wrapper {
   width: 100%;
-  margin-left: auto;
-  margin-right: auto;
   margin-bottom: 16px;
   position: relative;
   box-sizing: border-box;
@@ -50,7 +48,9 @@
 }
 
 .quiz-question-article-img {
-  width: calc(100vw - 32px);
+  width: calc(100% - 8px);
+  margin-left: 4px;
+  margin-right: 4px;
   max-width: 100%;
   border-radius: 10px;
   display: block;
@@ -207,8 +207,10 @@
   color: #000;
 }
 
+
 .quiz-question-learning-wrap {
   margin-top: 16px;
+  margin-bottom: 44px; /* 징검다리 아래 확인 버튼과의 간격 */
   width: 100%;
   position: relative;
   display: flex;
@@ -222,7 +224,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px; /* 말풍선-개미 간격 */
-  margin-top: 8px; /* 칠판 위 12px */
+  margin-top: 4px; /* 칠판 위 12px */
   padding-left: 24px; /* 왼쪽 여백 */
   padding-right: 39px; /* 오른쪽 여백 (개미 위치 보정) */
   width: 100%;

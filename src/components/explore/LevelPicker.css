@@ -30,9 +30,11 @@
 .level-picker-container {
   position: relative;
   width: 100%;
-  min-height: 100%;
+    min-height: 120vh;
+    max-height: 120vh;
   background: #F4F6FA;
   box-sizing: border-box;
+  overflow-y: auto;
 
 .level-picker-header {
   position: absolute;

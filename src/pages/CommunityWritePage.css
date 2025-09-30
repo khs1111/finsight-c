@@ -1,29 +1,135 @@
-.write-container { position:relative; width:100%; max-width:412px; min-height:100vh; margin:0 auto; background:#F4F6FA; font-family:'Roboto', sans-serif; box-sizing:border-box; }
+@media (max-width: 100%) {
+	.write-container {
+		width: 100% !important;
+		min-width: 0 !important;
+		max-width: 100% !important;
+		min-height: 100vh !important;
+		box-sizing: border-box;
+		margin: 0 !important;
+		padding: 0 !important;
+		background: #fff;
+	}
+}
+@media (max-width: 100%) {
+	/* ...existing code... */
+	.write-info-card,
+	.write-category-bar,
+	.write-category-inner,
+	.write-header,
+	.write-body-area {
+		margin-left: 16px;
+		margin-right: 16px;
+	}
+}
+/* 모바일 반응형 스타일 */
+@media (max-width: 100%) {
+	.write-container {
+		width: 100%;
+		min-width: 0;
+		max-width: 100%;
+		padding: 0 0 32px 0;
+		box-sizing: border-box;
+	}
+	.write-header {
+		padding: 0 12px;
+		height: 56px;
+		font-size: 18px;
+	}
+	.write-header-title {
+		font-size: 18px;
+		padding-left: 8px;
+	}
+	.write-header-done {
+		font-size: 16px;
+		padding: 8px 16px;
+		min-width: 64px;
+		border-radius: 8px;
+	}
+	.write-category-bar, .write-category-inner {
+		width: 100%;
+		max-width: 100%;
+		padding: 0 12px;
+		box-sizing: border-box;
+	}
+	.write-category-text {
+		font-size: 16px;
+		padding: 12px 0;
+	}
+	.write-category-dropdown {
+		width: 100%;
+		left: 0;
+		font-size: 16px;
+		border-radius: 0 0 12px 12px;
+	}
+	.write-category-option {
+		font-size: 16px;
+		padding: 14px 0;
+	}
+	.write-info-card {
+		margin: 12px 8px;
+		font-size: 15px;
+	}
+	.write-body-area {
+		width: 100%;
+		min-width: 0;
+		max-width: 100%;
+		font-size: 16px;
+		padding: 16px 8px;
+		box-sizing: border-box;
+	}
+	.write-bottom-spacer {
+		height: 32px;
+	}
+	.write-error-message {
+		font-size: 15px;
+		color: #e74c3c;
+		margin: 8px 0 0 8px;
+	}
+}
+@media (max-width: 100%) {
+  .write-info-card,
+  .write-body-area {
+    margin-left: 8px;
+    margin-right: 8px;
+    max-width: calc(100% - 16px);
+  }
+}
+.write-container {
+	position: relative;
+	width: 100%;
+	max-width: 100%;
+	min-height: 100vh;
+	margin: 0 auto;
+	background: #F4F6FA;
+	font-family: 'Roboto', sans-serif;
+	box-sizing: border-box;
+	overflow-x: hidden;
+}
 
 .write-status-spacer { height:48px; }
 
-.write-header { position:absolute; top:64px; left:16px; width:380px; height:24px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.write-header { position:absolute; top:64px; left:16px; max-width: calc(100% - 32px); width:100%; height:24px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
 .write-header .close-btn { width:24px; height:24px; background:none; border:none; padding:0; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 .write-header-title { font-size:18px; line-height:21px; font-weight:700; letter-spacing:-0.02em; color:#282828; }
 .write-header-done { background:none; border:none; padding:0; font-size:18px; line-height:21px; font-weight:700; letter-spacing:-0.02em; color:#9B9B9B; cursor:not-allowed; }
 .write-header-done.active { color:#448FFF; cursor:pointer; }
 
-.write-category-bar { position:absolute; top:104px; left:0; width:412px; padding:20px 16px; background:#FFFFFF; border-bottom:1px solid #D0D0D0; box-sizing:border-box; display:flex; justify-content:center; }
+.write-category-bar { position:absolute; top:104px; left:0; width:100%; padding:20px 16px; background:#FFFFFF; border-bottom:1px solid #D0D0D0; box-sizing:border-box; display:flex; justify-content:center; }
 .write-category-inner { width:380px; height:24px; display:flex; align-items:center; justify-content:space-between; }
 .write-category-text { font-size:18px; line-height:21px; font-weight:400; letter-spacing:-0.02em; color:#474747; }
 .write-category-arrow { width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
 
-.write-info-card { position:absolute; left:16px; top:188px; width:380px; min-height:210px; background:#DDEBFF; border-radius:8px; padding:16px; box-sizing:border-box; display:flex; }
+.write-info-card { position:absolute; left:16px; top:188px; max-width: calc(100% - 32px); width:100%; min-height:210px; background:#DDEBFF; border-radius:8px; padding:16px; box-sizing:border-box; display:flex; }
 .write-info-inner { display:flex; flex-direction:column; gap:8px; width:100%; }
 .write-info-title { font-size:14px; line-height:16px; font-weight:700; letter-spacing:-0.04em; color:#234E8F; }
 .write-info-body { font-size:14px; line-height:22px; font-weight:400; letter-spacing:-0.02em; color:#234E8F; white-space:pre-line; }
 
-.write-body-area { position:absolute; left:16px; top:188px; width:380px; min-height:260px; background:transparent; border:none; padding:0; font-size:16px; line-height:19px; font-weight:400; color:#282828; resize:none; box-sizing:border-box; transition:top 160ms ease; }
+.write-body-area { position:relative; left:16px; top:188px; width:100%; min-height:100%; background:transparent; border:none; padding:0; font-size:16px; line-height:19px; font-weight:400; color:#282828; resize:none; box-sizing:border-box; transition:top 160ms ease; }
 .write-body-area.with-info { top:418px; }
 .write-body-area::placeholder { color:#9B9B9B; }
 .write-body-area:focus { outline:none; }
 
-.write-category-dropdown { position:absolute; top:168px; left:0; width:412px; background:#FFFFFF; border-radius:0 0 16px 16px; padding:12px 0; display:flex; flex-direction:column; z-index:150; overflow-y:auto; overflow-x:hidden; max-height:260px; box-shadow:0 8px 16px -4px rgba(10,26,51,0.18); }
+.write-category-dropdown { position:absolute; top:168px; left:0; width:100%; background:#FFFFFF; border-radius:0 0 16px 16px; padding:12px 0; display:flex; flex-direction:column; z-index:150; overflow-y:auto; overflow-x:hidden; max-height:260px; box-shadow:0 8px 16px -4px rgba(10,26,51,0.18); }
 .write-category-option { padding:12px 24px; font-size:16px; line-height:19px; font-weight:400; color:#474747; background:none; border:none; text-align:left; cursor:pointer; width:100%; }
 .write-category-option + .write-category-option { border-top:1px solid #F0F0F0; }
 .write-category-option:hover { background:#F4F6FA; }

@@ -1,6 +1,102 @@
+/* 커뮤니티 피드 카드 리스트 */
+.community-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 16px;
+}
+
+.community-feed-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 20px 16px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.feed-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.feed-card-profile {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #eee;
+}
+
+.feed-card-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feed-card-nickname {
+  font-weight: 600;
+  font-size: 15px;
+  color: #222;
+}
+
+.feed-card-tier {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #f2f6ff;
+  color: #448fff;
+  margin-left: 2px;
+}
+.tier-master { background: linear-gradient(90deg,#448fff,#4833d0); color: #fff; }
+.tier-diamond { background: #e0eaff; color: #4833d0; }
+.tier-gold { background: #fffbe0; color: #d0a233; }
+.tier-silver { background: #f4f4f4; color: #888; }
+.tier-bronze { background: #fbeee0; color: #b97a33; }
+
+.feed-card-content {
+  font-size: 15px;
+  color: #333;
+  margin-bottom: 12px;
+  word-break: break-word;
+}
+
+.feed-card-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #888;
+}
+
+.feed-card-category {
+  font-weight: 500;
+}
+.feed-card-date {
+  font-size: 12px;
+}
+
+.community-loading, .community-error, .community-empty {
+  text-align: center;
+  color: #888;
+  padding: 32px 0;
+  font-size: 16px;
+}
 @import './StudyPage.css';
 
-.community-container { position:relative; width:'auto'; max-width:'auto'; min-height:100vh; margin:0 auto; background:#F4F6FA; box-sizing:border-box; font-family:'Roboto', sans-serif; }
+.community-container {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  background: #F4F6FA;
+  box-sizing: border-box;
+  font-family: 'Roboto', sans-serif;
+  overflow-x: hidden;
+}
 
 /* Frame 86 - 커뮤니티 헤더 (타이틀 + 필터링 + 글쓰기) */
 .community-header { 

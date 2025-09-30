@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import goldTier from '../assets/tier/emerald.png';
+import { fetchProfile, fetchProfileActivity } from '../api/profile';
 import './Profile.css';
 
 const actionItems = [
@@ -108,29 +110,29 @@ function buildMonthDays(year, month) {
 
 function useMissionSet(year, month) {
 
-  const now = new Date();
-  const isCurrent = now.getFullYear() === year && now.getMonth() === month;
-  return useMemo(() => {
-    const base = ['1','2','3','4','5','6','7','8','9','10','11','13','15','16','17','18','19'];
-    if (!isCurrent) return new Set();
-    return new Set(base.map(d => `${year}-${z(month+1)}-${z(parseInt(d,10))}`));
-  }, [year, month, isCurrent]);
+  // API 출석 데이터로 대체
+  return useMemo(() => new Set(), [year, month]);
 }
 
 function Calendar() {
   const todayDate = new Date();
   const [viewYear, setViewYear] = useState(todayDate.getFullYear());
-  const [viewMonth, setViewMonth] = useState(todayDate.getMonth()); 
-  const missionSet = useMissionSet(viewYear, viewMonth);
+  const [viewMonth, setViewMonth] = useState(todayDate.getMonth());
+  const [attendanceSet, setAttendanceSet] = useState(new Set());
+
+  useEffect(() => {
+    fetchProfileActivity().then(res => {
+      // res.data.attendance: ['2024-06-01', ...]
+      setAttendanceSet(new Set(res.data.attendance || []));
+    }).catch(() => setAttendanceSet(new Set()));
+  }, [viewYear, viewMonth]);
 
   const cells = useMemo(() => buildMonthDays(viewYear, viewMonth), [viewYear, viewMonth]);
   const headers = ['일', '월', '화', '수', '목', '금', '토'];
-
   const todayKey = `${todayDate.getFullYear()}-${z(todayDate.getMonth() + 1)}-${z(todayDate.getDate())}`;
-
   const changeMonth = useCallback((delta) => {
     setViewYear(prev => {
-      const d = new Date(prev, viewMonth + delta, 1); 
+      const d = new Date(prev, viewMonth + delta, 1);
       return d.getFullYear();
     });
     setViewMonth(prev => {
@@ -156,11 +158,9 @@ function Calendar() {
           if(!c.inCurrent) baseClasses.push('outside');
           const dateKey = c.key;
           const isToday = dateKey === todayKey;
-          const isMission = c.inCurrent && missionSet.has(dateKey);
-          const isCompleted = isMission; // 출석/완료 조건에 맞게 수정
-          if (isMission) baseClasses.push('active');
+          const isCompleted = c.inCurrent && attendanceSet.has(dateKey);
+          if (isCompleted) baseClasses.push('active');
           if (isToday) baseClasses.push('today');
-          // 마지막 주에서 다음달 날짜는 숨김 처리
           if (!c.inCurrent) {
             return <div key={dateKey} className={baseClasses.join(' ')} style={{opacity:0, pointerEvents:'none'}} aria-hidden="true" />;
           }
@@ -192,54 +192,40 @@ function Calendar() {
 }
 
 export default function Profile() {
+  const [profile, setProfile] = useState({ nickname: '', tier: '' });
+  useEffect(() => {
+    fetchProfile().then(res => {
+      setProfile({
+        nickname: res.data.nickname || '',
+        tier: res.data.tier || '',
+      });
+    }).catch(() => setProfile({ nickname: '', tier: '' }));
+  }, []);
   return (
     <div className="profile-spec">
       <div className="p-topbar" aria-label="상단 제목">
         <span className="p-topbar-title">프로필</span>
       </div>
-      <div className="p-hero">
-        <svg
-        right= "16"
-          width="412"
-          height="340"
-          viewBox="0 0 412 340"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          xmlnsXlink="http://www.w3.org/1999/xlink"
-          className="p-hero-svg"
-        >
-          <path
-            d="M0 16C0 7.16344 7.16344 0 16 0H396C404.837 0 412 7.16344 412 16V340H0V16Z"
-            fill="url(#pattern0_721_4657)"
-          />
-          <defs>
-            <pattern
-              id="pattern0_721_4657"
-              patternContentUnits="objectBoundingBox"
-              width="1"
-              height="1"
-            >
-              <use
-                xlinkHref="#image0_721_4657"
-                transform="matrix(0.00390625 0 0 0.00473346 0 -0.105882)"
-              />
-            </pattern>
-            <image
-              id="image0_721_4657"
-              width="256"
-              height="256"
-              preserveAspectRatio="none"
-              xlinkHref="data:image/png;base64,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"
-            />
-          </defs>
-    </svg>
-    <div className="p-avatar-block inside-hero">
-          <div className="avatar" />
-          <div className="tier-badge">
-            <span className="tier-star" />
-            <span className="tier-label">파니의 동료</span>
-          </div>
+      <div className="p-hero-bg" style={{
+        backgroundImage: `url(${require('../assets/profile/back.png')})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        width: '100%',
+        height: '340px',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        zIndex: 0,
+      }} />
+      <div className="p-avatar-block inside-hero" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="avatar" style={{ position: 'relative', width: '200px', height: '200px', background: 'transparent' }}>
+          <img src={require('../assets/profile/ant.png')} alt="캐릭터" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: '120px', height: '120px', objectFit: 'contain', zIndex: 2 }} />
         </div>
+        <div className="tier-badge">
+          <img src={goldTier} alt="골드 티어" className="tier-star" />
+          <span className="tier-label">{profile.nickname}</span>
+        </div>
+        <div className="nickname-label">{profile.nickname}</div>
       </div>
 
       <div className="p-stats-card">

@@ -9,17 +9,54 @@
   color:#282828;
 }
 body.profile-route { background:#F4F6FA; }
-html.profile-route, body.profile-route, body.profile-route #root { background:#F4F6FA; }
-.profile-route #root { min-height:'auto'; }
-body.profile-route { margin:0 !important; }
-
-/* 상단 타이틀 바 (Frame 86) */
-.p-topbar {
-	position: static; /* 박스 밖으로: 오버레이 제거 */
-	width: 380px;
-	height: 21px;
-	margin: 4px auto 0; /* 위로 64px 간격, 가운데 정렬 */
-	display: flex;
+  .p-calendar-wrapper {
+    margin: 32px auto;
+    width: 380px;
+    height: 372px;
+    background: #FFFFFF;
+    box-shadow: 0px 0px 12px rgba(0, 0, 0, 0.08);
+  margin-top: 0;
+  width: 414px;
+  height: 340px;
+  border-radius: 16px 16px 0 0;
+  position: absolute;
+  left: -1px;
+    margin-top: 0;
+    width: 414px;
+    height: 340px;
+    border-radius: 16px 16px 0 0;
+    position: static;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+  left: 0;
+  width: 414px;
+  height: 340px;
+  opacity: 1;
+  z-index: 2;
+  object-fit: cover;
+    margin-top: 0;
+    width: 414px;
+    height: 340px;
+    border-radius: 16px 16px 0 0;
+    position: absolute;
+    left: -1px;
+    top: 103px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #F4F6FA 0%, #A0C6FF 100%);
+    z-index: 1;
+    display: flex;
+    flex-direction: row;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 414px;
+    height: 340px;
+    opacity: 1;
+    z-index: 2;
+    object-fit: cover;
+    border-radius: 16px 16px 0 0;
 	flex-direction: row;
 	align-items: center;
 	padding: 0;
@@ -31,6 +68,17 @@ body.profile-route { margin:0 !important; }
 	flex-grow: 0;
 	width: 49px; /* 디자이너 스펙 그대로 */
 	height: 21px;
+  .p-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 32px);
+    grid-auto-rows: auto;
+    gap: 4px 22px;
+    justify-content: center;
+    width: 356px;
+    height: 316px;
+    margin: 0 auto;
+    position: static;
+  }
 	font-family: Roboto, sans-serif;
 	font-style: normal;
 	font-weight: 700;
@@ -40,24 +88,119 @@ body.profile-route { margin:0 !important; }
 	color: #474747; /* Text color_1 */
 }
 
+  .cal-cell {
+    width: 32px;
+    height: 56px;
+    font-size: 10px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
 .p-hero { margin-top:18px; width:100%; height:340px; border-radius:16px 16px 0 0; position:relative; overflow:hidden; }
+.p-hero-bg {
+  position: absolute;
+  top: 103px;
+  left: -1px;
+  width: 100%;
+  height: 340px;
+  opacity: 1;
+  z-index: 0;
+  object-fit: cover;
+}
 
 .p-hero-title { position:static; display:none; }
 .p-hero-svg { display:block; width:100%; height:100%; }
 .p-avatar-block { width:200px; height:248px; display:flex; flex-direction:column; align-items:center; gap:16px; }
 
-.p-avatar-block.inside-hero { position:absolute; left:50%; top:calc(50% - 124px); transform:translateX(-50%); }
-.p-avatar-block .avatar { width:200px; height:200px; background:#E1E6EC; border-radius:16px; position:relative; box-shadow:0 0 12px rgba(0,0,0,.18); }
-.p-avatar-block .avatar::before { content:''; position:absolute; inset:0; background:repeating-conic-gradient(#fafafa 0deg 15deg,#d5d5d5 15deg 30deg); mix-blend-mode:normal; opacity:0.3; border-radius:16px; }
+.p-avatar-block {
+  position: absolute;
+  left: 50%;
+  top: 129px;
+  transform: translateX(-50%);
+  width: 266px;
+  height: 266px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+.p-avatar-block img {
+  width: 266px;
+  height: 266px;
+  opacity: 1;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
+/* 뱃지 카드 모바일 위치 조정 */
+.p-badge-card {
+  position: absolute;
+  left: -1px;
+  top: calc(103px + 340px + 16px);
+  width: 413px;
+  height: 104px;
+  background: #754D4D;
+  border-radius: 0 0 12px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+}
+ .p-avatar-block .avatar { width:200px; height:200px; border-radius:16px; position:relative; }
+ /* .p-avatar-block .avatar::before removed for transparent background */
 .tier-badge { display:flex; align-items:center; gap:8px; height:32px; }
+  .cal-cell.header {
+    height: 12px;
+    line-height: 20px;
+    font-weight: 700;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    font-family: 'Roboto';
+    width: 32px;
+    justify-content: center;
+  }
 .tier-badge .tier-star { width:32px; height:32px; position:relative; border-radius:4px; }
 .tier-badge .tier-star::before { content:''; position:absolute; inset:0; background:linear-gradient(180deg,#FFCD42 0%,#FFBC02 35.58%,#B94D00 100%); border:1.6px solid #FFFFFF; border-radius:4px; }
 .tier-badge .tier-label { font-size:18px; font-weight:700; letter-spacing:-0.02em; color:#474747; }
-.p-stats-card { margin:16px auto 32px; width:348px; height:100px; background:#FFF; box-shadow:0 0 12px rgba(0,0,0,.08); border-radius:16px; display:flex; justify-content:space-between; padding:10px 32px 10px; }
-.p-stats-card .stat { width:64px; display:flex; flex-direction:column; align-items:center; gap:4px; position:relative; }
+.p-stats-card {
+  margin:16px 32px 32px 32px;
+  width:auto;
+  min-width:0;
+  height:100px;
+  background:#FFF;
+  box-shadow:0 0 12px rgba(0,0,0,.08);
+  border-radius:16px;
+  display:flex;
+  justify-content:space-between;
+  padding:10px 32px 10px 32px;
+}
+.p-stats-card .stat {
+  width:64px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:0px;
+  position:relative;
+}
 .stat-icon { width:60px; height:60px; border-radius:12px; position:relative; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; color:#fff; }
 .stat-icon.gold { background:linear-gradient(135deg,#FFBC02 0%,#FFAA00 50%,#FFBC02 100%); }
 .stat-icon.gray { background:linear-gradient(135deg,#D0D0D0 0%,#BDBDBD 60%,#CFCFCF 100%); color:#4A4A4A; }
+  .cal-date-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 32px;
+    height: 56px;
+  }
 
 .stat-icon.no-bg { background:none; padding:0; }
 .stat-icon.badge .badge-inner { display:flex; align-items:center; justify-content:center; width:100%; height:100%; font-size:16px; }
@@ -65,8 +208,17 @@ body.profile-route { margin:0 !important; }
 .stat-label { font-size:12px; font-weight:700; text-align:center; color:#999; }
 /* 달력 전체 래퍼 */
 .p-calendar-wrapper { 
-  margin: 32px auto;
-  width: 380px;
+  margin: 32px 16px;
+  width: auto;
+  .cal-indicator {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: visible;
+  }
   height: 372px;
   background: #FFFFFF;
   box-shadow: 0px 0px 12px rgba(0, 0, 0, 0.08);
@@ -85,6 +237,24 @@ body.profile-route { margin:0 !important; }
   height: 24px;
   margin: 0 auto 8px auto;
   position: static;
+  .cal-star {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: visible;
+    top: -8px;
+  }
+  .cal-star svg {
+    width: 24.77px;
+    height: 23.93px;
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    opacity: 1;
+  }
 }
 
 /* 구분선 */
@@ -162,6 +332,234 @@ body.profile-route { margin:0 !important; }
   text-align: center;
   font-family: 'Roboto';
 }
+  @media (max-width: 620px) {
+  .p-hero {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    height: 266px;
+    min-height: 266px;
+    max-height: 266px;
+    border-radius: 16px 16px 0 0;
+    margin-top: 0;
+    position: relative;
+    left: 0;
+    top: 56px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #F4F6FA 0%, #A0C6FF 100%);
+    z-index: 1;
+  }
+  .p-hero-bg {
+    position: relative;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 266px;
+    object-fit: cover;
+    z-index: 2;
+    border-radius: 16px 16px 0 0;
+  }
+  .p-avatar-block {
+    position: absolute;
+    left: 50%;
+    top: 56px;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 266px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+  }
+  .p-avatar-block img {
+    width: 100%;
+    height: 100%;
+    opacity: 1;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+  }
+  .p-badge-card {
+    position: absolute;
+    left: 0;
+    top: calc(56px + 266px + 16px);
+    width: 100%;
+    height: 104px;
+    background: #754D4D;
+    border-radius: 0 0 12px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+  }
+    .profile-spec {
+      width: 100vw;
+      max-width: 100vw;
+      margin: 0;
+      padding: 24px 0 calc(17px + env(safe-area-inset-bottom, 0px));
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    .p-hero {
+      width: 100vw;
+      min-width: 100vw;
+      max-width: 100vw;
+      height: 266px;
+      min-height: 266px;
+      max-height: 266px;
+      border-radius: 16px 16px 0 0;
+      margin-top: 0;
+      position: relative;
+      left: 0;
+      top: 56px;
+      overflow: hidden;
+      background: linear-gradient(180deg, #F4F6FA 0%, #A0C6FF 100%);
+      z-index: 1;
+    }
+    .p-hero-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 2;
+      border-radius: 0;
+    }
+    .p-avatar-block {
+      position: absolute;
+      left: 50%;
+      top: 56px;
+      transform: translateX(-50%);
+      width: 266px;
+      height: 266px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3;
+    }
+    .p-avatar-block img {
+      width: 266px;
+      height: 266px;
+      opacity: 1;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
+    .p-badge-card {
+      position: relative;
+      left: 0;
+      top: calc(56px + 266px + 16px);
+      width: 100vw;
+      height: 104px;
+      background: #754D4D;
+      border-radius: 0 0 12px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 4;
+    }
+    .p-calendar-wrapper {
+      width: calc(100vw - 32px);
+      min-width: 0;
+      margin: 24px 16px;
+      box-sizing: border-box;
+      padding: 0;
+      height: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .p-stats-card {
+      width: 100vw;
+      min-width: 0;
+      margin: 16px 0 32px 0;
+      box-sizing: border-box;
+      padding: 10px 8px;
+    }
+    .p-calendar-head {
+      width: 100%;
+      gap: 32px;
+      margin: 0 auto 8px auto;
+      box-sizing: border-box;
+      padding: 0 8px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .p-calendar-grid {
+      width: 100%;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px 2vw;
+      margin: 0 auto;
+      box-sizing: border-box;
+      padding: 0 2px;
+      height: auto;
+    }
+    .cal-cell, .cal-cell.day, .cal-cell.header {
+      width: 100%;
+      min-width: 0;
+      font-size: 9px;
+      box-sizing: border-box;
+      height: 48px;
+      max-width: 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .cal-date-container {
+      width: 100%;
+      min-width: 0;
+      gap: 6px;
+      height: 48px;
+      max-width: 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .cal-indicator, .no-attendance-circle, .cal-star {
+      width: 24px;
+      height: 24px;
+      top: -4px;
+    }
+    .cal-star svg {
+      width: 18px;
+      height: 18px;
+      top: 2px;
+      left: 3px;
+    }
+    .today-circle {
+      width: 14px;
+      height: 14px;
+    }
+      .p-actions {
+        width: auto;
+        min-width: 0;
+        margin: 0 32px 0 32px;
+        box-sizing: border-box;
+        padding: 0;
+      }
+      .p-stats-card{
+        margin:0 16px 0 16px;
+        width: auto;
+        min-width: 0;
+        margin: 16px 32px 32px 32px;
+        box-sizing: border-box;
+        padding: 10px 32px 10px 32px;
+      }
+    .p-topbar {
+  width: 100%;
+  min-width: 0;
+  margin: 4px auto 0 auto;
+  box-sizing: border-box;
+  padding: 0 8px;
+  position: relative;
+  z-index: 10;
+    }
+  
 
 .cal-cell.header.sun { color: #FF5252; }
 .cal-cell.header.sat { color: #448FFF; }
@@ -293,14 +691,97 @@ body.profile-route { margin:0 !important; }
   font-weight: 500; 
   font-size: 10px; 
 }
-.p-actions { width:380px; margin:0 auto; display:flex; flex-direction:column; gap:16px; }
+.p-actions {
+  width:auto;
+  min-width:0;
+      margin: 0 16px 0 16px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
 .action-row { width:100%; display:flex; align-items:center; gap:10px; background:#FFF; border:none; box-shadow:0 0 12px rgba(0,0,0,.08); border-radius:16px; padding:16px; font-size:14px; letter-spacing:-0.01em; color:#282828; text-align:left; cursor:pointer; }
 
 .action-row .label { font-family:Roboto, 'Noto Sans KR', sans-serif; font-weight:400; font-size:14px; line-height:100%; letter-spacing:-0.01em; }
 .action-row .icon-placeholder { width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:14px; }
 .action-row:active { background:#F0F0F0; }
-@media (max-width:430px) { .profile-spec { padding:37.08px 0 calc(17px + env(safe-area-inset-bottom, 0px)); } .p-calendar-wrapper,.p-actions { width:calc(100% - 32px); } .p-stats-card { width:calc(100% - 64px); } }
 
-@media (max-width: 430px) {
-	.p-topbar { width: calc(100% - 32px); }
+@media (max-width: 100%) {
+  .profile-spec {
+    padding: 24px 0 calc(17px + env(safe-area-inset-bottom, 0px));
+    min-height: 100vh;
+    box-sizing: border-box;
+  }
+  .p-calendar-wrapper {
+    width: 100%;
+    min-width: 0;
+    margin: 24px auto;
+    box-sizing: border-box;
+    padding: 0 8px;
+  }
+  .p-calendar-head {
+    width: 100%;
+    gap: 32px;
+    margin: 0 auto 8px auto;
+    box-sizing: border-box;
+    padding: 0 8px;
+  }
+  .p-calendar-grid {
+    width: 100%;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px 2vw;
+    margin: 0 auto;
+    box-sizing: border-box;
+    padding: 0 2px;
+  }
+  .cal-cell, .cal-cell.day, .cal-cell.header {
+    width: 100%;
+    min-width: 0;
+    font-size: 9px;
+    box-sizing: border-box;
+  }
+  .cal-date-container {
+    width: 100%;
+    min-width: 0;
+    gap: 6px;
+    height: 48px;
+  }
+  .cal-indicator, .no-attendance-circle, .cal-star {
+    width: 24px;
+    height: 24px;
+    top: -4px;
+  }
+  .cal-star svg {
+    width: 18px;
+    height: 18px;
+    top: 2px;
+    left: 3px;
+  }
+  .today-circle {
+    width: 14px;
+    height: 14px;
+  }
+  .p-actions {
+    width: 100%;
+    min-width: 0;
+    margin: 0 auto;
+    box-sizing: border-box;
+    padding: 0 8px;
+  }
+  .p-stats-card {
+    width: 100%;
+    min-width: 0;
+    margin: 12px auto 24px auto;
+    box-sizing: border-box;
+    padding: 10px 8px;
+  }
+  .p-topbar {
+    width: 100%;
+    min-width: 0;
+    margin: 4px auto 0 auto;
+    box-sizing: border-box;
+    padding: 0 8px;
+    position: relative;
+    z-index: 10;
+  }
 }
+  }

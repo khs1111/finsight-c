@@ -58,7 +58,7 @@ export default function CompletionScreen({
       <div
         style={{
           position: "absolute",
-          top: "98px", // speech bubble top (138px) - 40px
+          top: "94px", // 말풍선 top(138px) - 44px
           left: 0,
           width: "100%",
           height: "48px",
@@ -67,7 +67,9 @@ export default function CompletionScreen({
           alignItems: "center",
           zIndex: 3,
         }}
-      ></div>
+      >
+        {/* 여기에 실제 스테이터스 UI를 넣으세요 */}
+      </div>
 
       {/* ===== 말풍선 ===== */}
       <div

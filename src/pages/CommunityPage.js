@@ -1,15 +1,15 @@
 // 커뮤니티 피드 페이지
 // - 게시물 피드 / 랭크 필터 / 글쓰기 진입 FAB
 // - 카테고리(오늘의 뉴스, 시황 등) 상태 관리
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './StudyPage.css';
 import './CommunityPage.css';
 import RankFilterDropdown from '../components/community/RankFilterDropdown';
-import FeedSection from '../components/community/FeedSection';
+import { fetchCommunityPosts } from '../api/community';
 import { useNavigate } from 'react-router-dom';
 
 // 카테고리 목록 (디자인 스펙 기반) - '오늘의 뉴스' = 전체 개념
-const CATEGORIES = ['오늘의 뉴스', '시황', '채권', '부동산', '원자재'];
+const CATEGORIES = ['자유게시판', '탐험지', '경제 시사', '투자'];
 
 // CommunityPage: 커뮤니티 메인 피드 컴포넌트
 export default function CommunityPage() {
@@ -17,7 +17,26 @@ export default function CommunityPage() {
   const [category, setCategory] = useState('오늘의 뉴스');
   const [showRank, setShowRank] = useState(false);
   const [rank, setRank] = useState(null); // 마스터, 다이아 등
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
+
+  // 커뮤니티 글 목록 불러오기 (카테고리/티어별)
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetchCommunityPosts({ category, tier: rank })
+      .then(data => {
+        setPosts(data);
+      })
+      .catch(() => {
+        setError('글 목록을 불러오지 못했습니다.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [category, rank]);
 
   return (
     <div className="community-container has-bottom-nav">
@@ -66,7 +85,41 @@ export default function CommunityPage() {
       </div>
       
       <div className="community-content">
-        <FeedSection />
+        {loading && <div className="community-loading">글 목록을 불러오는 중...</div>}
+        {error && <div className="community-error">{error}</div>}
+        {!loading && !error && posts.length === 0 && (
+          <div className="community-empty">글이 없습니다.</div>
+        )}
+        {!loading && !error && posts.length > 0 && (
+          <div className="community-feed-list">
+            {posts.map(post => (
+              <div key={post.id} className="community-feed-card">
+                <div className="feed-card-header">
+                  <img
+                    src={post.author?.profileImage || '/default-profile.png'}
+                    alt="프로필"
+                    className="feed-card-profile"
+                  />
+                  <div className="feed-card-author">
+                    <span className="feed-card-nickname">{post.author?.nickname || '익명'}</span>
+                    {post.author?.badge && (
+                      <img src={post.author.badge.iconUrl} alt={post.author.badge.name} className="feed-card-badge" style={{width:24,height:24,marginLeft:8}} />
+                    )}
+                  </div>
+                </div>
+                <div className="feed-card-content">{post.body}</div>
+                <div className="feed-card-tags">
+                  {post.tags && post.tags.map(tag => <span key={tag} className="feed-card-tag">#{tag}</span>)}
+                </div>
+                <div className="feed-card-footer">
+                  <span className="feed-card-date">{post.createdAt ? post.createdAt.slice(0, 10) : ''}</span>
+                  <span className="feed-card-likes">좋아요 {post.likeCount}</span>
+                  <span className="feed-card-comments">댓글 {post.commentCount}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       
       {showRank && (

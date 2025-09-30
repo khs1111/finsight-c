@@ -101,53 +101,16 @@ const activeStage = currentIndex < totalStages ? currentIndex : -1;
         <div className="explore-main-menu-btn" onClick={() => setMenuOpen(!menuOpen)}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 18C3.44772 18 3 17.5523 3 17C3 16.4477 3.44772 16 4 16H20C20.5523 16 21 16.4477 21 17C21 17.5523 20.5523 18 20 18H4ZM4 13C3.44772 13 3 12.5523 3 12C3 11.4477 3.44772 11 4 11H20C20.5523 11 21 11.4477 21 12C21 12.5523 20.5523 13 20 13H4ZM4 8C3.44772 8 3 7.55228 3 7C3 6.44772 3.44772 6 4 6H20C20.5523 6 21 6.44772 21 7C21 7.55228 20.5523 8 20 8H4Z" fill="#474747"/></svg>
           {menuOpen && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 32,
-                right: 0,
-                width: 82,
-                height: 76,
-                background: '#FFFFFF',
-                boxShadow: '0px 0px 16px rgba(10,26,51,0.32)',
-                borderRadius: 16,
-                display: 'flex',
-                flexDirection: 'column',
-                padding: '16px 12px',
-                gap: 10,
-                boxSizing: 'border-box',
-                zIndex: 40
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', padding: 0, gap: 8, width: 58 }}>
+            <div className="explore-main-menu-popup">
+              <div className="explore-main-menu-popup-list">
                 <div
+                  className="explore-main-menu-popup-item"
                   onClick={() => { navigate('/study?tab=words'); setMenuOpen(false); }}
-                  style={{
-                    width: 58,
-                    height: 14,
-                    fontFamily: 'Roboto',
-                    fontWeight: 700,
-                    fontSize: 12,
-                    lineHeight: '14px',
-                    color: '#282828',
-                    cursor: 'pointer',
-                    letterSpacing: '-0.02em'
-                  }}
                 >단어장</div>
-                <div style={{ width: 58, height: 0, borderTop: '1px solid #F5F5F5' }} />
+                <div className="explore-main-menu-popup-divider" />
                 <div
+                  className="explore-main-menu-popup-item"
                   onClick={() => { navigate('/study?tab=wrong'); setMenuOpen(false); }}
-                  style={{
-                    width: 58,
-                    height: 14,
-                    fontFamily: 'Roboto',
-                    fontWeight: 700,
-                    fontSize: 12,
-                    lineHeight: '14px',
-                    color: '#282828',
-                    cursor: 'pointer',
-                    letterSpacing: '-0.02em'
-                  }}
                 >오답노트</div>
               </div>
             </div>
@@ -375,6 +338,17 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
   const [tempTopic, setTempTopic] = React.useState(selectedTopic);
   const [tempSubTopic, setTempSubTopic] = React.useState(selectedSubTopic);
   const [subTopicDropdownOpen, setSubTopicDropdownOpen] = React.useState(false);
+  const [containerHeight, setContainerHeight] = React.useState(undefined);
+  const dropdownRef = React.useRef(null);
+  // 드롭다운 열릴 때마다 높이 측정해서 컨테이너에 적용
+  React.useEffect(() => {
+    if (subTopicDropdownOpen && dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      setContainerHeight(rect.height + 220); // 여유 padding 포함
+    } else {
+      setContainerHeight(undefined);
+    }
+  }, [subTopicDropdownOpen, tempTopic]);
 
   const levels = ['초급자', '중급자', '고급자'];
   const topics = ['은행', '카드', '세금/절세', '투자'];
@@ -411,7 +385,10 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
       <div className="explore-main-overlay" onClick={onClose} />
 
       {/* 주제/레벨 선택 박스 */}
-      <div className={`explore-main-selector-box${subTopicDropdownOpen ? ' open' : ''}`}> 
+      <div
+        className={`explore-main-selector-box${subTopicDropdownOpen ? ' open' : ''}`}
+        style={containerHeight ? { height: containerHeight, transition: 'height .2s' } : {}}
+      >
         <div className={`explore-main-selector-content${subTopicDropdownOpen ? ' open' : ''}`}> 
           {/* 난이도 선택 섹션 */}
           <div className="explore-main-level-section">
@@ -452,45 +429,47 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
             </div>
           </div>
 
-          {/* 세부 주제 섹션 */}
+          {/* 세부 주제 섹션 및 드롭다운 + 확인 버튼 */}
           <div className="explore-main-subtopic-section">
             <div className="explore-main-subtopic-title">세부 주제</div>
-          </div>
-
-          {/* 세부 주제 드롭다운 컨테이너 */}
-          <div className={`explore-main-subtopic-dropdown${subTopicDropdownOpen ? ' open' : ''}`}> 
-            {/* 드롭다운 헤더 */}
-            <button
-              className={`explore-main-subtopic-dropdown-header${subTopicDropdownOpen ? ' open' : ''}`}
-              onClick={() => setSubTopicDropdownOpen(!subTopicDropdownOpen)}
+            <div
+              className={`explore-main-subtopic-dropdown-container`}
+              ref={dropdownRef}
             >
-              <span className="explore-main-subtopic-dropdown-text">{tempSubTopic}</span>
-              <div className={`explore-main-subtopic-dropdown-arrow${subTopicDropdownOpen ? ' open' : ''}`}> 
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M4 6L8 10L12 6" stroke="#999999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+              <div className={`explore-main-subtopic-dropdown${subTopicDropdownOpen ? ' open' : ''}`}> 
+                {/* 드롭다운 헤더 */}
+                <button
+                  className={`explore-main-subtopic-dropdown-header${subTopicDropdownOpen ? ' open' : ''}`}
+                  onClick={() => setSubTopicDropdownOpen(!subTopicDropdownOpen)}
+                >
+                  <span className="explore-main-subtopic-dropdown-text">{tempSubTopic}</span>
+                  <div className={`explore-main-subtopic-dropdown-arrow${subTopicDropdownOpen ? ' open' : ''}`}> 
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M4 6L8 10L12 6" stroke="#999999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </button>
+
+                {/* 드롭다운 옵션들 */}
+                {subTopicDropdownOpen && subTopicMap[tempTopic]?.slice(1).map((subTopic, index) => (
+                  <button
+                    key={subTopic}
+                    className={`explore-main-subtopic-dropdown-option${index === subTopicMap[tempTopic].length - 2 ? ' last' : ''}`}
+                    onClick={() => {
+                      setTempSubTopic(subTopic);
+                      setSubTopicDropdownOpen(false);
+                    }}
+                  >
+                    <span className="explore-main-subtopic-dropdown-option-text">{subTopic}</span>
+                  </button>
+                ))}
               </div>
-            </button>
-
-            {/* 드롭다운 옵션들 */}
-            {subTopicDropdownOpen && subTopicMap[tempTopic]?.slice(1).map((subTopic, index) => (
-              <button
-                key={subTopic}
-                className={`explore-main-subtopic-dropdown-option${index === subTopicMap[tempTopic].length - 2 ? ' last' : ''}`}
-                onClick={() => {
-                  setTempSubTopic(subTopic);
-                  setSubTopicDropdownOpen(false);
-                }}
-              >
-                <span className="explore-main-subtopic-dropdown-option-text">{subTopic}</span>
+              {/* 확인 버튼 */}
+              <button className="explore-main-selector-confirm-btn" onClick={handleConfirm}>
+                <span className="explore-main-selector-confirm-btn-text">확인</span>
               </button>
-            ))}
+            </div>
           </div>
-
-          {/* 확인 버튼 */}
-          <button className="explore-main-selector-confirm-btn" onClick={handleConfirm}>
-            <span className="explore-main-selector-confirm-btn-text">확인</span>
-          </button>
         </div>
       </div>
     </>
