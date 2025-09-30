@@ -108,19 +108,7 @@ export default function CommunityWritePage() {
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
       />
-      <div className="write-tag-bar">
-        <input
-          value={tagInput}
-          onChange={e => setTagInput(e.target.value)}
-          placeholder="태그 입력 후 Enter"
-          onKeyDown={e => {if(e.key==='Enter'){e.preventDefault();handleAddTag();}}}
-        />
-        <button type="button" onClick={handleAddTag}>태그 추가</button>
-      </div>
-      <div className="write-tag-list">
-        {tags.map(tag => <span key={tag} className="write-tag">#{tag}</span>)}
-      </div>
-
+      
       <div className="write-bottom-spacer" />
     </div>
   );

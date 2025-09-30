@@ -1,3 +1,131 @@
+
+/* 1) 달력 카드: 좌우 16px, 아래는 주 끝나고 12px로 끝 */
+.p-calendar-wrapper {
+  width: calc(100% - 32px);
+  margin: 0 auto;
+  padding: 16px 16px 12px 16px;   /* 좌우 16, 하단 12 */
+  background: #FFF;
+  border-radius: 16px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: auto;                   /* 고정 높이 제거 */
+}
+
+/* 2) 헤더: 화살표-년월-화살표 가로 정렬 + 세로 중앙 */
+.p-calendar-head {
+  display: flex;
+  align-items: center;            /* 위에 달라붙는 것 방지 */
+  justify-content: space-between; /* 좌/중앙/우 정렬 안정화 */
+  width: 100%;
+  padding: 0;                     /* wrapper가 이미 16px 패딩 보유 */
+  margin: 0 0 12px 0;
+  box-sizing: border-box;
+}
+.p-calendar-head .month-label {
+  font: 700 14px/16px Roboto, sans-serif;
+  color: #999;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+/* 3) 요일 헤더(일~토)도 그리드로 가운데 배치 */
+.p-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  width: 100%;
+  justify-items: center;          /* 칸 안 가운데 */
+  margin-bottom: 8px;
+}
+
+/* 4) 날짜 그리드: 컨테이너 너비 전체 사용 + 가운데 정렬 */
+.p-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr)); /* 균등 7등분 */
+  gap: 8px 12px;                   /* 세로 8, 가로 12 (피그마 느낌) */
+  width: 100%;
+  justify-items: center;           /* 셀 내용 가운데 */
+  align-items: start;
+  height: auto;                    /* 고정값 제거 */
+}
+
+/* 5) 날짜 셀: 고정폭/절대위치 제거, 가운데로만 배치 */
+.cal-cell,
+.cal-cell.day {
+  display: grid;
+  place-items: center;             /* 수직/수평 모두 중앙 */
+  width: 100%;                     /* 1fr 칸을 꽉 채움 */
+  height: auto;
+  box-sizing: border-box;
+}
+.cal-date-container {
+  display: grid;
+  place-items: center;
+  row-gap: 6px;                    /* 숫자 ↔ 원/별 간격 */
+}
+
+/* 6) 원/별 크기 통일 (시각적 중심 맞춤) */
+.day-circle,
+.today-circle,
+.no-attendance-circle,
+.cal-star {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.today-circle { background:#448FFF; color:#FFF; }
+
+/* 별 아이콘은 절대배치 금지 */
+.cal-star svg {
+  width: 18px;
+  height: 18px;
+  position: static;                /* absolute → static */
+}
+
+/* 7) 날짜 숫자 텍스트 정렬 */
+.cal-day-number {
+  font: 500 10px/20px Roboto, sans-serif;
+  text-align: center;
+}
+
+/* 8) 혹시 남아있는 고정 폭/높이/absolute를 무력화 */
+.p-calendar-grid > * { position: static !important; width: auto !important; height: auto !important; }
+
+html { scrollbar-gutter: stable; }
+.p-calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 16px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+.nav-btn {
+  margin-top: 12px;
+  margin-bottom: 0;
+  height: 32px;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.month-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #999;
+  line-height: 1;
+}
+.p-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px 0;
+  width: 100%;
+  padding: 0 16px 12px 16px;
+  box-sizing: border-box;
+}
 .profile-spec {
   position:relative;
   width:100%;
@@ -10,57 +138,17 @@
 }
 body.profile-route { background:#F4F6FA; }
   .p-calendar-wrapper {
-    margin: 32px auto;
-    width: 380px;
-    height: 372px;
-    background: #FFFFFF;
-    box-shadow: 0px 0px 12px rgba(0, 0, 0, 0.08);
-  margin-top: 0;
-  width: 414px;
-  height: 340px;
-  border-radius: 16px 16px 0 0;
-  position: absolute;
-  left: -1px;
-    margin-top: 0;
-    width: 414px;
-    height: 340px;
-    border-radius: 16px 16px 0 0;
-    position: static;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-  left: 0;
-  width: 414px;
-  height: 340px;
-  opacity: 1;
-  z-index: 2;
-  object-fit: cover;
-    margin-top: 0;
-    width: 414px;
-    height: 340px;
-    border-radius: 16px 16px 0 0;
-    position: absolute;
-    left: -1px;
-    top: 103px;
-    overflow: hidden;
-    background: linear-gradient(180deg, #F4F6FA 0%, #A0C6FF 100%);
-    z-index: 1;
-    display: flex;
-    flex-direction: row;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 414px;
-    height: 340px;
-    opacity: 1;
-    z-index: 2;
-    object-fit: cover;
-    border-radius: 16px 16px 0 0;
-	flex-direction: row;
-	align-items: center;
-	padding: 0;
-	gap: 8px;
+  width: calc(100% - 32px);
+  margin: 24px 16px;
+  padding: 0 0 12px 0;
+  background: #FFFFFF;
+  box-shadow: 0px 0px 12px rgba(0,0,0,0.08);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: auto;
+  box-sizing: border-box;
 }
 .p-topbar-title {
 	flex: none;
@@ -69,15 +157,19 @@ body.profile-route { background:#F4F6FA; }
 	width: 49px; /* 디자이너 스펙 그대로 */
 	height: 21px;
   .p-calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 32px);
-    grid-auto-rows: auto;
-    gap: 4px 22px;
-    justify-content: center;
-    width: 356px;
-    height: 316px;
-    margin: 0 auto;
-    position: static;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px 12px;
+  width: 100%;
+  justify-items: center;
+  height: auto;
+  margin: 0 auto;
+  padding-bottom: 12px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px 12px;
+  justify-items: center;
   }
 	font-family: Roboto, sans-serif;
 	font-style: normal;
@@ -89,16 +181,12 @@ body.profile-route { background:#F4F6FA; }
 }
 
   .cal-cell {
-    width: 32px;
-    height: 56px;
-    font-size: 10px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    flex-direction: column;
-    box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 48px;
   }
 .p-hero { margin-top:18px; width:100%; height:340px; border-radius:16px 16px 0 0; position:relative; overflow:hidden; }
 .p-hero-bg {
@@ -568,11 +656,13 @@ body.profile-route { background:#F4F6FA; }
 
 /* 날짜 셀 */
 .cal-cell.day { 
-  height: 56px;
+  display: flex;
   flex-direction: column;
-  position: relative;
-  align-items: stretch;
+  align-items: center;
   justify-content: flex-start;
+  width: 100%;
+  max-width: 32px;
+  height: auto;
 }
 
 .cal-cell.day.outside { 
@@ -623,8 +713,12 @@ body.profile-route { background:#F4F6FA; }
 
 /* 표시 영역 */
 .cal-indicator {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -637,15 +731,8 @@ body.profile-route { background:#F4F6FA; }
   width: 19px;
   height: 19px;
   background: #448FFF;
-  border-radius: 100%;
-  position: static;
-  z-index: 1;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: #FFF;
+  border-radius: 50%;
 }
 
 /* 출석한 날 노란 별 */
@@ -661,12 +748,9 @@ body.profile-route { background:#F4F6FA; }
 }
 
 .cal-star svg {
-  width: 24.77px;
-  height: 23.93px;
-  position: absolute;
-  top: 2px;
-  left: 4px;
-  opacity: 1;
+  width: 20px;
+  height: 20px;
+  position: static;
 }
 
 /* 출석하지 않은 날 회색 원 */

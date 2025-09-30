@@ -1,3 +1,33 @@
+/* 기사형 문제 이미지 컨테이너 및 그라데이션 오버레이 */
+.article-image-wrap {
+  position: relative;
+  width: 100%;
+  margin-bottom: 16px;
+  padding-left: 16px;
+  padding-right: 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 8px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.article-image-wrap img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+}
+.article-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  border-radius: 8px;
+}
 /* QuizQuestion.css - Extracted from QuizQuestion.js for Figma-spec, pixel-perfect, fully responsive layout */
 
 .quiz-question-container {
@@ -79,7 +109,10 @@
 .quiz-question-option-card {
   width: 100%;
   margin-bottom: 16px;
-  padding: 19px 16px;
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-top: 19px;
+  padding-bottom: 19px;
   border-radius: 8px;
   background: #fff;
   cursor: pointer;

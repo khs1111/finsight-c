@@ -140,9 +140,19 @@ function Calendar() {
   return (
     <div className="p-calendar-wrapper">
       <div className="p-calendar-head">
-        <button className="nav-btn" aria-label="prev" onClick={() => changeMonth(-1)}>◀</button>
+        <button className="nav-btn" aria-label="prev" onClick={() => changeMonth(-1)}>
+          {/* 오른쪽 화살표 (기존 왼쪽 SVG에 scaleX(-1)) */}
+          <svg width="10" height="18" viewBox="0 0 10 18" fill="none" xmlns="http://www.w3.org/2000/svg" style={{transform:'scaleX(-1)'}}>
+            <path d="M0.999828 17.7498C1.19889 17.7508 1.38994 17.6715 1.52983 17.5298L9.52983 9.52985C9.82228 9.23703 9.82228 8.76266 9.52983 8.46985L1.52983 0.469847C1.23432 0.194488 0.773819 0.202613 0.488207 0.488225C0.202595 0.773837 0.194469 1.23434 0.469829 1.52985L7.93983 8.99985L0.469829 16.4698C0.177375 16.7627 0.177375 17.237 0.469829 17.5298C0.609713 17.6715 0.800762 17.7508 0.999828 17.7498Z" fill="#999999"/>
+          </svg>
+        </button>
         <span className="month-label">{viewYear}.{viewMonth + 1}</span>
-        <button className="nav-btn" aria-label="next" onClick={() => changeMonth(1)}>▶</button>
+        {/* 왼쪽 화살표 (기존 왼쪽 SVG 그대로) */}
+        <button className="nav-btn" aria-label="next" onClick={() => changeMonth(1)}>
+          <svg width="10" height="18" viewBox="0 0 10 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0.999828 17.7498C1.19889 17.7508 1.38994 17.6715 1.52983 17.5298L9.52983 9.52985C9.82228 9.23703 9.82228 8.76266 9.52983 8.46985L1.52983 0.469847C1.23432 0.194488 0.773819 0.202613 0.488207 0.488225C0.202595 0.773837 0.194469 1.23434 0.469829 1.52985L7.93983 8.99985L0.469829 16.4698C0.177375 16.7627 0.177375 17.237 0.469829 17.5298C0.609713 17.6715 0.800762 17.7508 0.999828 17.7498Z" fill="#999999"/>
+          </svg>
+        </button>
       </div>
       <div className="p-calendar-grid" role="table" aria-label="학습 캘린더">
         {headers.map(h => (

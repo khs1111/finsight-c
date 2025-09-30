@@ -4,17 +4,18 @@
   left: 16px;
   top: 64px;
   width: 326px;
-  min-height: 200px;
+  min-height: 0;
   background: #FFFFFF;
   box-shadow: 0px 0px 8px rgba(10, 26, 51, 0.18);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 16px;
+  padding: 16px 16px 56px 16px;
   gap: 10px;
   z-index: 100;
   transition: height .2s;
+  box-sizing: border-box;
 }
 
 /* 내부 컨텐츠 오토레이아웃 */
@@ -23,6 +24,7 @@
   flex-direction: column;
   align-items: flex-start;
   padding: 0;
+  padding-bottom: 16px;
   gap: 16px;
   width: 294px;
   min-height: 100px;
@@ -32,9 +34,9 @@
 .explore-main-subtopic-dropdown-container {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
+  gap: 16px;   /* 드롭다운 ↔ 버튼 16px */
   width: 294px;
+  padding-bottom: 16px; /* 버튼 ↔ 컨테이너 끝 16px */
 }
 
 /* 드롭다운 헤더 */
@@ -68,17 +70,18 @@
 /* 확인 버튼 */
 .explore-main-selector-confirm-btn {
   display: flex;
-  flex-direction: row;
   justify-content: center;
   align-items: center;
-  padding: 11px 101px;
-  gap: 10px;
+  padding: 11px 0;
   width: 294px;
   height: 40px;
   background: linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%);
   border-radius: 8px;
   border: none;
   cursor: pointer;
+  margin: 0;
+  position: relative;
+  z-index: 101;
 }
 
 .explore-main-selector-confirm-btn-text {
@@ -277,10 +280,11 @@
   flex-grow: 1;
 }
 .explore-main-level-btn.selected {
-  background: #F4F6FA;
-  border: 2px solid;
-  border-image: linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%) 1;
-  border-radius: 32px;
+  background:
+    linear-gradient(#F4F6FA, #F4F6FA) padding-box,
+    linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%) border-box;
+  border: 1px solid transparent;
+  border-radius: 8px; /* 카드와 동일하게 */
   box-sizing: border-box;
 }
 .explore-main-level-btn-text {
@@ -430,12 +434,13 @@
   border: 1px solid #9B9B9B;
   border-radius: 12px;
   transition: box-shadow 0.2s, height 0.3s;
-  z-index: 30;
+  z-index: 100;
   height: 44px;
   overflow: visible;
   margin-top: 0;
 }
 .explore-main-subtopic-dropdown.open {
+  z-index: 100;
   box-shadow: 0 4px 24px rgba(10,26,51,0.18);
   height: auto !important;
 }
@@ -506,27 +511,6 @@
 }
 
 /* Confirm Button */
-.explore-main-selector-confirm-btn {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  padding: 11px 0;
-  gap: 10px;
-  width: 294px;
-  max-width: 100%;
-  height: 40px;
-  background: linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%);
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  margin: 16px auto 16px auto;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 16px;
-  box-sizing: border-box;
-}
 .explore-main-selector-confirm-btn-text {
   font-family: 'Roboto';
   font-style: normal;
@@ -909,11 +893,13 @@
   flex-grow: 1;
   transition: background 0.2s;
 }
+
 .explore-main-topic-btn.selected {
-  background: #F4F6FA;
-  border: 2px solid;
-  border-image: linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%) 1;
-  border-radius: 20px; /* 더 둥글게 하고 싶으면 값 조정 */
+  background: 
+    linear-gradient(#F4F6FA, #F4F6FA) padding-box,
+    linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%) border-box;
+  border: 1px solid transparent;
+  border-radius: 8px; /* 카드와 동일하게 */
   box-sizing: border-box;
 }
 
@@ -951,7 +937,7 @@
 /* 선택된 버튼 텍스트 그라데이션 */
 .explore-main-level-btn.selected .explore-main-level-btn-text,
 .explore-main-topic-btn.selected .explore-main-topic-btn-text {
-  font-weight: 700;
+   font-weight: 700;
   font-size: 14px;
   line-height: 16px;
   letter-spacing: -0.04em;
@@ -961,4 +947,3 @@
   background-clip: text;
   color: transparent;
 }
-

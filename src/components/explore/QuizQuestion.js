@@ -188,13 +188,14 @@ export default function QuizQuestion({ current,
 
   // ===== 기사형 문제 전용 상태 =====
   const ARTICLE_IMG_MIN = 260; 
-  const ARTICLE_IMG_MAX = 800; // 길어지는 것 제한 길이
+  const ARTICLE_IMG_MAX = '100%'; // 길어지는 것 제한 길이
   const [articleImgHeight, setArticleImgHeight] = useState(null);
   // 🖼️ 기사 이미지 관련 상태 및 참조
   const articleImgWrapperRef = useRef(null);
   const naturalSizeRef = useRef({ w: null, h: null });
   const [imgError, setImgError] = useState(false);
   const [imgSrc, setImgSrc] = useState(null);
+  // 이미지가 public/assets에 있다면 아래 경로 사용
   const q4Fallbacks = React.useMemo(() => [
     '/assets/q4-article.png',
     '/assets/q4-article.jpg',
@@ -528,14 +529,15 @@ export default function QuizQuestion({ current,
 
         {/* 기사 이미지 타입이면 제목 아래에 이미지(또는 플레이스홀더) */}
         {question.type === 'articleImage' && (
-          <div ref={articleImgWrapperRef} className="quiz-question-article-img-wrapper">
+          <div className="article-image-wrap" ref={articleImgWrapperRef}>
             {imgSrc && !imgError ? (
               <img
                 src={imgSrc}
                 alt="기사 이미지"
                 onLoad={handleArticleImgLoad}
                 onError={() => {
-                  if (question?.id === 4 && q4FallbackIndexRef.current < q4Fallbacks.length - 1) {
+                  // fallback: 4번 문제일 때만 여러 확장자 시도
+                  if (q4FallbackIndexRef.current < q4Fallbacks.length - 1) {
                     q4FallbackIndexRef.current += 1;
                     setImgSrc(q4Fallbacks[q4FallbackIndexRef.current]);
                   } else {
@@ -565,6 +567,7 @@ export default function QuizQuestion({ current,
                 )}
               </div>
             )}
+            <div className="article-gradient" />
           </div>
         )}
 
