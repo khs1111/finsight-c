@@ -108,11 +108,7 @@ function buildMonthDays(year, month) {
   return cells;
 }
 
-function useMissionSet(year, month) {
 
-  // API 출석 데이터로 대체
-  return useMemo(() => new Set(), [year, month]);
-}
 
 function Calendar() {
   const todayDate = new Date();
