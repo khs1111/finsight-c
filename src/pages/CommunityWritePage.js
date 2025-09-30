@@ -25,7 +25,7 @@ export default function CommunityWritePage() {
     setLoading(true);
     setError(null);
     try {
-      await createCommunityPost({ body, tags });
+      await createCommunityPost({ body });
       navigate(-1);
     } catch (e) {
       setError('글 등록에 실패했습니다. 다시 시도해주세요.');
