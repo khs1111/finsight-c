@@ -13,8 +13,6 @@ export default function CommunityWritePage() {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [category, setCategory] = useState(null);
   const [body, setBody] = useState('');
-  const [tags, setTags] = useState([]);
-  const [tagInput, setTagInput] = useState('');
   const [focused, setFocused] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
