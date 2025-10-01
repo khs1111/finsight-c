@@ -26,7 +26,9 @@ export async function getWrongNotes(params = {}) {
   return data;
 }
 
-export default {
+const studyApi = {
   getWrongNoteStats,
   getWrongNotes,
 };
+
+export default studyApi;

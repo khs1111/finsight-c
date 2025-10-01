@@ -190,7 +190,6 @@ export default function QuizQuestion({ current,
   // ===== 기사형 문제 전용 상태 =====
   // 기사 이미지: 너비는 플레이스홀더와 동일(래퍼 100%), 높이는 이미지 비율에 맞춤
   const ARTICLE_IMG_MIN = 0; 
-  const ARTICLE_IMG_MAX = Infinity; // 제한 없이 비율대로
   const [articleImgHeight, setArticleImgHeight] = useState(null);
   // 🖼️ 기사 이미지 관련 상태 및 참조
   const articleImgWrapperRef = useRef(null);

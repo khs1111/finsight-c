@@ -44,7 +44,9 @@ export function useWrongNoteStore() {
 
   // recalc stats on local change if API not provided
   useEffect(() => {
-    if (!stats || !Array.isArray(stats.byCategory) || stats.total == null) {
+    // If API did not provide stats, derive from local list
+    const noApiStats = !stats || !Array.isArray(stats.byCategory) || stats.total == null;
+    if (noApiStats) {
       const totals = local.length;
       const byCategory = local.reduce((acc, cur) => {
         const key = cur.category || '기타';
@@ -54,6 +56,7 @@ export function useWrongNoteStore() {
       }, []);
       setStats({ total: totals, byCategory });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [local]);
 
   const add = (item) => {
