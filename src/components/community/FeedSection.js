@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { fetchCommunityPosts } from '../../api/community';
 
 // Inline SVG icon components (gray icons)
 const IconHeart = () => (
@@ -19,42 +20,14 @@ const IconShare = () => (
   </svg>
 );
 
-// Added category field for filtering; hashtags remain removed in UI.
-const samplePosts = [
-  {
-    id: 1,
-    category: '시황',
-    author: '파니의 친구',
-    date: '9월 2일',
-    title: '오늘장 변동성 장난 아니네요.',
-    body: '기관 매수세가 좀 들어오는 것 같긴 한데, 외국인 흐름은 여전히 부담스럽습니다. 다들 어떻게 보고 계신가요?',
-    tags: ['#뉴스레터', '#장초반상승', '#정부투자'],
-    thumbnail: true,
-    stats: { likes: 4, comments: 8, shares: 0 }
-  },
-  {
-    id: 2,
-    category: '채권',
-    author: '파니의 친구',
-    date: '9월 2일',
-    title: '금리 인상 사이클이 거의 끝나가는 것 같아서',
-    body: '장기 채권 ETF 관심 가지는 중입니다. 비슷한 생각 있으신 분?',
-    tags: ['#카카오', '#장초반상승'],
-    thumbnail: false,
-    stats: { likes: 24, comments: 8, shares: 0 }
-  },
-  {
-    id: 3,
-    category: '시황',
-    author: '파니의 친구',
-    date: '9월 1일',
-    title: '오늘장 변동성 다시 체크',
-    body: '외국인 수급 조금 들어오는 듯? 그래도 방향 확신 어렵네요.',
-    tags: ['#카카오', '#장초반상승'],
-    thumbnail: false,
-    stats: { likes: 4, comments: 12, shares: 0 }
-  }
-];
+function formatKDate(iso) {
+  try {
+    const d = new Date(iso);
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    return `${m}월 ${day}일`;
+  } catch { return ''; }
+}
 
 
 const PostCard = ({ post }) => {
@@ -92,13 +65,47 @@ const PostCard = ({ post }) => {
   );
 };
 
-export default function FeedSection({ categoryFilter = '전체' }) {
+export default function FeedSection({ categoryFilter = '전체', token }) {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true); setError(null);
+      try {
+        const { data } = await fetchCommunityPosts(token);
+        const mapped = (Array.isArray(data) ? data : [])
+          .map(p => ({
+            id: p.id,
+            author: p.author?.nickname || '익명',
+            date: p.createdAt ? formatKDate(p.createdAt) : '',
+            title: p.body?.substring(0, 30) || '', // 간단 타이틀 대체
+            body: p.body || '',
+            tags: Array.isArray(p.tags) ? p.tags : [],
+            thumbnail: false, // 서버 모델에 썸네일 정보 없음 → 기본값
+            stats: { likes: p.likeCount ?? 0, comments: p.commentCount ?? 0, shares: 0 },
+            category: (Array.isArray(p.tags) && p.tags[0]) || '기타'
+          }));
+        if (mounted) setPosts(mapped);
+      } catch (e) {
+        if (mounted) setError(e?.message || '피드 불러오기 실패');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [token]);
+
   const filtered = categoryFilter === '전체'
-    ? samplePosts
-    : samplePosts.filter(p => p.category === categoryFilter);
+    ? posts
+    : posts.filter(p => (p.category === categoryFilter) || p.tags?.includes(categoryFilter));
 
   return (
     <div className="community-feed">
+      {loading && <div className="loading">불러오는 중...</div>}
+      {error && <div className="error-text">{error}</div>}
       <ul className="c-post-card-list">
         {filtered.map(p => <PostCard key={p.id} post={p} />)}
       </ul>

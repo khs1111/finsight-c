@@ -1,3 +1,172 @@
+/* --- WORD/NOTE 드롭다운: 엄격 Figma 고정 버전 --- */
+.explore-main-menu-popup{
+  position: absolute; top: 32px; right: 0;
+  width: 82px !important;
+  padding: 16px 12px !important;
+  height: 76px !important;
+  box-sizing: border-box;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 0 !important;
+  border-radius: 16px;
+}
+
+.explore-main-menu-popup > .explore-main-menu-popup-list{
+  display: grid !important;
+  grid-template-rows: 14px 1px 14px !important;
+  row-gap: 8px !important;
+  width: 58px !important;
+  height: 76px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  justify-items: stretch !important;
+}
+
+.explore-main-menu-popup > .explore-main-menu-popup-list > .explore-main-menu-popup-item{
+  width: 58px !important;
+  height: 14px !important;
+  line-height: 14px !important;
+  padding: 0 !important; margin: 0 !important;
+  font-size: 12px !important; font-weight: 700 !important;
+  text-align: left !important; border: none !important; background: none !important;
+  cursor: pointer !important;
+}
+
+.explore-main-menu-popup > .explore-main-menu-popup-list > .explore-main-menu-popup-divider{
+  width: 58px !important;
+  height: 1px !important;
+  background: #F5F5F5 !important;
+  border: none !important;
+  margin: 0 !important;
+}
+/* 드롭다운 팝업 하단 16px 패딩(Figma 스펙) */
+.explore-main-menu-popup {
+  padding-bottom: 16px !important;
+}
+/* --- FIX: 단어장/오답노트 드롭다운 중앙 구분선 & 8px 간격 (최종) --- */
+.explore-main-menu-popup{
+  height: auto !important;
+}
+
+.explore-main-menu-popup > .explore-main-menu-popup-list{
+  display: grid !important;
+  grid-template-rows: minmax(24px,1fr) 1px minmax(24px,1fr) !important;
+  row-gap: 8px !important;
+  align-items: center !important;
+  justify-items: stretch !important;
+  width: 100% !important;
+  height: auto !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+.explore-main-menu-popup > .explore-main-menu-popup-list > .explore-main-menu-popup-item{
+  height: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 16px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  background: none !important;
+  border: none !important;
+  text-align: left !important;
+  cursor: pointer !important;
+}
+
+.explore-main-menu-popup > .explore-main-menu-popup-list > .explore-main-menu-popup-divider{
+  width: 100% !important;
+  height: 1px !important;
+  background: #F5F5F5 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+/* 드롭다운 구분선/간격/텍스트 완벽 정렬 (분석 기반) */
+.explore-main-menu-popup-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  gap: 0;
+  width: 100%;
+}
+
+.explore-main-menu-popup-item {
+  width: 100%;
+  padding: 8px 0;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 16px;
+  color: #282828;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.explore-main-menu-popup-divider {
+  width: 100%;
+  height: 1px;
+  background: #F5F5F5;
+  margin: 0;
+  border: none;
+}
+/* 단어장/오답노트 드롭다운 Figma 스펙 */
+.explore-main-menu-popup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 16px 12px;
+  gap: 10px;
+  position: absolute;
+  top: 32px;
+  right: 0;
+  width: 82px;
+  height: 76px;
+  background: #fff;
+  box-shadow: 0px 0px 16px rgba(10, 26, 51, 0.32);
+  border-radius: 16px;
+  z-index: 200;
+}
+
+.explore-main-menu-popup-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0;
+  gap: 8px;
+  width: 58px;
+  height: 44px;
+}
+
+.explore-main-menu-popup-item {
+  width: 58px;
+  height: 14px;
+  font-family: 'Roboto', sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 14px;
+  color: #282828;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.explore-main-menu-popup-divider {
+  width: 58px;
+  height: 0px;
+  border: 1px solid #F5F5F5;
+  margin: 8px 0;
+}
+/* 상단 메뉴 드롭다운(단어장/오답노트) 항상 위에 보이도록 */
+.explore-main-menu-popup {
+  z-index: 200;
+  position: absolute;
+  top: 32px;
+  right: 0;
+}
 /* 주제/레벨 선택 전체 컨테이너 */
 .explore-main-selector-box {
   position: absolute;

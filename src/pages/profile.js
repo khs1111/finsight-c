@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import goldTier from '../assets/tier/emerald.png';
+import TierDummy from '../assets/tier/gold.png';
 import { fetchProfile, fetchProfileActivity } from '../api/profile';
 import './Profile.css';
 
@@ -198,40 +198,38 @@ function Calendar() {
 }
 
 export default function Profile() {
-  const [profile, setProfile] = useState({ nickname: '', tier: '' });
+  const [profile, setProfile] = useState({ nickname: '', tier: '', tierImageUrl: '' });
   useEffect(() => {
     fetchProfile().then(res => {
       setProfile({
         nickname: res.data.nickname || '',
         tier: res.data.tier || '',
+        // 서버에서 티어 이미지 URL을 내려주면 사용, 없으면 빈 문자열
+        tierImageUrl: res.data.tierImageUrl || res.data.tier_image_url || '',
       });
-    }).catch(() => setProfile({ nickname: '', tier: '' }));
+    }).catch(() => setProfile({ nickname: '', tier: '', tierImageUrl: '' }));
   }, []);
+  const displayTier = (profile && profile.tier) ? profile.tier : 'EMERALD';
+  const displayNickname = (profile && profile.nickname) ? profile.nickname : '퍼니의 동료';
   return (
     <div className="profile-spec">
       <div className="p-topbar" aria-label="상단 제목">
         <span className="p-topbar-title">프로필</span>
       </div>
-      <div className="p-hero-bg" style={{
-        backgroundImage: `url(${require('../assets/profile/back.png')})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        width: '100%',
-        height: '340px',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        zIndex: 0,
-      }} />
-      <div className="p-avatar-block inside-hero" style={{ position: 'relative', zIndex: 1 }}>
-        <div className="avatar" style={{ position: 'relative', width: '200px', height: '200px', background: 'transparent' }}>
-          <img src={require('../assets/profile/ant.png')} alt="캐릭터" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: '120px', height: '120px', objectFit: 'contain', zIndex: 2 }} />
+
+      {/* Tier image + Nickname inline row */}
+      <div className="profile-heading" aria-label="티어와 닉네임">
+        <div className="tier-inline" aria-label="티어와 닉네임">
+          <img
+            className="tier-image"
+            src={profile.tierImageUrl || TierDummy}
+            alt={displayTier}
+            width={32}
+            height={32}
+            onError={(e) => { e.currentTarget.src = TierDummy; }}
+          />
+          <span className="nickname-inline">{displayNickname}</span>
         </div>
-        <div className="tier-badge">
-          <img src={goldTier} alt="골드 티어" className="tier-star" />
-          <span className="tier-label">{profile.nickname}</span>
-        </div>
-        <div className="nickname-label">{profile.nickname}</div>
       </div>
 
       <div className="p-stats-card">
@@ -290,7 +288,7 @@ export default function Profile() {
               </defs>
             </svg>
           </div>
-          <div className="stat-label">뉴스 레터</div>
+          <div className="stat-label">뉴스레터</div>
         </div>
         <div className="stat">
           <div className="stat-icon no-bg" aria-hidden="true">

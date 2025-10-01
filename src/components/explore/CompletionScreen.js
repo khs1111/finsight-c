@@ -75,7 +75,7 @@ export default function CompletionScreen({
       <div
         style={{
           position: "absolute",
-          top: "138px", // 상태바(48px) 아래 40px 간격 => 48 + 40 = 88
+          top: "48px", // 상태바(48px) 아래 40px 간격 => 48 + 40 = 88
           left: "24px",
           right: "24px",
           width: "calc(100% - 48px)",
@@ -141,7 +141,7 @@ export default function CompletionScreen({
       <div
         style={{
           position: "absolute",
-          top: "240px",
+          top: "136px",
           left: "50%",
           transform: "translateX(-50%)",
           width: "240px",
@@ -305,7 +305,7 @@ export default function CompletionScreen({
       <div
         style={{
           position: "absolute",
-          top: "530px", 
+          top: "440px", 
           left: "50%",
           transform: "translateX(-50%)",
           display: "flex",

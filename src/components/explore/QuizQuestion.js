@@ -16,6 +16,7 @@ import React, { useState, useRef, useEffect } from "react";
 import "./QuizQuestion.css";
 
 import ProgressHeader from "./ProgressHeader";
+import q4ArticlePng from "../../assets/explore/q4-article.png";
 
 /**
  * 🎯 QuizQuestion 컴포넌트
@@ -187,22 +188,23 @@ export default function QuizQuestion({ current,
   };
 
   // ===== 기사형 문제 전용 상태 =====
-  const ARTICLE_IMG_MIN = 260; 
-  const ARTICLE_IMG_MAX = '100%'; // 길어지는 것 제한 길이
+  // 기사 이미지: 너비는 플레이스홀더와 동일(래퍼 100%), 높이는 이미지 비율에 맞춤
+  const ARTICLE_IMG_MIN = 0; 
+  const ARTICLE_IMG_MAX = Infinity; // 제한 없이 비율대로
   const [articleImgHeight, setArticleImgHeight] = useState(null);
   // 🖼️ 기사 이미지 관련 상태 및 참조
   const articleImgWrapperRef = useRef(null);
   const naturalSizeRef = useRef({ w: null, h: null });
   const [imgError, setImgError] = useState(false);
   const [imgSrc, setImgSrc] = useState(null);
-  // 이미지가 public/assets에 있다면 아래 경로 사용
-  const q4Fallbacks = React.useMemo(() => [
-    '/assets/q4-article.png',
-    '/assets/q4-article.jpg',
-    '/assets/q4-article.jpeg',
-    '/assets/q4-article.webp',
-    '/assets/q4-article.svg'
-  ], []);
+  // 이미지 후보 목록: 문제에서 제공한 이미지(있다면) + 프로젝트 내 더미 이미지
+  const imgCandidates = React.useMemo(() => {
+    const list = [];
+    if (question?.image) list.push(question.image);
+    list.push(q4ArticlePng);
+    // 중복 제거
+    return Array.from(new Set(list.filter(Boolean)));
+  }, [question?.image]);
   const q4FallbackIndexRef = useRef(0);
 
   /**
@@ -230,8 +232,8 @@ export default function QuizQuestion({ current,
       const scaledH = nh * (wrapW / nw);
       
       // 🔒 최소/최대 높이 제한 적용
-      const clamped = Math.max(ARTICLE_IMG_MIN, Math.min(ARTICLE_IMG_MAX, Math.round(scaledH)));
-      setArticleImgHeight(clamped);
+  const exactH = Math.round(scaledH);
+  setArticleImgHeight(exactH);
     } catch (err) {
       // 🚨 계산 실패 시 최소 높이 사용
       console.warn('이미지 크기 계산 실패:', err);
@@ -252,8 +254,8 @@ export default function QuizQuestion({ current,
       // 📐 새로운 컨테이너 너비에 맞춰 재계산
       const wrapW = articleImgWrapperRef.current.clientWidth;
       const scaledH = h * (wrapW / w);
-      const clamped = Math.max(ARTICLE_IMG_MIN, Math.min(ARTICLE_IMG_MAX, Math.round(scaledH)));
-      setArticleImgHeight(clamped);
+  const exactH = Math.round(scaledH);
+  setArticleImgHeight(exactH);
     };
     
     // 🔄 이벤트 리스너 등록 및 정리
@@ -280,15 +282,14 @@ export default function QuizQuestion({ current,
     setLearningText("");
 
     
-    // 🖼️ 기사 이미지 타입의 경우 이미지 소스 설정 (Q4 폴백 지원)
+    // 🖼️ 기사 이미지 타입의 경우 이미지 소스 설정 (후보군 순차 시도)
     if (question?.type === 'articleImage') {
-      const initial = question.image || null;
       q4FallbackIndexRef.current = 0;
-      setImgSrc(initial || q4Fallbacks[0]);
+      setImgSrc(imgCandidates[0] || null);
     } else {
       setImgSrc(null);
     }
-  }, [current, q4Fallbacks, question?.image, question?.type]);
+  }, [current, imgCandidates, question?.type]);
 
   // 학습하기가 열릴 때 백엔드에서 받은 퀴즈 데이터의 키포인트를 사용
   useEffect(() => {
@@ -536,38 +537,34 @@ export default function QuizQuestion({ current,
                 alt="기사 이미지"
                 onLoad={handleArticleImgLoad}
                 onError={() => {
-                  // fallback: 4번 문제일 때만 여러 확장자 시도
-                  if (q4FallbackIndexRef.current < q4Fallbacks.length - 1) {
+                  // 다음 후보 시도 (초기 URL 실패 시 더미로 폴백)
+                  if (q4FallbackIndexRef.current < imgCandidates.length - 1) {
                     q4FallbackIndexRef.current += 1;
-                    setImgSrc(q4Fallbacks[q4FallbackIndexRef.current]);
+                    setImgSrc(imgCandidates[q4FallbackIndexRef.current]);
                   } else {
                     setImgError(true);
                   }
                 }}
                 className="quiz-question-article-img"
-                style={{ height: articleImgHeight ? articleImgHeight : ARTICLE_IMG_MIN }}
+                style={{ height: articleImgHeight ? articleImgHeight : 'auto' }}
               />
             ) : (
-              <div className="quiz-question-article-img-placeholder" style={{ height: articleImgHeight ? articleImgHeight : ARTICLE_IMG_MIN }}>
+              <div className="quiz-question-article-img-placeholder" style={{ height: articleImgHeight ? articleImgHeight : 'auto' }}>
                 <span style={{ fontWeight:600 }}>기사 이미지 영역</span>
                 {!imgError ? (
-                  <span style={{ opacity:0.7, fontSize:12 }}>업로드 시 비율에 맞춰 최대 {ARTICLE_IMG_MAX}px 까지 확장</span>
+                  <span style={{ opacity:0.7, fontSize:12 }}>업로드 시 비율에 맞춰 이미지 높이에 맞춰 표시됩니다</span>
                 ) : (
                   <div style={{ textAlign:'center' }}>
                     <div style={{ fontSize:12, color:'#9AA6B2' }}>이미지를 찾을 수 없습니다.</div>
-                    <div style={{ fontSize:12, color:'#9AA6B2' }}>다음 중 하나의 파일을 추가하면 자동으로 표시됩니다:</div>
+                    <div style={{ fontSize:12, color:'#9AA6B2' }}>다음 위치에 이미지를 추가하거나 문제에 image URL을 제공하세요:</div>
                     <div style={{ fontSize:12, color:'#4A6FB0', marginTop:4, lineHeight:'18px' }}>
-                      public/assets/q4-article.png<br/>
-                      public/assets/q4-article.jpg<br/>
-                      public/assets/q4-article.jpeg<br/>
-                      public/assets/q4-article.webp<br/>
-                      public/assets/q4-article.svg
+                      src/assets/explore/q4-article.png
                     </div>
                   </div>
                 )}
               </div>
             )}
-            <div className="article-gradient" />
+            {/* gradient removed to match spec */}
           </div>
         )}
 

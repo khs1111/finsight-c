@@ -4,13 +4,13 @@ import Illustration from '../../assets/study/wrongNoteIllustration.svg';
 const CATEGORY_ORDER = ['은행', '투자', '세금/절세', '암호화폐'];
 
 export default function WrongNoteSection() {
-  const { wrongNotes } = useWrongNoteStore();
-  const total = wrongNotes.length;
+  const { wrongNotes, loading, error, stats } = useWrongNoteStore();
+  const total = stats?.total ?? wrongNotes.length;
   const counts = CATEGORY_ORDER.map(cat => ({
     category: cat,
-    count: wrongNotes.filter(w => w.category === cat).length
+    count: (stats?.byCategory?.find(s => s.category === cat)?.count) ?? wrongNotes.filter(w => w.category === cat).length
   }));
-  const empty = total === 0;
+  const empty = !loading && total === 0;
 
   return (
     <div className="wrongnote-wrapper" role="region" aria-label="오답노트">
@@ -21,7 +21,9 @@ export default function WrongNoteSection() {
           <img src={Illustration} alt="오답 일러스트" className="wrongnote-float-illust" />
         )}
       </div>
-      {empty ? (
+      {loading ? (
+        <div className="wrongnote-empty"><p>불러오는 중...</p></div>
+      ) : empty ? (
         <div className="wrongnote-empty">
           <img src={Illustration} alt="오답 노트 일러스트" className="wrongnote-illust" />
           <h3>틀린 문제가 아직 없어요</h3>
@@ -29,6 +31,7 @@ export default function WrongNoteSection() {
         </div>
       ) : (
         <>
+          {error && <div className="error-text">서버 통신 오류: {error}</div>}
           <ul className="wrongnote-category-list">
             {counts.map(item => (
               <li key={item.category} className="wrongnote-cat-card">

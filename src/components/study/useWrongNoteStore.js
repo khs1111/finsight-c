@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import api from '../../api';
 
 // In-memory wrong note (틀린문제) store
 // Each item: { id, question, userAnswer, correctAnswer, explanation?, addedAt }
@@ -17,7 +18,43 @@ function setWrongState(updater) {
 
 export function useWrongNoteStore() {
   const [local, setLocal] = useState(wrongState);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState({ total: local.length, byCategory: [] });
   if (!wrongListeners.has(setLocal)) wrongListeners.add(setLocal);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true); setError(null);
+      // 1) fetch stats
+      const s = await api.getWrongNoteStats?.();
+      if (mounted && s) setStats(s);
+      // 2) fetch items (optional pageable; for now full list)
+      const listData = await api.getWrongNotes?.();
+      if (mounted && listData && Array.isArray(listData.items)) {
+        setWrongState(listData.items);
+      }
+      setLoading(false);
+    })().catch(err => {
+      if (mounted) { setError(err?.message || '오답노트 불러오기 실패'); setLoading(false); }
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  // recalc stats on local change if API not provided
+  useEffect(() => {
+    if (!stats || !Array.isArray(stats.byCategory) || stats.total == null) {
+      const totals = local.length;
+      const byCategory = local.reduce((acc, cur) => {
+        const key = cur.category || '기타';
+        const found = acc.find(a => a.category === key);
+        if (found) found.count += 1; else acc.push({ category: key, count: 1 });
+        return acc;
+      }, []);
+      setStats({ total: totals, byCategory });
+    }
+  }, [local]);
 
   const add = (item) => {
     setWrongState(prev => [{ id: Date.now().toString(), addedAt: Date.now(), category: item.category || '기타', ...item }, ...prev]);
@@ -27,7 +64,7 @@ export function useWrongNoteStore() {
   };
   const clear = () => setWrongState([]);
 
-  return { wrongNotes: local, add, remove, clear };
+  return { wrongNotes: local, add, remove, clear, loading, error, stats };
 }
 
 export function _resetWrong(list) { setWrongState(list); }

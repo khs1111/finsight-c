@@ -18,10 +18,18 @@ export default function ExploreMain({ onStart }) {
   const [selectedTopic, setSelectedTopic] = useState('은행');
   const [selectedSubTopic, setSelectedSubTopic] = useState('예금/적금');
   const [totalQuestions, setTotalQuestions] = useState(0); // 서버에서 받아온 총 질문 수
-  const today = new Date().getDate(); // 오늘 날짜
-const weekDates = Array.from({ length: 7 }, (_, i) => today - 3 + i); // 오늘 기준으로 3일
-// eslint-disable-next-line no-unused-vars
-const [solvedDates, setSolvedDates] = React.useState([today]);
+  const todayDateObj = new Date();
+  const today = todayDateObj.getDate(); // 오늘 날짜 (일)
+  // Calculate current week's (Sunday to Saturday) dates
+  const startOfWeek = new Date(todayDateObj);
+  startOfWeek.setDate(todayDateObj.getDate() - todayDateObj.getDay()); // Sunday
+  const weekDates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(startOfWeek);
+    d.setDate(startOfWeek.getDate() + i);
+    return d.getDate();
+  });
+  // eslint-disable-next-line no-unused-vars
+  const [solvedDates, setSolvedDates] = React.useState([today]);
 
 // 서버에서 질문 수 가져오기
 useEffect(() => {

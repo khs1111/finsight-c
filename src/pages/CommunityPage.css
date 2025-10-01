@@ -17,6 +17,7 @@
 }
 
 .feed-card-header {
+  top: 24px;
   display: flex;
   align-items: center;
   gap: 12px;
