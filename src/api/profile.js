@@ -1,6 +1,8 @@
 // src/api/profile.js
 // 프로필 정보 및 활동(출석) API 래퍼
 
+import axios from 'axios';
+
 const API_BASE =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
   process.env.REACT_APP_API_BASE ||
@@ -59,7 +61,6 @@ export async function fetchProfileActivity() {
 }
 
 // (선택) 대시보드/배지 Axios 래퍼
-import axios from 'axios';
 const BASE_URL = API_BASE;
 
 export function getAxios(token) {

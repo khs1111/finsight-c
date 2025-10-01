@@ -9,15 +9,19 @@ import antCharacter from '../../assets/explore/antCharacter.svg';
 import './ExploreMain.css';
 
 // ExploreMain: 학습 진입 전 개요 UI
-export default function ExploreMain({ onStart }) {
+export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false); // 메뉴 토글 상태
   const [filterOpen, setFilterOpen] = useState(false);
-  // 기본 난이도 선택: '초보자'
-  const [selectedLevel, setSelectedLevel] = useState('초보자'); // 선택 난이도
+  // propSelectedLevel이 있으면 그걸로, 없으면 '초보자'로 초기화
+  const [selectedLevel, setSelectedLevel] = useState(propSelectedLevel || '초보자');
   const [selectedTopic, setSelectedTopic] = useState('은행');
   const [selectedSubTopic, setSelectedSubTopic] = useState('예금/적금');
   const [totalQuestions, setTotalQuestions] = useState(0); // 서버에서 받아온 총 질문 수
+  // propSelectedLevel이 바뀌면 selectedLevel도 동기화
+  useEffect(() => {
+    if (propSelectedLevel) setSelectedLevel(propSelectedLevel);
+  }, [propSelectedLevel]);
   const todayDateObj = new Date();
   const today = todayDateObj.getDate(); // 오늘 날짜 (일)
   // Calculate current week's (Sunday to Saturday) dates

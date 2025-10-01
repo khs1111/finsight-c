@@ -15,7 +15,7 @@ export default function Explore() {
   const [step, setStep] = useState(1);
   const [mainTopic, setMainTopic] = useState(null);
   const [subTopic, setSubTopic] = useState(null);
-    // const [level, setLevel] = useState(null); // 삭제: 사용하지 않음
+  const [level, setLevel] = useState(null); // 난이도 상태 추가
   const [current, setQid] = useState(0);
   const [questions, setQuestions] = useState([]);
   const [results, setResults] = useState([]);
@@ -46,7 +46,7 @@ export default function Explore() {
         mainTopic={mainTopic}
         subTopic={subTopic}
         onConfirm={async (lv) => {
-    
+          setLevel(lv); // 선택한 레벨 저장
           try {
             // getQuestions API 사용 (더미 데이터 우선)
             console.log('🎯 퀴즈 데이터 요청 중...');
@@ -54,19 +54,16 @@ export default function Explore() {
               topicId: mainTopic, 
               levelId: lv 
             });
-            
             if (result && result.questions && result.questions.length > 0) {
               console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
               setQuestions(result.questions);
             } else {
               console.log('🔄 더미 퀴즈 데이터 사용');
-              // API 실패시 기존 더미 데이터 사용
               setQuestions(dummyQuizzes);
             }
           } catch (err) {
             console.error("❌ 문제 불러오기 실패:", err);
             console.log('🔄 더미 퀴즈 데이터로 폴백');
-            // 에러시 기존 더미 데이터 사용
             setQuestions(dummyQuizzes);
           }
           setQid(0);
@@ -83,6 +80,7 @@ export default function Explore() {
       <ExploreMain
         total={questions.length}
         done={current - 1}
+        selectedLevel={level}
         onStart={() => setStep(4)}
       />
     );
