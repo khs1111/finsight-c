@@ -1,7 +1,9 @@
 
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:8081/api';
+const BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE)
+	|| process.env.REACT_APP_API_BASE
+	|| 'http://localhost:8081/api';
 
 // Axios instance with JWT token support
 export function getAxios(token) {
@@ -18,7 +20,15 @@ export function getAxios(token) {
 // --------------------
 // Community Post APIs (legacy, for future expansion)
 // --------------------
-export const fetchCommunityPosts = (token) => getAxios(token).get('/community/posts');
+export const fetchCommunityPosts = ({ category, tier, page = 0, size = 20 } = {}, token) =>
+	getAxios(token).get('/community/posts', {
+		params: {
+			category: category || undefined,
+			tier: tier || undefined,
+			page,
+			size,
+		}
+	});
 export const createCommunityPost = (data, token) => getAxios(token).post('/community/posts', data);
 export const fetchCommunityPostDetail = (postId, token) => getAxios(token).get(`/community/posts/${postId}`);
 export const createCommunityComment = (postId, data, token) => getAxios(token).post(`/community/posts/${postId}/comments`, data);

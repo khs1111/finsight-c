@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import './StudyPage.css';
 import './CommunityPage.css';
 import RankFilterDropdown from '../components/community/RankFilterDropdown';
-import { fetchCommunityPosts } from '../api/community';
+import { fetchCommunityPosts, likeCommunityPost } from '../api/community';
 import { useNavigate } from 'react-router-dom';
 
 // 카테고리 목록 (디자인 스펙 기반) - '오늘의 뉴스' = 전체 개념
@@ -24,18 +24,23 @@ export default function CommunityPage() {
 
   // 커뮤니티 글 목록 불러오기 (카테고리/티어별)
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    fetchCommunityPosts({ category, tier: rank })
-      .then(data => {
-        setPosts(data);
-      })
-      .catch(() => {
-        setError('글 목록을 불러오지 못했습니다.');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('accessToken');
+        const { data } = await fetchCommunityPosts({ category, tier: rank }, token);
+        if (!mounted) return;
+        // 서버 응답 배열 가정: [{ id, author:{nickname,profileImage,tier}, body, tags, likeCount, commentCount, createdAt }]
+        setPosts(Array.isArray(data) ? data : []);
+      } catch (e) {
+        if (mounted) setError('글 목록을 불러오지 못했습니다.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
   }, [category, rank]);
 
   return (
@@ -95,15 +100,16 @@ export default function CommunityPage() {
             {posts.map(post => (
               <div key={post.id} className="community-feed-card">
                 <div className="feed-card-header">
-                  <img
-                    src={post.author?.profileImage || '/default-profile.png'}
-                    alt="프로필"
-                    className="feed-card-profile"
-                  />
+                  <img src={post.author?.profileImage || '/default-profile.png'} alt="프로필" className="feed-card-profile" />
                   <div className="feed-card-author">
                     <span className="feed-card-nickname">{post.author?.nickname || '익명'}</span>
-                    {post.author?.badge && (
-                      <img src={post.author.badge.iconUrl} alt={post.author.badge.name} className="feed-card-badge" style={{width:24,height:24,marginLeft:8}} />
+                    {post.author?.badge?.iconUrl && (
+                      <img
+                        src={post.author.badge.iconUrl}
+                        alt={post.author.badge.name || 'badge'}
+                        className="feed-card-badge"
+                        style={{ width: 20, height: 20, marginLeft: 6 }}
+                      />
                     )}
                   </div>
                 </div>
@@ -113,8 +119,23 @@ export default function CommunityPage() {
                 </div>
                 <div className="feed-card-footer">
                   <span className="feed-card-date">{post.createdAt ? post.createdAt.slice(0, 10) : ''}</span>
-                  <span className="feed-card-likes">좋아요 {post.likeCount}</span>
-                  <span className="feed-card-comments">댓글 {post.commentCount}</span>
+                  <button
+                    type="button"
+                    className="feed-card-like-btn"
+                    onClick={async () => {
+                      try {
+                        const token = localStorage.getItem('accessToken');
+                        // 낙관적 업데이트
+                        setPosts(prev => prev.map(p => p.id === post.id ? { ...p, likeCount: (p.likeCount ?? 0) + 1 } : p));
+                        await likeCommunityPost(post.id, token);
+                      } catch {
+                        // 실패 시 롤백 최소화(선택적으로 구현 가능)
+                      }
+                    }}
+                  >
+                    좋아요 {post.likeCount ?? 0}
+                  </button>
+                  <span className="feed-card-comments">댓글 {post.commentCount ?? 0}</span>
                 </div>
               </div>
             ))}

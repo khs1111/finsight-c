@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import api from '../../api';
+import {
+  fetchWrongNoteStatistics,
+  fetchWrongNotes
+} from '../../api/community';
 
 // In-memory wrong note (틀린문제) store
 // Each item: { id, question, userAnswer, correctAnswer, explanation?, addedAt }
@@ -27,13 +30,18 @@ export function useWrongNoteStore() {
     let mounted = true;
     (async () => {
       setLoading(true); setError(null);
-      // 1) fetch stats
-      const s = await api.getWrongNoteStats?.();
-      if (mounted && s) setStats(s);
-      // 2) fetch items (optional pageable; for now full list)
-      const listData = await api.getWrongNotes?.();
-      if (mounted && listData && Array.isArray(listData.items)) {
-        setWrongState(listData.items);
+      try {
+        const token = localStorage.getItem('accessToken');
+        const userId = localStorage.getItem('userId') || undefined;
+        // 1) stats
+        const { data: statData } = await fetchWrongNoteStatistics(userId, token);
+        if (mounted && statData) setStats(statData);
+        // 2) list (first page)
+        const { data: listResp } = await fetchWrongNotes({ userId, page: 0, size: 50, filter: 'all', token });
+        const items = Array.isArray(listResp?.items) ? listResp.items : Array.isArray(listResp) ? listResp : [];
+        if (mounted) setWrongState(items);
+      } catch (e) {
+        if (mounted) setError(e?.message || '오답노트 불러오기 실패');
       }
       setLoading(false);
     })().catch(err => {
