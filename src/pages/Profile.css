@@ -16,18 +16,29 @@
 /* 2) 헤더: 화살표-년월-화살표 가로 정렬 + 세로 중앙 */
 .p-calendar-head {
   display: flex;
-  align-items: center;            /* 위에 달라붙는 것 방지 */
-  justify-content: space-between; /* 좌/중앙/우 정렬 안정화 */
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  padding: 0;                     /* wrapper가 이미 16px 패딩 보유 */
-  margin: 0 0 12px 0;
+  padding: 16px 0 12px 0; /* 상단에 16px, 하단 12px 패딩 */
+  margin: 0;
   box-sizing: border-box;
+  gap: 24px; /* 좌우 화살표와 년월 간격 */
 }
 .p-calendar-head .month-label {
-  font: 700 14px/16px Roboto, sans-serif;
-  color: #999;
+  /* 글꼴/크기/색상은 기존 규격 유지. 위치만 보정 */
   text-align: center;
-  flex: 0 0 auto;
+  margin: 0 12px;
+}
+.p-calendar-head .nav-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 /* 3) 요일 헤더(일~토)도 그리드로 가운데 배치 */
@@ -233,11 +244,12 @@ body.profile-route { background:#F4F6FA; }
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 0px;
-  gap: 128px;
-  width: 346px;
-  height: 24px;
-  margin: 0 auto 8px auto;
+  justify-content: center; /* 가운데 정렬 */
+  padding: 12px 0;         /* 위아래 여백으로 상단 붙음 방지 */
+  gap: 24px;               /* 좌/우 화살표와 년월 간격 */
+  width: 100%;
+  height: auto;
+  margin: 0 0 8px 0;
   position: static;
   .cal-star {
     width: 32px;

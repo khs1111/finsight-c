@@ -13,6 +13,8 @@ export default function CompletionScreen({
   const navigate = useNavigate();
   // bottom nav height 측정 (FloatingQuizCTA와 동일한 기준 사용)
   const [navHeight, setNavHeight] = useState(0);
+  const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 390);
+  const [vh, setVh] = useState(typeof window !== 'undefined' ? window.innerHeight : 844);
   useEffect(() => {
     function measure() {
       const nav = document.querySelector('.bottom-nav');
@@ -21,6 +23,10 @@ export default function CompletionScreen({
         setNavHeight(h);
       } else {
         setNavHeight(0);
+      }
+      if (typeof window !== 'undefined') {
+        setVw(window.innerWidth);
+        setVh(window.innerHeight);
       }
     }
     measure();
@@ -42,16 +48,30 @@ export default function CompletionScreen({
   const gap = 16;
   const topCTABottom = baseBottom + (buttonHeight + gap) * 1; // stackIndex=1
   const premiumBubbleBottom = topCTABottom + buttonHeight + gap; // 위 CTA 위로 16px
+  // 뷰포트 기반 레이아웃 계산
+  const maxCardWidth = Math.min(360, vw - 32);
+  const characterSize = vh <= 740 ? 180 : 240;
+  const topBubble = vh <= 740 ? 36 : 48;
+  const topCharacter = topBubble + 88 + 6; // 말풍선 아래 여유
+  const estimatedCardHeight = 120; // 내용 자동 높이이지만 레이아웃 계산용 추정치
+  // 결과 카드 top: 캐릭터 아래 일정 간격, 단 CTA와 겹치지 않도록 하단 여유
+  const rawResultTop = topCharacter + characterSize + 24;
+  const bottomSafe = navHeight + 16 + 60 + 16 + 60 + 16; // CTA 2개 스택 가정 여유치
+  const maxTopForCard = Math.max(0, vh - bottomSafe - estimatedCardHeight);
+  const resultTop = Math.min(rawResultTop, maxTopForCard);
+
   return (
     <div
       style={{
         width: "100%",
         maxWidth: "100%",
-        minHeight: "917px",
+        minHeight: "100dvh",
         margin: "0 auto",
         background: "#F4F6FA",
         fontFamily: "Roboto, sans-serif",
         position: "relative",
+        overflowX: 'hidden',
+        overflowY: 'hidden',
       }}
     >
       {/* ===== Status Bar ===== */}
@@ -75,7 +95,7 @@ export default function CompletionScreen({
       <div
         style={{
           position: "absolute",
-          top: "48px", // 상태바(48px) 아래 40px 간격 => 48 + 40 = 88
+          top: `${topBubble}px`,
           left: "24px",
           right: "24px",
           width: "calc(100% - 48px)",
@@ -141,16 +161,16 @@ export default function CompletionScreen({
       <div
         style={{
           position: "absolute",
-          top: "136px",
+          top: `${topCharacter}px`,
           left: "50%",
           transform: "translateX(-50%)",
-          width: "240px",
-          height: "240px",
+          width: `${characterSize}px`,
+          height: `${characterSize}px`,
         }}
       >
         <svg
-          width="240"
-          height="240"
+          width={characterSize}
+          height={characterSize}
           viewBox="0 0 240 240"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -305,16 +325,17 @@ export default function CompletionScreen({
       <div
         style={{
           position: "absolute",
-          top: "440px", 
+          top: `${resultTop}px`, 
           left: "50%",
           transform: "translateX(-50%)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          padding: "16px 40px",
-          gap: "10px",
-          width: "380px",
-          height: "108px",
+          padding: "16px",
+          gap: "12px",
+          width: `${maxCardWidth}px`,
+          maxWidth: 'calc(100% - 32px)',
+          height: "auto",
           background: "#FFFFFF",
           borderRadius: "16px",
           boxShadow: "0px 0px 12px rgba(0,0,0,0.08)",
@@ -325,11 +346,11 @@ export default function CompletionScreen({
           style={{
             display: "flex",
             flexDirection: "row",
-            justifyContent: "center",
+            justifyContent: "space-between",
             alignItems: "center",
-            gap: "60px",
-            width: "296px",
-            height: "28px",
+            gap: "12px",
+            width: "100%",
+            minHeight: "28px",
           }}
         >
           {results.map((_, idx) => (
@@ -361,10 +382,10 @@ export default function CompletionScreen({
             display: "flex",
             flexDirection: "row",
             alignItems: "center",
-            gap: "56px",
-            width: "296px",
-            height: "32px",
-            justifyContent: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            width: "100%",
+            minHeight: "32px",
           }}
         >
           {results.map((r, idx) => {

@@ -1,4 +1,4 @@
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import Header from './components/news/Header';
 import Home from './pages/Home';
@@ -18,6 +18,7 @@ import { useNavVisibility } from './components/navigation/NavVisibilityContext';
 import Profile from './pages/profile';
 import Newsletter from './pages/Newsletter';
 import BackendStatusDemo from './components/BackendStatusDemo';
+import Login from './pages/Login';
 
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
   const isCommunity = location.pathname.startsWith('/community');
   const isProfile = location.pathname.startsWith('/profile');
   const isNewsletter = location.pathname.startsWith('/newsletter');
+  const isLogin = location.pathname.startsWith('/login');
   const hideNewsletterNav = location.pathname.startsWith('/newsletter/subscribe') ||
   
     location.pathname === '/newsletter' ||
@@ -55,13 +57,16 @@ function App() {
 
   return (
     <>
-  {!(isExplore || isStudy || isAddWord || isCommunity || isProfile || isNewsletter) && <Header onSearch={handleSearch} />}
-  {!(isExplore || isStudy || isAddWord || isCommunity || isProfile || isNewsletter) && <CategoryNav />}
+  {!(isExplore || isStudy || isAddWord || isCommunity || isProfile || isNewsletter || isLogin) && <Header onSearch={handleSearch} />}
+  {!(isExplore || isStudy || isAddWord || isCommunity || isProfile || isNewsletter || isLogin) && <CategoryNav />}
 
       <div className="has-bottom-nav">
         <Routes>
+          <Route path="/login" element={<Login />} />
           <Route path="/search" element={<Search />} />
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={
+            sessionStorage.getItem('guest') === '1' ? <Home /> : <Navigate to="/login" replace />
+          } />
           <Route path="/search/:query" element={<SearchResults />} />
           <Route path="/news/:id" element={<NewsDetail />} />
           <Route path="/explore/*" element={<Explore />} />
@@ -76,7 +81,7 @@ function App() {
           <Route path="/dev/backend-status" element={<BackendStatusDemo />} />
         </Routes>
       </div>
-  {!hide && !isStudy && !hideNewsletterNav && <BottomNav />}
+  {!hide && !isStudy && !hideNewsletterNav && !isLogin && <BottomNav />}
     </>
   );
 }

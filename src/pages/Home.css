@@ -1,10 +1,13 @@
 /* 홈 전체 컨테이너를 화면에 꽉 차게 */
 .home-container {
-  width: 100vw;
-  max-width: 100vw;
+  /* 100vw는 모바일 브라우저에서 스크롤바/세이프에어리어로 가로 넘침을 유발할 수 있음 */
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
   margin: 0 auto;
+  /* 내부 요소의 미세한 넘침 방지 */
+  overflow-x: hidden;
 }
 /* ===== 공통 리셋 & 기본 ===== */
 *,

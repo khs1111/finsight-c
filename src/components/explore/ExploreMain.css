@@ -171,8 +171,10 @@
 .explore-main-selector-box {
   position: absolute;
   left: 16px;
+  right: 16px; /* 양쪽 16px 여백 보장 */
   top: 64px;
-  width: 326px;
+  width: auto;  /* 고정폭 제거로 작은 화면에서 넘침 방지 */
+  max-width: calc(100% - 32px);
   min-height: 0;
   background: #FFFFFF;
   box-shadow: 0px 0px 8px rgba(10, 26, 51, 0.18);
@@ -325,7 +327,6 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-fill-color: transparent;
 }
 /* TopicLevelSelector Overlay */
 .explore-main-overlay {
@@ -416,7 +417,7 @@
   flex: none;
   order: 0;
   align-self: stretch;
-  flex-grow: 0;
+  /* non-standard text-fill-color removed */
 }
 .explore-main-level-row {
   display: flex;
@@ -762,9 +763,6 @@
   justify-content: space-around;
   margin-top: 8px;
 }
-.explore-main-attendance-icon {
-  /* for svg wrapper */
-}
 
 /* 진행도 바 */
 .explore-main-progress-bar {
@@ -863,6 +861,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+   /* 모바일에서 가로 넘침 방지 */
+   overflow-x: hidden;
 }
 
 .explore-main-filter {
@@ -1098,7 +1098,6 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-fill-color: transparent;
 }
 
 /* 선택된 레벨/주제 버튼 */
@@ -1115,4 +1114,45 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   color: transparent;
+}
+
+/* ==============================================
+   FIX: 단어장/오답노트 드롭다운 높이 오토 정렬
+   - 기존 상단부의 고정 height, grid 규칙과 충돌해
+     드롭다운 높이가 어색하게 보이는 문제를 해소합니다.
+   - 가장 마지막에 둔 강한 오버라이드로 일관성 보장.
+   ============================================== */
+.explore-main-menu-popup {
+  /* 외곽 높이는 고정, 내부만 정렬 */
+  height: 76px !important; /* Figma 고정 높이 */
+  padding: 16px 12px !important; /* 상하 16px 패딩 유지 */
+  box-sizing: border-box;
+}
+.explore-main-menu-popup-list {
+  /* 고정 높이 내부에서 요소 정렬: 그리드로 정확히 배치 */
+  display: grid !important;
+  grid-template-rows: 14px 1px 14px !important; /* 텍스트-구분선-텍스트 */
+  row-gap: 4px !important; /* 상하 16px 패딩을 감안한 컴팩트 간격 */
+  align-content: center !important; /* 76px-패딩 내에서 수직 중앙 정렬 */
+  justify-items: stretch !important;
+  width: 58px !important;
+  height: auto !important; /* 내용 높이만 사용 */
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.explore-main-menu-popup-item {
+  /* 항목은 14px 라인표시로 고정 */
+  padding: 0 !important;
+  margin: 0 !important;
+  height: 14px !important;
+  line-height: 14px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+.explore-main-menu-popup-divider {
+  width: 100% !important;
+  height: 1px !important;
+  background: #F5F5F5 !important;
+  margin: 0 !important;
+  border: none !important;
 }
