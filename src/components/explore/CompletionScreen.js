@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useLayoutEffect, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import FloatingQuizCTA from './FloatingQuizCTA';
 
@@ -13,9 +13,21 @@ export default function CompletionScreen({
   const navigate = useNavigate();
   // bottom nav height 측정 (FloatingQuizCTA와 동일한 기준 사용)
   const [navHeight, setNavHeight] = useState(0);
-  const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 390);
-  const [vh, setVh] = useState(typeof window !== 'undefined' ? window.innerHeight : 844);
-  useEffect(() => {
+  const getViewportWidth = () => {
+    if (typeof window === 'undefined') return 390;
+    if (window.visualViewport?.width) return Math.round(window.visualViewport.width);
+    return Math.round(window.innerWidth);
+  };
+  const getViewportHeight = () => {
+    if (typeof window === 'undefined') return 844;
+    if (window.visualViewport?.height) return Math.round(window.visualViewport.height);
+    return Math.round(window.innerHeight);
+  };
+  const [vw, setVw] = useState(getViewportWidth());
+  const [vh, setVh] = useState(getViewportHeight());
+  const [containerMinH, setContainerMinH] = useState(getViewportHeight());
+  useLayoutEffect(() => {
+    // 초기 페인트 전에 뷰포트/내비 높이를 먼저 측정해서 첫 렌더 레이아웃이 맞도록 함
     function measure() {
       const nav = document.querySelector('.bottom-nav');
       if (nav) {
@@ -25,20 +37,27 @@ export default function CompletionScreen({
         setNavHeight(0);
       }
       if (typeof window !== 'undefined') {
-        setVw(window.innerWidth);
-        setVh(window.innerHeight);
+        setVw(getViewportWidth());
+        setVh(getViewportHeight());
+        setContainerMinH(getViewportHeight());
       }
     }
-    measure();
-    const ro = 'ResizeObserver' in window ? new ResizeObserver(measure) : null;
+    // 두 번의 rAF로 모바일 브라우저 주소창 애니메이션 영향을 완화
+    requestAnimationFrame(() => {
+      measure();
+      requestAnimationFrame(measure);
+    });
+    const ro = typeof window !== 'undefined' && 'ResizeObserver' in window ? new ResizeObserver(measure) : null;
     if (ro) {
       const nav = document.querySelector('.bottom-nav');
       if (nav) ro.observe(nav);
     }
     window.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('resize', measure);
     return () => {
       window.removeEventListener('resize', measure);
       if (ro) ro.disconnect();
+      window.visualViewport?.removeEventListener('resize', measure);
     };
   }, []);
 
@@ -65,13 +84,13 @@ export default function CompletionScreen({
       style={{
         width: "100%",
         maxWidth: "100%",
-        minHeight: "100dvh",
+        minHeight: `${containerMinH}px`,
         margin: "0 auto",
         background: "#F4F6FA",
         fontFamily: "Roboto, sans-serif",
         position: "relative",
         overflowX: 'hidden',
-        overflowY: 'hidden',
+        overflowY: 'auto',
       }}
     >
       {/* ===== Status Bar ===== */}
