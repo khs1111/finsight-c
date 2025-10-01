@@ -1,10 +1,13 @@
 //초 중 고 레벨 선택
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import "./LevelPicker.css";
 
 // props: mainTopic (대분류), subTopic (선택된 소분류)
 export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) {
   const [selectedLevel, setSelectedLevel] = useState(null);
+  const containerRef = useRef(null);
+  const goalRef = useRef(null);
+  const [spacerH, setSpacerH] = useState(156); // 기본 여유 공간(버튼/네비 고려)
 
   const levels = [
     {
@@ -27,8 +30,38 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
     },
   ];
 
+  useLayoutEffect(() => {
+    function measure() {
+      try {
+        const containerEl = containerRef.current;
+        if (!containerEl) return;
+        const cRect = containerEl.getBoundingClientRect();
+        let bottomAbs = 0;
+        if (goalRef.current) {
+          const gRect = goalRef.current.getBoundingClientRect();
+          bottomAbs = Math.max(bottomAbs, Math.round(gRect.bottom - cRect.top));
+        }
+        // 추가 여유: 고정 버튼(60) + 버튼 상단여백(12) + 네비(72) + 추가 마진(24)
+        const extra = 60 + 12 + 72 + 24;
+        const desired = Math.max(156, bottomAbs + extra);
+        setSpacerH(desired);
+      } catch (e) { /* noop */ }
+    }
+    // 초기 2번 rAF로 주소창 애니메이션 보정
+    requestAnimationFrame(() => {
+      measure();
+      requestAnimationFrame(measure);
+    });
+    window.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('resize', measure);
+    };
+  }, [selectedLevel]);
+
   return (
-    <div className="level-picker-container">
+    <div ref={containerRef} className="level-picker-container">
       {/* 상단 헤더 */}
       <div className="level-picker-header">
         <button
@@ -103,7 +136,7 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
 
       {/* 학습 목표 카드 */}
       {selectedLevel && (
-        <div className="level-picker-goal">
+        <div ref={goalRef} className="level-picker-goal">
           <div className="level-picker-goal-title">학습 목표</div>
           <div style={{ width: '100%', borderTop: '1px solid #F5F5F5', marginTop: 10, marginBottom: 10 }} />
           <div className="level-picker-goal-desc">
@@ -147,7 +180,7 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
       </button>
 
       {/* 바닥 여유 공간(고정 버튼/네비 아래로 내용이 숨지 않도록) */}
-      <div className="level-picker-bottom-spacer" />
+      <div className="level-picker-bottom-spacer" style={{ height: spacerH }} />
     </div>
   );
 }
