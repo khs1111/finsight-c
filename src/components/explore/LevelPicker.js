@@ -145,6 +145,9 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
       >
         확인
       </button>
+
+      {/* 바닥 여유 공간(고정 버튼/네비 아래로 내용이 숨지 않도록) */}
+      <div className="level-picker-bottom-spacer" />
     </div>
   );
 }

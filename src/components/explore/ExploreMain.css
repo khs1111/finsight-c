@@ -1156,3 +1156,54 @@
   margin: 0 !important;
   border: none !important;
 }
+
+/* ==============================================
+   FINAL CANONICAL OVERRIDE: Word/Note dropdown
+   - Avoid conflicting duplicate blocks in prod
+   - Lock exact size/spacing per spec
+   ============================================== */
+.explore-main-menu-btn .explore-main-menu-popup {
+  position: absolute !important;
+  top: 32px !important;
+  right: 0 !important;
+  width: 82px !important;
+  height: 76px !important;
+  padding: 16px 12px !important;
+  background: #FFFFFF !important;
+  box-shadow: 0px 0px 16px rgba(10,26,51,0.32) !important;
+  border-radius: 16px !important;
+  z-index: 200 !important;
+  display: block !important;
+  box-sizing: border-box !important;
+}
+.explore-main-menu-btn .explore-main-menu-popup .explore-main-menu-popup-list {
+  display: grid !important;
+  grid-template-rows: 14px 1px 14px !important;
+  row-gap: 8px !important;
+  width: 58px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  justify-items: stretch !important;
+  align-content: start !important;
+}
+.explore-main-menu-btn .explore-main-menu-popup .explore-main-menu-popup-item {
+  width: 58px !important;
+  height: 14px !important;
+  line-height: 14px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #282828 !important;
+  text-align: left !important;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+}
+.explore-main-menu-btn .explore-main-menu-popup .explore-main-menu-popup-divider {
+  width: 58px !important;
+  height: 0 !important;
+  border-top: 1px solid #F5F5F5 !important;
+  margin: 0 !important;
+}
