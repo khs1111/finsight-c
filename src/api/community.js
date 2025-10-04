@@ -1,9 +1,5 @@
-
 import axios from 'axios';
-
-const BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE)
-	|| process.env.REACT_APP_API_BASE
-	|| 'http://localhost:8081/api';
+import { API_BASE as BASE_URL } from './config';
 
 // Axios instance with JWT token support
 export function getAxios(token) {

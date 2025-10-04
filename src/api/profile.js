@@ -2,11 +2,7 @@
 // 프로필 정보 및 활동(출석) API 래퍼
 
 import axios from 'axios';
-
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
-  process.env.REACT_APP_API_BASE ||
-  'http://localhost:8081/api';
+import { API_BASE } from './config';
 
 async function http(path, opts = {}) {
   const token = localStorage.getItem('accessToken');
@@ -34,15 +30,28 @@ export async function fetchProfile() {
     const data = await http('/profile');
     return { data };
   } catch (e) {
-    // 안전한 폴백
-    return {
-      data: {
-        nickname: localStorage.getItem('username') || '퍼니의 동료',
-        tier: 'EMERALD',
-        tierImageUrl: '',
-      },
-      isDummy: true,
-    };
+    // 백엔드에 /profile이 없을 경우, /dashboard 기반으로 폴백 시도
+    try {
+      const userId = Number(localStorage.getItem('userId')) || undefined;
+      if (!userId) throw new Error('no userId');
+      const dash = await http(`/dashboard?userId=${userId}`);
+      const nickname = dash?.userInfo?.nickname || localStorage.getItem('username') || '퍼니의 동료';
+      // tier/tierImageUrl은 대시보드 스키마에 없을 수 있어 기본값
+      return {
+        data: { nickname, tier: 'EMERALD', tierImageUrl: '' },
+        isFallback: true,
+      };
+    } catch (_) {
+      // 최종 안전 폴백
+      return {
+        data: {
+          nickname: localStorage.getItem('username') || '퍼니의 동료',
+          tier: 'EMERALD',
+          tierImageUrl: '',
+        },
+        isDummy: true,
+      };
+    }
   }
 }
 
@@ -52,7 +61,19 @@ export async function fetchProfileActivity() {
     const data = await http('/profile/activity');
     return { data };
   } catch (e) {
-    // 오늘 날짜만 출석으로 폴백
+    // 백엔드에 /profile/activity가 없을 경우, /dashboard의 weeklyProgress로 유사 폴백
+    try {
+      const userId = Number(localStorage.getItem('userId')) || undefined;
+      if (!userId) throw new Error('no userId');
+      const dash = await http(`/dashboard?userId=${userId}`);
+      const arr = Array.isArray(dash?.weeklyProgress) ? dash.weeklyProgress : [];
+      const attendance = arr
+        .filter((d) => d?.completed)
+        .map((d) => d?.date)
+        .filter(Boolean);
+      if (attendance.length) return { data: { attendance }, isFallback: true };
+    } catch (_) {}
+    // 최종 폴백: 오늘 날짜만 출석으로 처리
     const today = new Date();
     const z = (n) => (n < 10 ? `0${n}` : `${n}`);
     const key = `${today.getFullYear()}-${z(today.getMonth() + 1)}-${z(today.getDate())}`;

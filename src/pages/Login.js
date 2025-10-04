@@ -47,9 +47,8 @@ export default function Login() {
           onClick={handleGuestLogin}
           disabled={loading}
         >
-          {loading ? '입장 중…' : '게스트로 시작하기'}
+          {loading ? '입장 중…' : '시작하기'}
         </button>
-        <p className="login-hint">나중에 계정을 만들어도 좋아요</p>
       </div>
     </div>
   );

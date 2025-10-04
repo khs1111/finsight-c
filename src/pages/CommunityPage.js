@@ -73,17 +73,18 @@ export default function CommunityPage() {
         </div>
       </div>
       
-      {/* 카테고리 칩 바 (Frame 42) */}
-      <div style={chipBarWrapper}>
+      {/* 카테고리 칩 바: CSS 규격 적용 (헤더 하단 16px, 가로 100%) */}
+      <div className="community-category-row">
         {CATEGORIES.map((c) => {
           const active = c === category;
           return (
             <button
               key={c}
+              type="button"
+              className={active ? 'cat-chip active' : 'cat-chip'}
               onClick={() => setCategory(c)}
-              style={active ? chipActive : chipInactive}
             >
-              <span style={active ? chipActiveLabel : chipLabel}>{c}</span>
+              {c}
             </button>
           );
         })}
@@ -153,56 +154,4 @@ export default function CommunityPage() {
   );
 }
 
-const chipBarWrapper = {
-  position: 'absolute',
-  top: 88, 
-  left: 0,
-  width: 412,
-  height: 64,
-  padding: 16,
-  display: 'flex',
-  flexDirection: 'row',
-  alignItems: 'flex-start',
-  gap: 10,
-  boxSizing: 'border-box'
-};
-
-const baseChip = {
-  display: 'flex',
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 10,
-  height: 32,
-  borderRadius: 30,
-  border: '1px solid #DFE5EE',
-  padding: '18px 10px', 
-  boxSizing: 'border-box',
-  cursor: 'pointer',
-  background: '#EEF2F6',
-  outline: 'none'
-};
-
-const chipInactive = { ...baseChip };
-const chipActive = {
-  ...baseChip,
-  background: 'linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%)',
-  border: 'none',
-  boxShadow: '0 0 2px rgba(0,0,0,0.25)'
-};
-
-const chipLabelBase = {
-  fontFamily: 'Roboto',
-  fontWeight: 400,
-  fontSize: 14,
-  lineHeight: '16px',
-  letterSpacing: '-0.03em',
-  color: '#626262'
-};
-const chipLabel = { ...chipLabelBase };
-const chipActiveLabel = {
-  ...chipLabelBase,
-  fontWeight: 700,
-  letterSpacing: '-0.04em',
-  color: '#F9F9F9',
-  textShadow: '0px 0px 2px rgba(0,0,0,0.25)'
-};
+// 카테고리 칩 스타일은 CommunityPage.css의 .community-category-row, .cat-chip, .cat-chip.active를 사용합니다.

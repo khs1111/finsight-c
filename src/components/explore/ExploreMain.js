@@ -61,7 +61,7 @@ useEffect(() => {
 }, [selectedLevel, selectedTopic, selectedSubTopic]);
 
 // 진행 상황: 서버에서 받아온 총 질문 수를 전달
-const { total: totalProblems, index: currentIndex, answers } = useProgress('default', totalQuestions);
+const { total: totalProblems, index: currentIndex, answers } = useProgress(selectedLevel || 'default', totalQuestions);
 const answeredCount = answers.length; // 사용자가 풀면 진행
 // eslint-disable-next-line no-unused-vars
 const correctCount = answers.filter(a => a.correct).length;
@@ -89,6 +89,10 @@ const activeStage = currentIndex < totalStages ? currentIndex : -1;
       el.scrollTop = el.scrollHeight - el.clientHeight;
     }
   }, []);
+
+  // 진행도 숫자: 현재/다음 단계 표시 (예: 1 2 -> 2 3)
+  const currentNumber = totalProblems > 0 ? Math.min(answeredCount + 1, totalProblems) : 1;
+  const nextNumber = totalProblems > 0 ? Math.min(currentNumber + 1, totalProblems) : 2;
 
   return (
     <div
@@ -167,8 +171,8 @@ const activeStage = currentIndex < totalStages ? currentIndex : -1;
 
       {/* 진행도 바 양쪽 숫자 */}
       <div className="explore-main-progress-numbers">
-        <div className="explore-main-progress-number active">1</div>
-        <div className="explore-main-progress-number">2</div>
+        <div className="explore-main-progress-number active">{currentNumber}</div>
+        <div className="explore-main-progress-number">{nextNumber}</div>
       </div>
 
       {/* 징검다리 스크롤 영역 */}

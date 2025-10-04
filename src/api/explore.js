@@ -7,43 +7,46 @@ import {
   dummySubmitResponse,
   dummyQuestionsData
 } from '../utils/testData.js';
-
-const API_BASE =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE) ||
-  process.env.REACT_APP_API_BASE ||
-  'http://localhost:8081/api';
+import { API_BASE } from './config';
 
 // 백엔드 연결 상태 확인
 let isBackendConnected = false;
 
 // 백엔드 연결 상태 체크 함수
 async function checkBackendConnection() {
+  const candidates = [
+    '/health',
+    '/',
+    '/actuator/health',
+    '/dashboard',
+  ];
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2500);
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2초로 단축
-    
-    const res = await fetch(`${API_BASE}/health`, {
-      signal: controller.signal,
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    clearTimeout(timeoutId);
-    isBackendConnected = res.ok;
-    
-    if (isBackendConnected) {
-      console.log('✅ 백엔드 서버 연결됨 - 실제 API 사용');
-    } else {
-      console.log('⚠️ 백엔드 서버 응답 오류 - 더미 데이터 사용');
+    for (const path of candidates) {
+      try {
+        const res = await fetch(`${API_BASE}${path}`, {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' },
+          credentials: 'include',
+          method: 'GET',
+        });
+        if (res.ok) {
+          isBackendConnected = true;
+          console.log(`✅ 백엔드 서버 연결됨 (${path}) - 실제 API 사용`);
+          clearTimeout(timeoutId);
+          return true;
+        }
+      } catch (_) { /* try next */ }
     }
-    
-    return isBackendConnected;
-  } catch (error) {
-    isBackendConnected = false;
-    console.log('🔄 백엔드 서버 연결 안됨 - 더미 데이터로 디자인 확인 모드');
-    console.log(`   API_BASE: ${API_BASE}`);
-    console.log(`   더미 퀴즈 ${dummyQuizzes.length}개 준비됨`);
-    return false;
+  } finally {
+    clearTimeout(timeoutId);
   }
+  isBackendConnected = false;
+  console.log('🔄 백엔드 서버 연결 안됨 - 더미 데이터로 디자인 확인 모드');
+  console.log(`   API_BASE: ${API_BASE}`);
+  console.log(`   더미 퀴즈 ${dummyQuizzes.length}개 준비됨`);
+  return false;
 }
 
 // 앱 시작시 백엔드 연결 상태 확인
@@ -63,6 +66,12 @@ export const recheckBackendConnection = async () => {
 
 // 현재 백엔드 연결 상태 확인
 export const isBackendOnline = () => isBackendConnected;
+
+// 공통 유틸: userId 보정 (로컬스토리지 fallback)
+const withUserId = (userId) => {
+  const stored = Number(localStorage.getItem('userId'));
+  return userId ?? (Number.isFinite(stored) ? stored : undefined);
+};
 
 // JWT 토큰을 자동으로 헤더에 포함하는 fetch 함수
 async function http(path, opts = {}, token) {
@@ -108,13 +117,15 @@ export const getSubsector = async (id) => {
 // 3. 레벨별 퀴즈 목록 및 상태 조회
 export const getLevelQuizzes = async (levelId, userId, token) => {
   if (!isBackendConnected) return [];
-  return http(`/levels/${levelId}/quizzes?userId=${userId}`, {}, token);
+  const uid = withUserId(userId);
+  return http(`/levels/${levelId}/quizzes?userId=${uid}`, {}, token);
 };
 
 // 4. 레벨별 진행도 조회
 export const getLevelProgress = async (levelId, userId, token) => {
   if (!isBackendConnected) return null;
-  return http(`/levels/${levelId}/progress?userId=${userId}`, {}, token);
+  const uid = withUserId(userId);
+  return http(`/levels/${levelId}/progress?userId=${uid}`, {}, token);
 };
 
 // 5. 퀴즈 상세 조회
@@ -124,8 +135,24 @@ export const getQuiz = async (quizId) => {
     const dummyQuiz = dummyQuizzes.find(q => q.id === parseInt(quizId)) || dummyQuizzes[0];
     return dummyQuiz;
   }
-  return http(`/quizzes/${quizId}`);
+  const raw = await http(`/quizzes/${quizId}`);
+  return normalizeQuizPayload(raw);
 };
+
+// 서버 응답 키를 UI에서 쓰는 형태로 정규화 (questionText/optionText → question/text)
+function normalizeQuizPayload(raw) {
+  if (!raw) return raw;
+  const questions = (raw.questions || []).map((q) => ({
+    ...q,
+    question: q.question ?? q.questionText ?? q.stemMd ?? '',
+    stemMd: q.stemMd ?? q.questionText ?? q.question ?? '',
+    options: (q.options || []).map((o) => ({
+      ...o,
+      text: o.text ?? o.optionText ?? '',
+    })),
+  }));
+  return { ...raw, questions };
+}
 
 // 6. 답안 제출
 // 답안 제출 (백엔드 명세: quizId, userId, answers 배열, JWT 토큰)
@@ -143,7 +170,7 @@ export const submitAnswer = async ({ quizId, userId, answers, token }) => {
   // 백엔드 명세: { quizId, userId, answers: [{ questionId, selectedOptionId }] }
   return http('/quizzes/submit-answer', {
     method: 'POST',
-    body: JSON.stringify({ quizId, userId, answers }),
+    body: JSON.stringify({ quizId, userId: withUserId(userId), answers }),
     token
   }, token);
 };
@@ -151,37 +178,43 @@ export const submitAnswer = async ({ quizId, userId, answers, token }) => {
 // 7. 퀴즈 결과 조회
 export const getQuizResult = async (quizId, userId, token) => {
   if (!isBackendConnected) return null;
-  return http(`/quizzes/${quizId}/result?userId=${userId}`, {}, token);
+  const uid = withUserId(userId);
+  return http(`/quizzes/${quizId}/result?userId=${uid}`, {}, token);
 };
 
 // 8. 퀴즈 완료 처리
 export const completeQuiz = async (quizId, userId, token) => {
   if (!isBackendConnected) return { success: true };
-  return http(`/quizzes/${quizId}/complete?userId=${userId}`, { method: 'POST' }, token);
+  const uid = withUserId(userId);
+  return http(`/quizzes/${quizId}/complete?userId=${uid}`, { method: 'POST' }, token);
 };
 
 // 9. 레벨 완료 처리
 export const completeLevel = async (levelId, userId, token) => {
   if (!isBackendConnected) return { success: true };
-  return http(`/levels/${levelId}/complete?userId=${userId}`, { method: 'POST' }, token);
+  const uid = withUserId(userId);
+  return http(`/levels/${levelId}/complete?userId=${uid}`, { method: 'POST' }, token);
 };
 
 // 10. 레벨 시작 처리
 export const startLevel = async (levelId, userId, token) => {
   if (!isBackendConnected) return { success: true };
-  return http(`/levels/${levelId}/start?userId=${userId}`, { method: 'POST' }, token);
+  const uid = withUserId(userId);
+  return http(`/levels/${levelId}/start?userId=${uid}`, { method: 'POST' }, token);
 };
 
 // 11. 대시보드 조회
 export const getDashboard = async (userId, token) => {
   if (!isBackendConnected) return null;
-  return http(`/dashboard?userId=${userId}`, {}, token);
+  const uid = withUserId(userId);
+  return http(`/dashboard?userId=${uid}`, {}, token);
 };
 
 // 12. 뱃지 조회
 export const getBadgesReal = async (userId, token) => {
   if (!isBackendConnected) return [];
-  return http(`/badges/user/${userId}`, {}, token);
+  const uid = withUserId(userId);
+  return http(`/badges/user/${uid}`, {}, token);
 };
 
 // 회원가입 - 백엔드: POST /api/auth/signup
@@ -317,52 +350,33 @@ export const getKeyPoints = async ({ questionId } = {}) => {
 
 // 폴백 함수들 (하위 호환성) - 더미 데이터 사용
 export const getTopics = async () => {
-  if (!isBackendConnected) {
-    console.log('🎯 더미 토픽 데이터 사용');
-    return dummyTopicStats.map(topic => ({
-      id: topic.topicId,
-      name: topic.topicName,
-      completion: topic.completion,
-      totalQuestions: topic.totalQuestions,
-      completedQuestions: topic.completedQuestions
-    }));
-  }
-  
-  try {
-    return await http('/topics');
-  } catch (error) {
-    console.log('🎯 백엔드 연결 실패 - 더미 토픽 데이터 사용');
-    return dummyTopicStats.map(topic => ({
-      id: topic.topicId,
-      name: topic.topicName,
-      completion: topic.completion
-    }));
-  }
+  // 현재 백엔드 스펙에 /topics는 없음 → 항상 더미 데이터 반환
+  return dummyTopicStats.map(topic => ({
+    id: topic.topicId,
+    name: topic.topicName,
+    completion: topic.completion,
+    totalQuestions: topic.totalQuestions,
+    completedQuestions: topic.completedQuestions
+  }));
 };
 
 export const getLevels = async () => {
-  if (!isBackendConnected) {
-    console.log('🎯 더미 레벨 데이터 사용');
-    return [
-      { id: 1, name: '기초', difficulty: 'easy' },
-      { id: 2, name: '중급', difficulty: 'medium' },
-      { id: 3, name: '고급', difficulty: 'hard' }
-    ];
-  }
-  
-  try {
-    return await http('/levels');
-  } catch (error) {
-    console.log('🎯 백엔드 연결 실패 - 더미 레벨 데이터 사용');
-    return [
-      { id: 1, name: '기초', difficulty: 'easy' },
-      { id: 2, name: '중급', difficulty: 'medium' },
-      { id: 3, name: '고급', difficulty: 'hard' }
-    ];
-  }
+  // 백엔드에는 "레벨 목록" 전용 엔드포인트가 명세되어 있지 않음 → 더미 고정
+  return [
+    { id: 1, name: '기초', difficulty: 'easy' },
+    { id: 2, name: '중급', difficulty: 'medium' },
+    { id: 3, name: '고급', difficulty: 'hard' }
+  ];
 };
 
-export const postAttempt = ({ questionId, choiceId }) => submitAnswer(questionId, choiceId);
+// UI 편의 래퍼: 단일 문항 답안 제출
+export const postAttempt = ({ quizId, questionId, selectedOptionId, userId, token }) =>
+  submitAnswer({
+    quizId,
+    userId: withUserId(userId),
+    answers: [{ questionId, selectedOptionId }],
+    token,
+  });
 
 export const getProgress = async () => {
   if (!isBackendConnected) {
@@ -412,15 +426,6 @@ export const getBadges = async () => {
 
 // 토픽별 통계 조회
 export const getTopicStats = async () => {
-  if (!isBackendConnected) {
-    console.log('🎯 더미 토픽 통계 데이터 사용');
-    return dummyTopicStats;
-  }
-  
-  try {
-    return await http('/topic-stats');
-  } catch (error) {
-    console.log('🎯 백엔드 연결 실패 - 더미 토픽 통계 데이터 사용');
-    return dummyTopicStats;
-  }
+  // 백엔드 스펙에 /topic-stats 없음 → 더미 고정
+  return dummyTopicStats;
 };

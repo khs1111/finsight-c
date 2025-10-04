@@ -1,4 +1,5 @@
 // Study-related API (wrong notes)
+import { API_BASE } from './config';
 
 async function safeFetch(url, options) {
   try {
@@ -12,7 +13,7 @@ async function safeFetch(url, options) {
 
 // GET /api/study/wrong-notes/stats
 export async function getWrongNoteStats() {
-  const data = await safeFetch('/api/study/wrong-notes/stats');
+  const data = await safeFetch(`${API_BASE}/study/wrong-notes/stats`);
   // expected shape: { total: number, byCategory: Array<{ category: string, count: number }> }
   return data;
 }
@@ -20,7 +21,7 @@ export async function getWrongNoteStats() {
 // GET /api/study/wrong-notes?category=...
 export async function getWrongNotes(params = {}) {
   const query = new URLSearchParams(params).toString();
-  const url = `/api/study/wrong-notes${query ? `?${query}` : ''}`;
+  const url = `${API_BASE}/study/wrong-notes${query ? `?${query}` : ''}`;
   const data = await safeFetch(url);
   // expected shape: { items: Array<WrongNote> }
   return data;

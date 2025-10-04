@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import TierDummy from '../assets/tier/gold.png';
+import AntImg from '../assets/profile/ant.png';
+import BackImg from '../assets/profile/back.png';
 import { fetchProfile, fetchProfileActivity } from '../api/profile';
 import './Profile.css';
 
@@ -212,29 +214,38 @@ export default function Profile() {
   const displayTier = (profile && profile.tier) ? profile.tier : 'EMERALD';
   const displayNickname = (profile && profile.nickname) ? profile.nickname : '퍼니의 동료';
   return (
-    <div className="profile-spec">
+    <>
       <div className="p-topbar" aria-label="상단 제목">
-        <span className="p-topbar-title">프로필</span>
+        <span className="p-topbar-title profile-spec">프로필</span>
       </div>
 
-      {/* Tier image + Nickname inline row */}
-      <div className="profile-heading" aria-label="티어와 닉네임">
-        <div className="tier-inline" aria-label="티어와 닉네임">
-          <img
-            className="tier-image"
-            src={profile.tierImageUrl || TierDummy}
-            alt={displayTier}
-            width={32}
-            height={32}
-            onError={(e) => { e.currentTarget.src = TierDummy; }}
-          />
-          <span className="nickname-inline">{displayNickname}</span>
+      <div className="profile-content-wrapper">
+        {/* Hero: background + character + overlayed tier/nickname */}
+        <div className="p-hero" aria-label="프로필 히어로">
+          <img className="p-hero-bg" src={BackImg} alt="" aria-hidden="true" />
+          <div className="p-avatar-block" aria-hidden="true">
+            <img src={AntImg} alt="프로필 캐릭터" width={266} height={266} />
+          </div>
+          <div className="p-hero-shadow" aria-hidden="true" />
+          <div className="p-hero-bottom" aria-hidden="true" />
+          <div className="p-hero-title" aria-label="티어와 닉네임">
+            <div className="tier-inline">
+              <img
+                className="tier-image"
+                src={profile.tierImageUrl || TierDummy}
+                alt={displayTier}
+                width={32}
+                height={32}
+                onError={(e) => { e.currentTarget.src = TierDummy; }}
+              />
+              <span className="nickname-inline">{displayNickname}</span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div className="p-stats-card">
-        <div className="stat">
-          <div className="stat-icon no-bg" aria-hidden="true">
+        <div className="p-stats-card">
+          <div className="stat">
+            <div className="stat-icon no-bg" aria-hidden="true">
             {/* 뉴스 아이콘 SVG (full 64x64) */}
             <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M27.2542 3.85294C30.0197 1.60771 33.9803 1.60771 36.7458 3.85293L40.1796 6.64079C41.3147 7.56232 42.6935 8.13345 44.1478 8.28445L48.5472 8.74126C52.0903 9.10915 54.8909 11.9097 55.2587 15.4528L55.7155 19.8522C55.8666 21.3065 56.4377 22.6853 57.3592 23.8204L60.1471 27.2542C62.3923 30.0197 62.3923 33.9803 60.1471 36.7458L57.3592 40.1796C56.4377 41.3147 55.8666 42.6935 55.7155 44.1478L55.2587 48.5472C54.8909 52.0903 52.0903 54.8909 48.5472 55.2587L44.1478 55.7155C42.6935 55.8666 41.3147 56.4377 40.1796 57.3592L36.7458 60.1471C33.9803 62.3923 30.0197 62.3923 27.2542 60.1471L23.8204 57.3592C22.6853 56.4377 21.3065 55.8666 19.8522 55.7155L15.4528 55.2587C11.9097 54.8909 9.10915 52.0903 8.74126 48.5472L8.28445 44.1478C8.13345 42.6935 7.56232 41.3147 6.64079 40.1796L3.85294 36.7458C1.60771 33.9803 1.60771 30.0197 3.85293 27.2542L6.64079 23.8204C7.56232 22.6853 8.13345 21.3065 8.28445 19.8522L8.74126 15.4528C9.10915 11.9097 11.9097 9.10915 15.4528 8.74126L19.8522 8.28445C21.3065 8.13345 22.6853 7.56232 23.8204 6.64079L27.2542 3.85294Z" fill="url(#paint0_linear_1086_6468)"/>
@@ -324,5 +335,6 @@ export default function Profile() {
 
       <Calendar />
     </div>
+    </>
   );
 }

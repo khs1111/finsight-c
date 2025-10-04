@@ -1,16 +1,27 @@
 // 간단한 게스트 로그인 API 래퍼
 // 백엔드 연결 시 /api/auth/guest 를 호출해 세션/토큰을 세팅하고 true 반환
-// 실패 시 false 반환. 현재는 연결 전이므로 항상 true를 반환하게 구성해두고,
-// 연결되면 fetch 부분 주석 해제하세요.
+// 실패 시 폴백 토큰을 저장하고 true 반환하여 UX를 유지합니다.
+import { API_BASE } from './config';
 
-export async function guestLogin() {
+export async function guestLogin(baseOverride) {
   try {
-    // const res = await fetch('/api/auth/guest', { method: 'POST', credentials: 'include' });
-    // if (!res.ok) return false;
-    // const data = await res.json();
-    // TODO: 토큰/쿠키 처리 등 필요 시 여기서 수행
-    return true; // 현재는 무조건 성공 처리
+    const base = baseOverride || API_BASE;
+
+    const res = await fetch(`${base}/auth/guest`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data?.token) localStorage.setItem('accessToken', data.token);
+    if (data?.userId != null) localStorage.setItem('userId', String(data.userId));
+    return true;
   } catch (e) {
-    return false;
+    // 폴백: 더미 토큰 저장으로 흐름 유지
+    const dummy = 'guest_' + Date.now();
+    localStorage.setItem('accessToken', dummy);
+    if (!localStorage.getItem('userId')) localStorage.setItem('userId', '64');
+    return true;
   }
 }
