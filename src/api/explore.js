@@ -334,7 +334,7 @@ export const login = async (username, password) => {
 // ========================================
 
 // 기존 getQuestions 함수 -> 더미 데이터 우선 사용
-export const getQuestions = async ({ topicId, levelId } = {}) => {
+export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
   console.log('📚 getQuestions 호출됨 - topicId:', topicId, 'levelId:', levelId);
   const uid = withUserId();
   const lid = coerceLevelId(levelId);
@@ -368,16 +368,86 @@ export const getQuestions = async ({ topicId, levelId } = {}) => {
       })
     );
 
-    // 기사형 문제(이미지 존재 또는 type==='articleImage')가 포함된 퀴즈 우선 선택
+    // 선호도 함수들
     const hasArticle = (norm) => Array.isArray(norm?.questions) && norm.questions.some(
       (q) => q.type === 'articleImage' || !!q.image
     );
-    const preferred = details.find(d => hasArticle(d.norm));
-    const chosen = preferred?.norm || details.find(d => d.id === prioritizedId)?.norm || details.find(d => d.norm)?.norm;
-    const chosenId = preferred?.id || prioritizedId;
 
-    const qs = Array.isArray(chosen?.questions) ? chosen.questions : [];
-    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항${preferred ? ', 기사형 포함' : ''})`);
+    // 주제/세부주제 관련 키워드 매칭 가중치
+    const getKeywords = (topic, sub) => {
+      const base = String(topic || '').trim();
+      const subBase = String(sub || '').trim();
+      const map = {
+        '은행': ['은행','예금','적금','계좌','인터넷뱅킹','모바일 뱅킹','대출'],
+        '카드': ['카드','신용카드','체크카드','혜택','수수료','한도','신용 점수','신용점수'],
+        '세금/절세': ['세금','절세','영수증','연말정산','소득공제','세액공제'],
+        '투자': ['투자','주식','채권','펀드','거래소']
+      };
+      const subMap = {
+        '예금/적금': ['예금','적금','이자','만기','정기예금','자유적금'],
+        '계좌의 종류와 기능': ['입출금계좌','통장','자유입출금','정기예금','계좌이체'],
+        '인터넷/모바일 뱅킹': ['인터넷뱅킹','모바일뱅킹','공동인증서','토스','카카오뱅크'],
+        '대출의 기초 이해': ['대출','원리금','금리','상환','담보','신용대출'],
+        '카드의 종류': ['신용카드','체크카드','카드','후불','선불'],
+        '카드 수수료 및 혜택 이해': ['수수료','혜택','적립','포인트','캐시백'],
+        '카드 사용 전략': ['할부','한도','연회비','결제일'],
+        '신용 점수와 카드 사용의 관계': ['신용 점수','신용점수','연체','신용등급'],
+        '거래소 사용': ['거래소','매수','매도','호가','체결'],
+        '주식': ['주식','배당','PER','PBR','시가총액'],
+        '채권': ['채권','표면금리','만기수익률','국채','회사채'],
+        '펀드': ['펀드','ETF','인덱스','수수료','환매'],
+        '세금이란': ['세금','납부','국세','지방세'],
+        '영수증과 세금 혜택': ['영수증','공제','현금영수증'],
+        '연말정산': ['연말정산','소득공제','세액공제','환급']
+      };
+      const t = map[base] || (base ? [base] : []);
+      const s = subMap[subBase] || (subBase ? [subBase] : []);
+      return Array.from(new Set([...t, ...s]));
+    };
+
+    const kw = getKeywords(topicId, subTopic).map(k => String(k).toLowerCase());
+    const textOfQuiz = (norm) => {
+      if (!norm?.questions) return '';
+      return norm.questions.map(q => [q.question, q.stemMd, q.teachingExplainerMd, q.solvingKeypointsMd, ...(q.options||[]).map(o=>o.text)]
+        .flat().filter(Boolean).join(' ')).join(' ');
+    };
+    const scoreOf = (norm) => {
+      if (!kw.length) return 0;
+      const hay = textOfQuiz(norm).toLowerCase();
+      return kw.reduce((s,k)=> s + (hay.includes(k) ? 1 : 0), 0);
+    };
+
+    // 1순위: 주제/세부주제 매칭 점수 높은 퀴즈
+    const withScores = details.map(d => ({ ...d, score: scoreOf(d.norm), hasArticle: hasArticle(d.norm) }));
+    let chosenEntry = withScores
+      .filter(d => d.norm)
+      .sort((a,b) => (b.score - a.score) || (Number(b.hasArticle) - Number(a.hasArticle)))[0];
+
+    // 2순위: 기사형 포함
+    if (!chosenEntry || chosenEntry.score === 0) {
+      const preferred = withScores.find(d => d.hasArticle);
+      chosenEntry = preferred || withScores.find(d => d.id === prioritizedId) || withScores.find(d => d.norm);
+    }
+
+    const chosen = chosenEntry?.norm;
+    const chosenId = chosenEntry?.id || prioritizedId;
+
+    // 기사형 문항을 4번째 위치(인덱스 3)로 이동
+    let qs = Array.isArray(chosen?.questions) ? chosen.questions : [];
+    const moveArticleToIndex = (arr, targetIdx = 3) => {
+      if (!Array.isArray(arr) || arr.length === 0) return arr || [];
+      const idx = arr.findIndex(q => q?.type === 'articleImage' || q?.image);
+      if (idx === -1) return arr;
+      const ti = Math.min(targetIdx, Math.max(0, arr.length - 1));
+      if (idx === ti) return arr;
+      const clone = arr.slice();
+      const [item] = clone.splice(idx, 1);
+      clone.splice(ti, 0, item);
+      return clone;
+    };
+    qs = moveArticleToIndex(qs, 3);
+
+    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항${qs.some(q=>q.type==='articleImage'||q.image)?', 기사형 포함' : ''}; 주제 매칭 점수=${chosenEntry?.score||0})`);
     return { questions: qs, totalCount: qs.length, quizId: chosenId };
   } catch (error) {
     console.log('🎯 백엔드 로드 실패 - 더미 questions 사용:', error.message);

@@ -52,6 +52,7 @@ export default function Explore() {
             console.log('🎯 퀴즈 데이터 요청 중...');
             const result = await apiGetQuestions({ 
               topicId: mainTopic, 
+              subTopic: subTopic,
               levelId: lv 
             });
             if (result && result.questions && result.questions.length > 0) {
@@ -83,6 +84,24 @@ export default function Explore() {
         selectedLevel={level}
         initialTopic={mainTopic}
         initialSubTopic={subTopic}
+        onSelectionConfirm={async ({ level: newLevel, topic: newTopic, subTopic: newSub }) => {
+          // 부모 상태 업데이트
+          setLevel(newLevel);
+          setMainTopic(newTopic);
+          setSubTopic(newSub);
+          // 질문 재조회
+          try {
+            const result = await apiGetQuestions({ topicId: newTopic, subTopic: newSub, levelId: newLevel });
+            if (result && Array.isArray(result.questions)) {
+              setQuestions(result.questions);
+            }
+          } catch (e) {
+            console.warn('질문 재조회 실패:', e);
+          }
+          // 진행도/현재 인덱스 초기화
+          setQid(0);
+          setResults([]);
+        }}
         onStart={() => setStep(4)}
       />
     );
