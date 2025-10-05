@@ -171,6 +171,16 @@ export const getQuiz = async (quizId) => {
 };
 
 // 서버 응답 키를 UI에서 쓰는 형태로 정규화 (questionText/optionText → question/text)
+function parseBoolLoose(v) {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v !== 0;
+  if (v == null) return false;
+  const s = String(v).trim().toLowerCase();
+  if (['true','1','y','yes','t','ok','correct'].includes(s)) return true;
+  if (['false','0','n','no','f','x','wrong'].includes(s)) return false;
+  return false;
+}
+
 function normalizeQuizPayload(raw) {
   if (!raw) return raw;
   const questions = (raw.questions || []).map((q) => ({
@@ -187,14 +197,25 @@ function normalizeQuizPayload(raw) {
     hintMd: (
       q.hintMd ?? q.hint ?? q.tipsMd ?? q.tips ?? null
     ),
-    // 기사형 문제 처리: 다양한 키에서 이미지 필드 정규화
-    image: q.image ?? q.imageUrl ?? q.articleImageUrl ?? q.article_image ?? null,
+    // 기사형 문제 처리: 다양한 키에서 이미지 필드 정규화 (확장)
+    image: (
+      q.image ?? q.imageUrl ?? q.imageURL ?? q.imgUrl ?? q.img_url ??
+      q.articleImage ?? q.articleImageUrl ?? q.article_image_url ?? q.article_image ?? q.articleImg ??
+      q.contentImageUrl ?? q.content_image_url ?? q.thumbnail ?? q.thumbnailUrl ?? q.newsImageUrl ?? q.news_image_url ?? null
+    ),
     // 백엔드에서 type이 없더라도 이미지가 있으면 articleImage로 간주
-    type: q.type ?? ((q.image ?? q.imageUrl ?? q.articleImageUrl ?? q.article_image) ? 'articleImage' : undefined),
+    type: q.type ?? ((
+      q.image || q.imageUrl || q.imageURL || q.imgUrl || q.img_url ||
+      q.articleImage || q.articleImageUrl || q.article_image_url || q.article_image ||
+      q.contentImageUrl || q.content_image_url || q.thumbnail || q.thumbnailUrl
+    ) ? 'articleImage' : undefined),
     options: (q.options || []).map((o) => ({
       ...o,
         text: o.text ?? o.optionText ?? '',
-        isCorrect: typeof o.isCorrect === 'boolean' ? o.isCorrect : !!o.correct,
+        // 다양한 백엔드 케이스 처리 (isCorrect/correct/is_correct/answer/isRight 등)
+        isCorrect: parseBoolLoose(
+          o.isCorrect ?? o.correct ?? o.is_correct ?? o.answer ?? o.isRight ?? o.is_right
+        ),
     })),
   }));
   return { ...raw, questions };
@@ -356,7 +377,7 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
     const candidateIds = Array.from(new Set([
       prioritizedId,
       ...quizzes.map(q => q.id || q.quizId).filter(Boolean)
-    ])).slice(0, 5);
+    ])).slice(0, 10);
 
     const details = await Promise.all(
       candidateIds.map(async (id) => {
@@ -452,6 +473,22 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
   } catch (error) {
     console.log('🎯 백엔드 로드 실패 - 더미 questions 사용:', error.message);
     return { questions: dummyQuizzes, totalCount: dummyQuizzes.length };
+  }
+};
+
+// 레벨 메타데이터 조회 (설명/목표 등) - 존재하지 않으면 null 반환
+export const getLevelMeta = async (levelId) => {
+  const lid = coerceLevelId(levelId);
+  try {
+    // 우선 /levels/:id/meta → 실패 시 /levels/:id로 폴백
+    try {
+      const meta = await http(`/levels/${lid}/meta`);
+      if (meta) return meta;
+    } catch { /* try fallback */ }
+    const res = await http(`/levels/${lid}`);
+    return res || {};
+  } catch {
+    return {};
   }
 };
 // 기존 getKeyPoints 함수 -> 더미 데이터 우선 사용

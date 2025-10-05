@@ -1,5 +1,6 @@
 //초 중 고 레벨 선택
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, useEffect } from "react";
+import { getLevelMeta } from "../../api/explore";
 import "./LevelPicker.css";
 
 // props: mainTopic (대분류), subTopic (선택된 소분류)
@@ -59,6 +60,32 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
       window.visualViewport?.removeEventListener('resize', measure);
     };
   }, [selectedLevel]);
+
+  // 백엔드 메타데이터 상태
+  const [liveMeta, setLiveMeta] = useState(null);
+  useEffect(() => {
+    // 선택된 레벨이 있을 때 해당 레벨 메타데이터 조회 시도
+    (async () => {
+      if (!selectedLevel) return setLiveMeta(null);
+      try {
+        const meta = await getLevelMeta(selectedLevel);
+        setLiveMeta(meta);
+      } catch {
+        setLiveMeta(null);
+      }
+    })();
+  }, [selectedLevel]);
+
+  const getDescForLevel = (lvKey) => {
+    const base = levels.find(l => l.key === lvKey)?.desc;
+    const live = liveMeta?.description || liveMeta?.desc;
+    return live || base;
+  };
+  const getGoalForLevel = (lvKey) => {
+    const base = levels.find(l => l.key === lvKey)?.goal;
+    const live = liveMeta?.goal || liveMeta?.objectives || liveMeta?.learningGoal;
+    return live || base;
+  };
 
   return (
     <div ref={containerRef} className="level-picker-container">
@@ -127,7 +154,7 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
                 {lv.title}
               </div>
               <div className="level-picker-card-desc">
-                {lv.desc}
+                {getDescForLevel(lv.key)}
               </div>
             </div>
           </div>
@@ -140,7 +167,7 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
           <div className="level-picker-goal-title">학습 목표</div>
           <div style={{ width: '100%', borderTop: '1px solid #F5F5F5', marginTop: 10, marginBottom: 10 }} />
           <div className="level-picker-goal-desc">
-            {levels.find((lv) => lv.key === selectedLevel)?.goal}
+            {getGoalForLevel(selectedLevel)}
           </div>
         </div>
       )}
