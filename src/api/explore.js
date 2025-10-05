@@ -183,7 +183,8 @@ function parseBoolLoose(v) {
 
 function normalizeQuizPayload(raw) {
   if (!raw) return raw;
-  // 이미지 URL 유효성 검사: 숫자/불린 등은 무시하여 잘못된 네트워크 요청(예: /1) 방지
+  // 이미지 URL 유효성 검사 및 보정: 숫자/불린 등은 무시하고,
+  // 파일명/상대경로만 온 경우 API origin 기준 절대 URL로 변환하여 기사문제 표시를 지원
   const sanitizeImageUrl = (v) => {
     if (!v) return null;
     if (typeof v !== 'string') return null;
@@ -191,6 +192,20 @@ function normalizeQuizPayload(raw) {
     if (!s) return null;
     // 허용되는 스킴 또는 경로 패턴만 통과
     if (/^(https?:\/\/|data:|blob:|\/|\.\/|\.\.\/)/i.test(s)) return s;
+    // 파일명 또는 선행 슬래시가 없는 상대경로 처리 (예: "news.png" 또는 "uploads/news.png")
+    const looksLikeImageFile = /\.(png|jpe?g|gif|webp|svg)$/i.test(s) && !/[\s"'<>]/.test(s);
+    if (looksLikeImageFile) {
+      try {
+        const origin = new URL(API_BASE, (typeof window !== 'undefined' ? window.location.origin : undefined)).origin;
+        const normalized = s.replace(/^\/+/, ''); // 선행 슬래시 제거 후 추가
+        const abs = `${origin}/${normalized}`;
+        console.log(`🖼️ 이미지 상대경로 보정: '${s}' -> '${abs}'`);
+        return abs;
+      } catch (_) {
+        // URL 계산 실패 시 원본 반환하지 않고 null 처리
+        return null;
+      }
+    }
     return null;
   };
 
