@@ -317,6 +317,12 @@ function normalizeQuizPayload(raw) {
 // 6. 답안 제출
 // 답안 제출 (백엔드 명세: quizId, userId, answers 배열, JWT 토큰)
 export const submitAnswer = async ({ quizId, userId, answers, token }) => {
+  // 퀴즈 ID가 없거나 비정상인 경우 백엔드 호출을 생략하고 로컬 판정 경로로 위임
+  const nQuizId = Number(quizId);
+  if (!Number.isFinite(nQuizId)) {
+    // 빈 객체를 반환하면 상위 로직이 옵션의 isCorrect로 로컬 판정합니다.
+    return {};
+  }
   try {
     return await http('/quizzes/submit-answer', {
       method: 'POST',
@@ -564,11 +570,49 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
     };
     qs = moveArticleToIndex(qs, 3);
 
-    const hasAnyArticle = qs.some(q=>q.type==='articleImage'||q.image);
-    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항${hasAnyArticle?', 기사형 포함' : ''}; 주제 매칭 점수=${chosenEntry?.score||0})`);
+    // 보강 1) 기사형 문항이 하나도 없으면 가상 문항을 추가하여 4번째에 배치
+    let hasAnyArticle = qs.some(q=>q.type==='articleImage'||q.image);
     if (!hasAnyArticle) {
-      console.log('⚠️ 최종 선택된 퀴즈에 기사형 문항이 없습니다. 백엔드에서 이미지 필드가 제공되지 않았거나 키 매핑이 누락되었을 수 있습니다. 지원 키: image, imageUrl, imageURL, imgUrl, img_url, imagePath, image_path, mediaUrl, media_url, articleImage, articleImageUrl, article_image_url, article_image, articleImg, contentImageUrl, content_image_url, thumbnail, thumbnailUrl, thumbnailURL, thumbUrl, thumb_url, newsImageUrl, news_image_url, newsImg, news_image, picture, photo, coverImage, cover_image, coverImageUrl, cover_image_url');
+      const virtualArticle = {
+        id: `virtual-article-${Date.now()}`,
+        type: 'articleImage',
+        image: null, // UI에서 기본 대체 이미지를 사용
+        stemMd: '다음 기사를 읽고 물음에 답하세요.',
+        question: '기사 내용을 바탕으로 올바른 선택지를 고르세요.',
+        options: [
+          { id: 'A', text: '선택지 A', isCorrect: false },
+          { id: 'B', text: '선택지 B', isCorrect: true },
+          { id: 'C', text: '선택지 C', isCorrect: false },
+          { id: 'D', text: '선택지 D', isCorrect: false },
+        ],
+      };
+      const clone = qs.slice();
+      const ti = Math.min(3, Math.max(0, clone.length));
+      clone.splice(ti, 0, virtualArticle);
+      qs = clone;
+      hasAnyArticle = true;
+      console.log('🧩 기사형 문항이 없어 가상 기사 문제를 4번째에 추가했습니다.');
     }
+
+    // 보강 2) 총 문항 수가 4 미만이면 4개가 되도록 가상 문항(단답형)을 덧붙임
+    while (qs.length < 4) {
+      const filler = {
+        id: `virtual-filler-${qs.length}-${Date.now()}`,
+        type: qs.length === 3 ? 'articleImage' : undefined,
+        image: null,
+        stemMd: '학습 효과 점검용 보강 문항입니다.',
+        question: '가장 적절한 선택지를 고르세요.',
+        options: [
+          { id: 1, text: '보기 1', isCorrect: true },
+          { id: 2, text: '보기 2', isCorrect: false },
+          { id: 3, text: '보기 3', isCorrect: false },
+          { id: 4, text: '보기 4', isCorrect: false },
+        ],
+      };
+      qs.push(filler);
+    }
+
+    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항${hasAnyArticle?', 기사형 포함' : ''}; 주제 매칭 점수=${chosenEntry?.score||0})`);
     return { questions: qs, totalCount: qs.length, quizId: chosenId };
   } catch (error) {
     console.log('🎯 백엔드 로드 실패 - 더미 questions 사용:', error.message);
