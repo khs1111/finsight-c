@@ -183,41 +183,75 @@ function parseBoolLoose(v) {
 
 function normalizeQuizPayload(raw) {
   if (!raw) return raw;
-  const questions = (raw.questions || []).map((q) => ({
-    ...q,
-    question: q.question ?? q.questionText ?? q.stemMd ?? '',
-    stemMd: q.stemMd ?? q.questionText ?? q.question ?? '',
-    // 학습/핵심포인트/힌트 정규화
-    solvingKeypointsMd: (
-      q.solvingKeypointsMd ?? q.solvingKeypoints ?? q.keypointsMd ?? q.keyPointsMd ?? q.keypoints ?? q.keyPoints ?? q.key_points ?? null
-    ),
-    teachingExplainerMd: (
-      q.teachingExplainerMd ?? q.explainerMd ?? q.explainer ?? q.explanationMd ?? q.explanation ?? null
-    ),
-    hintMd: (
-      q.hintMd ?? q.hint ?? q.tipsMd ?? q.tips ?? null
-    ),
-    // 기사형 문제 처리: 다양한 키에서 이미지 필드 정규화 (확장)
-    image: (
-      q.image ?? q.imageUrl ?? q.imageURL ?? q.imgUrl ?? q.img_url ??
-      q.articleImage ?? q.articleImageUrl ?? q.article_image_url ?? q.article_image ?? q.articleImg ??
-      q.contentImageUrl ?? q.content_image_url ?? q.thumbnail ?? q.thumbnailUrl ?? q.newsImageUrl ?? q.news_image_url ?? null
-    ),
-    // 백엔드에서 type이 없더라도 이미지가 있으면 articleImage로 간주
-    type: q.type ?? ((
-      q.image || q.imageUrl || q.imageURL || q.imgUrl || q.img_url ||
-      q.articleImage || q.articleImageUrl || q.article_image_url || q.article_image ||
-      q.contentImageUrl || q.content_image_url || q.thumbnail || q.thumbnailUrl
-    ) ? 'articleImage' : undefined),
-    options: (q.options || []).map((o) => ({
-      ...o,
-        text: o.text ?? o.optionText ?? '',
+  const questions = (raw.questions || []).map((q) => {
+    const mapped = {
+      ...q,
+      question: q.question ?? q.questionText ?? q.stemMd ?? '',
+      stemMd: q.stemMd ?? q.questionText ?? q.question ?? '',
+      // 학습/핵심포인트/힌트 정규화
+      solvingKeypointsMd: (
+        q.solvingKeypointsMd ?? q.solvingKeypoints ?? q.keypointsMd ?? q.keyPointsMd ?? q.keypoints ?? q.keyPoints ?? q.key_points ?? null
+      ),
+      teachingExplainerMd: (
+        q.teachingExplainerMd ?? q.explainerMd ?? q.explainer ?? q.explanationMd ?? q.explanation ?? null
+      ),
+      hintMd: (
+        q.hintMd ?? q.hint ?? q.tipsMd ?? q.tips ?? null
+      ),
+      // 기사형 문제 처리: 다양한 키에서 이미지 필드 정규화 (확장)
+      image: (
+        q.image ?? q.imageUrl ?? q.imageURL ?? q.imgUrl ?? q.img_url ??
+        q.articleImage ?? q.articleImageUrl ?? q.article_image_url ?? q.article_image ?? q.articleImg ??
+        q.contentImageUrl ?? q.content_image_url ?? q.thumbnail ?? q.thumbnailUrl ?? q.newsImageUrl ?? q.news_image_url ?? null
+      ),
+      // 백엔드에서 type이 없더라도 이미지가 있으면 articleImage로 간주
+      type: q.type ?? ((
+        q.image || q.imageUrl || q.imageURL || q.imgUrl || q.img_url ||
+        q.articleImage || q.articleImageUrl || q.article_image_url || q.article_image ||
+        q.contentImageUrl || q.content_image_url || q.thumbnail || q.thumbnailUrl
+      ) ? 'articleImage' : undefined),
+      options: (q.options || []).map((o) => ({
+        ...o,
+        id: o.id ?? o.optionId ?? o.valueId ?? o.value ?? null,
+        text: o.text ?? o.optionText ?? o.label ?? '',
         // 다양한 백엔드 케이스 처리 (isCorrect/correct/is_correct/answer/isRight 등)
         isCorrect: parseBoolLoose(
           o.isCorrect ?? o.correct ?? o.is_correct ?? o.answer ?? o.isRight ?? o.is_right
         ),
-    })),
-  }));
+      })),
+    };
+
+    // 옵션들에 정답 플래그가 하나도 없으면 질문 레벨의 정답 정보를 이용해 설정
+    const anyCorrect = Array.isArray(mapped.options) && mapped.options.some((o) => o.isCorrect);
+    if (!anyCorrect && Array.isArray(mapped.options) && mapped.options.length) {
+      // 후보 키들: 인덱스/ID/텍스트
+      const correctIndex = (
+        q.correctIndex ?? q.correctOptionIndex ?? q.correct_option_index ?? q.answerIndex ?? q.answer_index
+      );
+      const correctId = (
+        q.correctOptionId ?? q.correct_option_id ?? q.answerId ?? q.answer_id
+      );
+      const correctText = (
+        q.correctAnswer ?? q.answerText ?? q.correct_answer ?? q.answer
+      );
+
+      let idx = -1;
+      if (Number.isInteger(correctIndex)) {
+        idx = Math.max(0, Math.min(mapped.options.length - 1, correctIndex));
+      } else if (typeof correctId !== 'undefined' && correctId !== null) {
+        const found = mapped.options.findIndex((o) => String(o.id) === String(correctId));
+        if (found >= 0) idx = found;
+      } else if (typeof correctText === 'string' && correctText.trim()) {
+        const found = mapped.options.findIndex((o) => String(o.text).trim() === String(correctText).trim());
+        if (found >= 0) idx = found;
+      }
+      if (idx >= 0) {
+        mapped.options = mapped.options.map((o, i) => ({ ...o, isCorrect: i === idx }));
+      }
+    }
+
+    return mapped;
+  });
   return { ...raw, questions };
 }
 
