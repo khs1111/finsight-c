@@ -341,23 +341,44 @@ export const getQuestions = async ({ topicId, levelId } = {}) => {
   try {
     // 1) 레벨별 퀴즈 목록 조회
     const levelData = await http(`/levels/${lid}/quizzes?userId=${uid}`);
-    const quizzes = Array.isArray(levelData?.quizzes) ? levelData.quizzes : [];
+    const quizzes = Array.isArray(levelData?.quizzes) ? levelData.quizzes : (Array.isArray(levelData) ? levelData : []);
     if (!quizzes.length) throw new Error('No quizzes for level');
 
     // 2) 우선순위: NOT_STARTED → IN_PROGRESS → 그 외, 없으면 첫 번째
-    const pick =
+    const prioritized =
       quizzes.find(q => q.status === 'NOT_STARTED') ||
       quizzes.find(q => q.status === 'IN_PROGRESS') ||
       quizzes[0];
-    const quizId = pick?.id || pick?.quizId || quizzes[0]?.id;
-    if (!quizId) throw new Error('No quizId');
+    const prioritizedId = prioritized?.id || prioritized?.quizId || quizzes[0]?.id;
+    if (!prioritizedId) throw new Error('No quizId');
 
-    // 3) 퀴즈 상세 조회 후 UI 스키마로 정규화
-    const raw = await http(`/quizzes/${quizId}`);
-    const normalized = normalizeQuizPayload(raw);
-    const qs = Array.isArray(normalized?.questions) ? normalized.questions : [];
-    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${quizId} 로드됨 (${qs.length}문항)`);
-    return { questions: qs, totalCount: qs.length, quizId };
+    // 3) 기사형 문제(이미지 포함)를 선호: 최대 5개 퀴즈 상세를 병렬 조회하여 이미지 포함 여부 확인
+    const candidateIds = Array.from(new Set([
+      prioritizedId,
+      ...quizzes.map(q => q.id || q.quizId).filter(Boolean)
+    ])).slice(0, 5);
+
+    const details = await Promise.all(
+      candidateIds.map(async (id) => {
+        try {
+          const rawQ = await http(`/quizzes/${id}`);
+          const norm = normalizeQuizPayload(rawQ);
+          return { id, norm };
+        } catch (_) { return { id, norm: null }; }
+      })
+    );
+
+    // 기사형 문제(이미지 존재 또는 type==='articleImage')가 포함된 퀴즈 우선 선택
+    const hasArticle = (norm) => Array.isArray(norm?.questions) && norm.questions.some(
+      (q) => q.type === 'articleImage' || !!q.image
+    );
+    const preferred = details.find(d => hasArticle(d.norm));
+    const chosen = preferred?.norm || details.find(d => d.id === prioritizedId)?.norm || details.find(d => d.norm)?.norm;
+    const chosenId = preferred?.id || prioritizedId;
+
+    const qs = Array.isArray(chosen?.questions) ? chosen.questions : [];
+    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항${preferred ? ', 기사형 포함' : ''})`);
+    return { questions: qs, totalCount: qs.length, quizId: chosenId };
   } catch (error) {
     console.log('🎯 백엔드 로드 실패 - 더미 questions 사용:', error.message);
     return { questions: dummyQuizzes, totalCount: dummyQuizzes.length };
