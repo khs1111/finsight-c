@@ -6,7 +6,7 @@ import ExploreMain from "../components/explore/ExploreMain";
 import QuizQuestion from "../components/explore/QuizQuestion";
 import CompletionScreen from "../components/explore/CompletionScreen";
 
-import {getQuestions as apiGetQuestions } from "../api/explore";
+import {getQuestions as apiGetQuestions, postAttempt } from "../api/explore";
 import { dummyQuizzes } from "../utils/testData.js";
 import CategoryNav from "../components/news/CategoryNav";
 import { useNavVisibility } from "../components/navigation/NavVisibilityContext";
@@ -18,6 +18,7 @@ export default function Explore() {
   const [level, setLevel] = useState(null); // 난이도 상태 추가
   const [current, setQid] = useState(0);
   const [questions, setQuestions] = useState([]);
+  const [quizId, setQuizId] = useState(null);
   const [results, setResults] = useState([]);
   const [isFetchingQuestions, setIsFetchingQuestions] = useState(false);
   const { setHide } = useNavVisibility();
@@ -56,14 +57,17 @@ export default function Explore() {
             if (result && result.questions && result.questions.length > 0) {
               console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
               setQuestions(result.questions);
+              setQuizId(result.quizId || null);
             } else {
               console.log('🔄 더미 퀴즈 데이터 사용');
               setQuestions(dummyQuizzes);
+              setQuizId(null);
             }
           } catch (err) {
             console.error("❌ 문제 불러오기 실패:", err);
             console.log('🔄 더미 퀴즈 데이터로 폴백');
             setQuestions(dummyQuizzes);
+            setQuizId(null);
           } finally { setIsFetchingQuestions(false); }
           setQid(0);
           setStep(3);
@@ -94,9 +98,11 @@ export default function Explore() {
             const result = await apiGetQuestions({ topicId: newTopic, subTopic: newSub, levelId: newLevel });
             if (result && Array.isArray(result.questions)) {
               setQuestions(result.questions);
+              setQuizId(result.quizId || null);
             }
           } catch (e) {
             console.warn('질문 재조회 실패:', e);
+            setQuizId(null);
           } finally { setIsFetchingQuestions(false); }
           // 진행도/현재 인덱스 초기화
           setQid(0);
@@ -126,18 +132,102 @@ export default function Explore() {
           newResults[current] = { ...currentResult, selected: idx };
           setResults(newResults);
         }}
-        onCheck={() => {
-          const newResults = [...results];
-          // Determine correctness
-          const question = questions[current];
-          let correctIdx = -1;
-          if (question && question.options) {
-            const correctOption = question.options.find(option => option.isCorrect);
-            correctIdx = correctOption ? question.options.indexOf(correctOption) : -1;
+        onCheck={async () => {
+          const qList = questions || [];
+          const question = qList[current];
+          const selectedIdx = currentResult.selected;
+          if (!question || selectedIdx == null || selectedIdx < 0) return;
+
+          const selectedOption = question.options?.[selectedIdx];
+          const selectedOptionId = selectedOption?.id ?? (selectedIdx + 1);
+
+          let backendCorrectIdx = -1;
+          try {
+            const resp = await postAttempt({
+              quizId: quizId ?? undefined,
+              questionId: question.id,
+              selectedOptionId,
+            });
+
+            // 다양한 서버 응답 스키마 지원: id/index/text/letter
+            const opts = question.options || [];
+            const toIdxById = (id) => opts.findIndex(o => String(o.id) === String(id));
+            const toIdxByText = (txt) => opts.findIndex(o => String(o.text).trim() === String(txt).trim());
+            const clamp = (n) => Math.max(0, Math.min(opts.length - 1, n));
+            const asNum = (v) => {
+              if (typeof v === 'number' && Number.isFinite(v)) return v;
+              if (typeof v === 'string') { const n = parseInt(v, 10); return Number.isFinite(n) ? n : NaN; }
+              return NaN;
+            };
+
+            const r = resp || {};
+            const idCandidates = [r.correctOptionId, r.correct_option_id, r.answerId, r.answer_id];
+            const idxCandidates = [r.correctIndex, r.correct_index, r.answerIndex, r.answer_index];
+            const textCandidates = [r.correctAnswer, r.correct_answer, r.answerText];
+            const letterCandidates = [r.correctOption, r.correct_option, r.correctLetter, r.correct_letter];
+
+            // 1) ID 매칭
+            for (const cid of idCandidates) {
+              if (cid != null) { const i = toIdxById(cid); if (i >= 0) { backendCorrectIdx = i; break; } }
+            }
+            // 2) 인덱스(0/1-based) 매칭
+            if (backendCorrectIdx < 0) {
+              for (const c of idxCandidates) {
+                const n = asNum(c);
+                if (Number.isFinite(n)) {
+                  if (n >= 0 && n < opts.length) { backendCorrectIdx = clamp(n); break; }
+                  if (n >= 1 && n <= opts.length) { backendCorrectIdx = clamp(n - 1); break; }
+                }
+              }
+            }
+            // 3) 텍스트 매칭
+            if (backendCorrectIdx < 0) {
+              for (const t of textCandidates) {
+                if (typeof t === 'string' && t.trim()) { const i = toIdxByText(t); if (i >= 0) { backendCorrectIdx = i; break; } }
+              }
+            }
+            // 4) 레터(A/B/C/D) 매칭
+            if (backendCorrectIdx < 0) {
+              for (const L of letterCandidates) {
+                if (typeof L === 'string' && L.trim()) {
+                  const s = L.trim().toUpperCase();
+                  if (/^[A-Z]$/.test(s)) { backendCorrectIdx = clamp(s.charCodeAt(0) - 'A'.charCodeAt(0)); break; }
+                  const n = asNum(s);
+                  if (Number.isFinite(n)) {
+                    if (n >= 1 && n <= opts.length) { backendCorrectIdx = clamp(n - 1); break; }
+                    if (n >= 0 && n < opts.length) { backendCorrectIdx = clamp(n); break; }
+                  }
+                }
+              }
+            }
+
+            // 서버 기준 정답을 옵션에 반영
+            if (opts.length && backendCorrectIdx >= 0) {
+              const updatedOptions = opts.map((o, i) => ({ ...o, isCorrect: i === backendCorrectIdx }));
+              const updatedQuestions = qList.slice();
+              updatedQuestions[current] = { ...question, options: updatedOptions };
+              setQuestions(updatedQuestions);
+            }
+
+            const finalCorrectIdx = backendCorrectIdx >= 0
+              ? backendCorrectIdx
+              : (opts.findIndex(o => o.isCorrect));
+            const isCorrect = Number.isInteger(selectedIdx) && selectedIdx === finalCorrectIdx
+              ? true
+              : Boolean(r?.correct);
+
+            const newResults = [...results];
+            newResults[current] = { ...currentResult, checked: true, correct: isCorrect };
+            setResults(newResults);
+          } catch (e) {
+            console.warn('⚠️ 백엔드 채점 실패, 로컬 판정으로 폴백:', e);
+            const correctOption = question.options?.find(o => o.isCorrect);
+            const localCorrectIdx = correctOption ? question.options.indexOf(correctOption) : -1;
+            const isCorrect = selectedIdx === localCorrectIdx;
+            const newResults = [...results];
+            newResults[current] = { ...currentResult, checked: true, correct: isCorrect };
+            setResults(newResults);
           }
-          const isCorrect = currentResult.selected === correctIdx;
-          newResults[current] = { ...currentResult, checked: true, correct: isCorrect };
-          setResults(newResults);
         }}
         onComplete={() => setStep(5)}
         onBack={handleBack}
@@ -152,13 +242,13 @@ export default function Explore() {
       results[idx] ? results[idx] : { selected: null, checked: false }
     );
     
-    // 백엔드 구조에 맞게 정답 확인 로직 수정
+    // 결과 계산: 백엔드 판정 우선, 없으면 옵션의 isCorrect 사용
     const correctCount = fixedResults.filter((r, idx) => {
+      if (r && r.checked && typeof r.correct === 'boolean') return r.correct;
       const question = questionList[idx];
-      if (!question?.options) return false;
-      const correctOption = question.options.find(option => option.isCorrect);
+      const correctOption = question?.options?.find(o => o.isCorrect);
       const correctIdx = correctOption ? question.options.indexOf(correctOption) : -1;
-      return r.selected === correctIdx;
+      return r?.selected === correctIdx;
     }).length;
     
     content = (

@@ -553,11 +553,8 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
 export const getLevelMeta = async (levelId) => {
   const lid = coerceLevelId(levelId);
   try {
-    // 우선 /levels/:id/meta → 실패 시 /levels/:id로 폴백
-    try {
-      const meta = await http(`/levels/${lid}/meta`);
-      if (meta) return meta;
-    } catch { /* try fallback */ }
+    // /levels/:id/meta 엔드포인트는 환경에 따라 존재하지 않을 수 있으므로 호출하지 않음
+    // 레벨 기본 정보만 사용하고, 실패 시 빈 객체 반환하여 UI가 기본 사양으로 동작하도록 함
     const res = await http(`/levels/${lid}`);
     return res || {};
   } catch {
