@@ -9,7 +9,7 @@ import antCharacter from '../../assets/explore/antCharacter.svg';
 import './ExploreMain.css';
 
 // ExploreMain: 학습 진입 전 개요 UI
-export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel, initialTopic, initialSubTopic }) {
+export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel, initialTopic, initialSubTopic, onSelectionConfirm }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false); // 메뉴 토글 상태
   const [filterOpen, setFilterOpen] = useState(false);
@@ -152,6 +152,10 @@ const activeStage = currentIndex < totalStages ? currentIndex : -1;
           setSelectedLevel(level);
           setSelectedTopic(topic);
           setSelectedSubTopic(subTopic);
+          // 부모(Explore.js)에도 변경 사항을 전달하여 문제를 재조회하도록 요청
+          if (typeof onSelectionConfirm === 'function') {
+            onSelectionConfirm({ level, topic, subTopic });
+          }
         }}
       />
 
@@ -392,11 +396,12 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
   }, [open, selectedLevel, selectedTopic, selectedSubTopic]);
 
   const handleConfirm = () => {
-    onConfirm({
+    const payload = {
       level: tempLevel,
       topic: tempTopic,
-      subTopic: tempSubTopic
-    });
+      subTopic: tempSubTopic,
+    };
+    onConfirm(payload);
     onClose();
   };
 
