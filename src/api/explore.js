@@ -223,9 +223,9 @@ function normalizeQuizPayload(raw) {
 
     // 옵션들에 정답 플래그가 하나도 없으면 질문 레벨의 정답 정보를 이용해 설정
     const anyCorrect = Array.isArray(mapped.options) && mapped.options.some((o) => o.isCorrect);
-    if (!anyCorrect && Array.isArray(mapped.options) && mapped.options.length) {
+  if (!anyCorrect && Array.isArray(mapped.options) && mapped.options.length) {
       // 후보 키들: 인덱스/ID/텍스트
-      const correctIndex = (
+      const correctIndexRaw = (
         q.correctIndex ?? q.correctOptionIndex ?? q.correct_option_index ?? q.answerIndex ?? q.answer_index
       );
       const correctId = (
@@ -234,16 +234,46 @@ function normalizeQuizPayload(raw) {
       const correctText = (
         q.correctAnswer ?? q.answerText ?? q.correct_answer ?? q.answer
       );
+      const correctLetter = (
+        q.correctOption ?? q.correct_option ?? q.correctLetter ?? q.correct_letter
+      );
 
       let idx = -1;
-      if (Number.isInteger(correctIndex)) {
-        idx = Math.max(0, Math.min(mapped.options.length - 1, correctIndex));
+      const len = mapped.options.length;
+      const toIdx = (n) => Math.max(0, Math.min(len - 1, n));
+      // 숫자/문자 모두 고려한 인덱스 계산
+      const asNumber = (v) => {
+        if (typeof v === 'number' && Number.isFinite(v)) return v;
+        if (typeof v === 'string') {
+          const n = parseInt(v, 10);
+          return Number.isFinite(n) ? n : NaN;
+        }
+        return NaN;
+      };
+
+      const nIdx = asNumber(correctIndexRaw);
+      if (Number.isFinite(nIdx)) {
+        // 0-based 우선, 아니면 1-based 해석
+        if (nIdx >= 0 && nIdx < len) idx = toIdx(nIdx);
+        else if (nIdx >= 1 && nIdx <= len) idx = toIdx(nIdx - 1);
       } else if (typeof correctId !== 'undefined' && correctId !== null) {
         const found = mapped.options.findIndex((o) => String(o.id) === String(correctId));
         if (found >= 0) idx = found;
       } else if (typeof correctText === 'string' && correctText.trim()) {
         const found = mapped.options.findIndex((o) => String(o.text).trim() === String(correctText).trim());
         if (found >= 0) idx = found;
+      } else if (typeof correctLetter === 'string' && correctLetter.trim()) {
+        const s = correctLetter.trim().toUpperCase();
+        // 'A' -> 0, 'B' -> 1 ... 혹은 '1' -> 0
+        if (/^[A-Z]$/.test(s)) {
+          idx = toIdx(s.charCodeAt(0) - 'A'.charCodeAt(0));
+        } else {
+          const asN = asNumber(s);
+          if (Number.isFinite(asN)) {
+            if (asN >= 0 && asN < len) idx = toIdx(asN);
+            else if (asN >= 1 && asN <= len) idx = toIdx(asN - 1);
+          }
+        }
       }
       if (idx >= 0) {
         mapped.options = mapped.options.map((o, i) => ({ ...o, isCorrect: i === idx }));
