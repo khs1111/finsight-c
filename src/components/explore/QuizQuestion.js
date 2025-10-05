@@ -200,7 +200,13 @@ export default function QuizQuestion({ current,
   // 이미지 후보 목록: 문제에서 제공한 이미지(있다면) + 프로젝트 내 더미 이미지
   const imgCandidates = React.useMemo(() => {
     const list = [];
-    if (question?.image) list.push(question.image);
+    // 유효한 이미지 URL만 포함 (스킴/상대경로 검사)
+    const isValidUrl = (v) => {
+      if (!v || typeof v !== 'string') return false;
+      const s = v.trim();
+      return /^(https?:\/\/|data:|blob:|\/|\.\/|\.\.\/)/i.test(s);
+    };
+    if (isValidUrl(question?.image)) list.push(question.image.trim());
     list.push(q4ArticlePng);
     // 중복 제거
     return Array.from(new Set(list.filter(Boolean)));

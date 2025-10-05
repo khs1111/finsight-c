@@ -197,7 +197,7 @@ const activeStage = currentIndex < totalStages ? currentIndex : -1;
         />
       </div>
 
-      <div className="explore-main-cta-fixed">
+  <div className="explore-main-cta-fixed">
   <FloatingQuizCTA onClick={isLoading ? undefined : onStart} label={isLoading ? '문제 불러오는 중...' : '퀴즈 풀러가기'} disabled={!!isLoading} />
       </div>
     </div>

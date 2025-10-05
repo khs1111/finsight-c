@@ -183,6 +183,17 @@ function parseBoolLoose(v) {
 
 function normalizeQuizPayload(raw) {
   if (!raw) return raw;
+  // 이미지 URL 유효성 검사: 숫자/불린 등은 무시하여 잘못된 네트워크 요청(예: /1) 방지
+  const sanitizeImageUrl = (v) => {
+    if (!v) return null;
+    if (typeof v !== 'string') return null;
+    const s = v.trim();
+    if (!s) return null;
+    // 허용되는 스킴 또는 경로 패턴만 통과
+    if (/^(https?:\/\/|data:|blob:|\/|\.\/|\.\.\/)/i.test(s)) return s;
+    return null;
+  };
+
   const questions = (raw.questions || []).map((q) => {
     // 이미지 후보 키들(백엔드 다양성 대응): 가장 먼저 매칭되는 값을 사용
     const img = (
@@ -194,6 +205,7 @@ function normalizeQuizPayload(raw) {
       q.picture ?? q.photo ?? q.coverImage ?? q.cover_image ?? q.coverImageUrl ?? q.cover_image_url ??
       null
     );
+    const image = sanitizeImageUrl(img);
     const mapped = {
       ...q,
       question: q.question ?? q.questionText ?? q.stemMd ?? '',
@@ -209,9 +221,9 @@ function normalizeQuizPayload(raw) {
         q.hintMd ?? q.hint ?? q.tipsMd ?? q.tips ?? null
       ),
       // 기사형 문제 처리: 다양한 키에서 이미지 필드 정규화 (확장)
-      image: img,
-      // 백엔드에서 type이 없더라도 이미지가 있으면 articleImage로 간주 (정규화된 image 값 기준)
-      type: q.type ?? (img ? 'articleImage' : undefined),
+      image,
+      // 백엔드에서 type이 없더라도 유효한 이미지가 있으면 articleImage로 간주
+      type: q.type ?? (image ? 'articleImage' : undefined),
       options: (q.options || []).map((o) => ({
         ...o,
         id: o.id ?? o.optionId ?? o.valueId ?? o.value ?? null,
