@@ -184,6 +184,16 @@ function parseBoolLoose(v) {
 function normalizeQuizPayload(raw) {
   if (!raw) return raw;
   const questions = (raw.questions || []).map((q) => {
+    // 이미지 후보 키들(백엔드 다양성 대응): 가장 먼저 매칭되는 값을 사용
+    const img = (
+      q.image ?? q.imageUrl ?? q.imageURL ?? q.imgUrl ?? q.img_url ??
+      q.imagePath ?? q.image_path ?? q.mediaUrl ?? q.media_url ??
+      q.articleImage ?? q.articleImageUrl ?? q.article_image_url ?? q.article_image ?? q.articleImg ??
+      q.contentImageUrl ?? q.content_image_url ?? q.thumbnail ?? q.thumbnailUrl ?? q.thumbnailURL ??
+      q.thumbUrl ?? q.thumb_url ?? q.newsImageUrl ?? q.news_image_url ?? q.newsImg ?? q.news_image ??
+      q.picture ?? q.photo ?? q.coverImage ?? q.cover_image ?? q.coverImageUrl ?? q.cover_image_url ??
+      null
+    );
     const mapped = {
       ...q,
       question: q.question ?? q.questionText ?? q.stemMd ?? '',
@@ -199,17 +209,9 @@ function normalizeQuizPayload(raw) {
         q.hintMd ?? q.hint ?? q.tipsMd ?? q.tips ?? null
       ),
       // 기사형 문제 처리: 다양한 키에서 이미지 필드 정규화 (확장)
-      image: (
-        q.image ?? q.imageUrl ?? q.imageURL ?? q.imgUrl ?? q.img_url ??
-        q.articleImage ?? q.articleImageUrl ?? q.article_image_url ?? q.article_image ?? q.articleImg ??
-        q.contentImageUrl ?? q.content_image_url ?? q.thumbnail ?? q.thumbnailUrl ?? q.newsImageUrl ?? q.news_image_url ?? null
-      ),
-      // 백엔드에서 type이 없더라도 이미지가 있으면 articleImage로 간주
-      type: q.type ?? ((
-        q.image || q.imageUrl || q.imageURL || q.imgUrl || q.img_url ||
-        q.articleImage || q.articleImageUrl || q.article_image_url || q.article_image ||
-        q.contentImageUrl || q.content_image_url || q.thumbnail || q.thumbnailUrl
-      ) ? 'articleImage' : undefined),
+      image: img,
+      // 백엔드에서 type이 없더라도 이미지가 있으면 articleImage로 간주 (정규화된 image 값 기준)
+      type: q.type ?? (img ? 'articleImage' : undefined),
       options: (q.options || []).map((o) => ({
         ...o,
         id: o.id ?? o.optionId ?? o.valueId ?? o.value ?? null,
@@ -502,16 +504,18 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
       return kw.reduce((s,k)=> s + (hay.includes(k) ? 1 : 0), 0);
     };
 
-    // 1순위: 주제/세부주제 매칭 점수 높은 퀴즈
+    // 1순위: 기사형 포함 퀴즈 우선 선택, 그 안에서 주제/세부주제 매칭 점수 높은 퀴즈
     const withScores = details.map(d => ({ ...d, score: scoreOf(d.norm), hasArticle: hasArticle(d.norm) }));
-    let chosenEntry = withScores
-      .filter(d => d.norm)
-      .sort((a,b) => (b.score - a.score) || (Number(b.hasArticle) - Number(a.hasArticle)))[0];
-
-    // 2순위: 기사형 포함
-    if (!chosenEntry || chosenEntry.score === 0) {
-      const preferred = withScores.find(d => d.hasArticle);
-      chosenEntry = preferred || withScores.find(d => d.id === prioritizedId) || withScores.find(d => d.norm);
+    const onlyArticle = withScores.filter(d => d.norm && d.hasArticle);
+    let chosenEntry;
+    if (onlyArticle.length) {
+      chosenEntry = onlyArticle.sort((a,b) => (b.score - a.score))[0];
+    } else {
+      // 기사형이 하나도 없으면 주제 매칭 점수 기준으로 선택 (백엔드 데이터 이슈 가능성 로그)
+      chosenEntry = withScores
+        .filter(d => d.norm)
+        .sort((a,b) => (b.score - a.score))[0];
+      console.log('ℹ️ 선택된 레벨 퀴즈들 중 기사형 문항이 없습니다. 백엔드에서 이미지가 포함된 문항을 제공하지 않는 상태일 수 있습니다.');
     }
 
     const chosen = chosenEntry?.norm;
@@ -528,11 +532,16 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
       const clone = arr.slice();
       const [item] = clone.splice(idx, 1);
       clone.splice(ti, 0, item);
+      console.log(`🔀 기사형 문항 위치 이동: 원래 인덱스 ${idx} → ${ti} (총 ${arr.length}문항)`);
       return clone;
     };
     qs = moveArticleToIndex(qs, 3);
 
-    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항${qs.some(q=>q.type==='articleImage'||q.image)?', 기사형 포함' : ''}; 주제 매칭 점수=${chosenEntry?.score||0})`);
+    const hasAnyArticle = qs.some(q=>q.type==='articleImage'||q.image);
+    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항${hasAnyArticle?', 기사형 포함' : ''}; 주제 매칭 점수=${chosenEntry?.score||0})`);
+    if (!hasAnyArticle) {
+      console.log('⚠️ 최종 선택된 퀴즈에 기사형 문항이 없습니다. 백엔드에서 이미지 필드가 제공되지 않았거나 키 매핑이 누락되었을 수 있습니다. 지원 키: image, imageUrl, imageURL, imgUrl, img_url, imagePath, image_path, mediaUrl, media_url, articleImage, articleImageUrl, article_image_url, article_image, articleImg, contentImageUrl, content_image_url, thumbnail, thumbnailUrl, thumbnailURL, thumbUrl, thumb_url, newsImageUrl, news_image_url, newsImg, news_image, picture, photo, coverImage, cover_image, coverImageUrl, cover_image_url');
+    }
     return { questions: qs, totalCount: qs.length, quizId: chosenId };
   } catch (error) {
     console.log('🎯 백엔드 로드 실패 - 더미 questions 사용:', error.message);
