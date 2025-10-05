@@ -11,19 +11,18 @@ async function safeFetch(url, options) {
   }
 }
 
-// GET /api/study/wrong-notes/stats
-export async function getWrongNoteStats() {
-  const data = await safeFetch(`${API_BASE}/study/wrong-notes/stats`);
-  // expected shape: { total: number, byCategory: Array<{ category: string, count: number }> }
+// GET /api/wrong-notes/statistics?userId=...
+export async function getWrongNoteStats(userId) {
+  const qp = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+  const data = await safeFetch(`${API_BASE}/wrong-notes/statistics${qp}`);
   return data;
 }
 
-// GET /api/study/wrong-notes?category=...
+// GET /api/wrong-notes?userId=&page=&size=&filter=
 export async function getWrongNotes(params = {}) {
   const query = new URLSearchParams(params).toString();
-  const url = `${API_BASE}/study/wrong-notes${query ? `?${query}` : ''}`;
+  const url = `${API_BASE}/wrong-notes${query ? `?${query}` : ''}`;
   const data = await safeFetch(url);
-  // expected shape: { items: Array<WrongNote> }
   return data;
 }
 

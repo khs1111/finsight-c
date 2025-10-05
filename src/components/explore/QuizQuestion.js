@@ -17,6 +17,7 @@ import "./QuizQuestion.css";
 
 import ProgressHeader from "./ProgressHeader";
 import q4ArticlePng from "../../assets/explore/q4-article.png";
+import { getKeyPoints } from "../../api/explore";
 
 /**
  * 🎯 QuizQuestion 컴포넌트
@@ -296,30 +297,44 @@ export default function QuizQuestion({ current,
     if (!showLearning || !q) return;
     
     try {
-      // 🔄 로딩 상태 시작
+      // � 백엔드에서 받은 퀴즈 데이터에서 학습 내용 추출 (우선순위 순)
+      const pickLocalLearning = () => {
+        if (q.solvingKeypointsMd) return q.solvingKeypointsMd;           // 1순위: 핵심 포인트
+        if (q.teachingExplainerMd) return q.teachingExplainerMd;         // 2순위: 설명 텍스트
+        if (q.hintMd) return q.hintMd;                                   // 3순위: 힌트
+        return null;
+      };
 
-      // 문제 1번(인덱스 0)일 때 더미 텍스트 적용
-      if (current === 0) {
-        setLearningText("• 더미 문제 1번의 학습 칠판 텍스트입니다.\n• 핵심 개념을 여기에 입력하세요.\n→ 추가 설명이나 예시도 가능합니다.");
+      const localText = pickLocalLearning();
+      if (localText) {
+        setLearningText(localText);
         return;
       }
-      // 📚 백엔드에서 받은 퀴즈 데이터에서 학습 내용 추출 (우선순위 순)
-      let text = "";
-      if (q.solvingKeypointsMd) {
-        // 🎯 1순위: 문제 해결 핵심 포인트
-        text = q.solvingKeypointsMd;
-      } else if (q.teachingExplainerMd) {
-        // 📖 2순위: 교육용 설명 텍스트
-        text = q.teachingExplainerMd;
-      } else if (q.hintMd) {
-        // 💡 3순위: 힌트 텍스트
-        text = q.hintMd;
-      } else {
-        // ⚠️ 학습 내용이 없는 경우 기본 메시지
-        text = "이 문제에 대한 학습 내용이 준비되지 않았습니다.";
-      }
-      // ✅ 추출된 학습 텍스트 설정
-      setLearningText(text);
+
+      // � 로컬에 없으면 백엔드 키포인트 API 시도
+      (async () => {
+        try {
+          const kp = await getKeyPoints({ questionId: q.id });
+          // 응답 스키마 대응: { text, keypoints } 또는 문자열
+          if (kp) {
+            if (typeof kp === 'string') {
+              setLearningText(kp);
+            } else if (kp.text || kp.keypoints) {
+              const parts = [];
+              if (kp.text) parts.push(String(kp.text));
+              if (kp.keypoints) parts.push(String(kp.keypoints));
+              setLearningText(parts.filter(Boolean).join('\n'));
+            } else {
+              setLearningText("이 문제에 대한 학습 내용을 불러오지 못했습니다.");
+            }
+          } else {
+            setLearningText("이 문제에 대한 학습 내용을 불러오지 못했습니다.");
+          }
+        } catch (e) {
+          console.error('키포인트 로드 실패:', e);
+          setLearningText("이 문제에 대한 학습 내용을 불러오지 못했습니다.");
+        }
+      })();
     } catch (e) {
       // 🚨 학습 내용 로드 실패 처리
       console.error('학습 내용 로드 실패:', e);

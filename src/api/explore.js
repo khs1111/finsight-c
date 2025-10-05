@@ -177,7 +177,21 @@ function normalizeQuizPayload(raw) {
     ...q,
     question: q.question ?? q.questionText ?? q.stemMd ?? '',
     stemMd: q.stemMd ?? q.questionText ?? q.question ?? '',
-      options: (q.options || []).map((o) => ({
+    // 학습/핵심포인트/힌트 정규화
+    solvingKeypointsMd: (
+      q.solvingKeypointsMd ?? q.solvingKeypoints ?? q.keypointsMd ?? q.keyPointsMd ?? q.keypoints ?? q.keyPoints ?? q.key_points ?? null
+    ),
+    teachingExplainerMd: (
+      q.teachingExplainerMd ?? q.explainerMd ?? q.explainer ?? q.explanationMd ?? q.explanation ?? null
+    ),
+    hintMd: (
+      q.hintMd ?? q.hint ?? q.tipsMd ?? q.tips ?? null
+    ),
+    // 기사형 문제 처리: 다양한 키에서 이미지 필드 정규화
+    image: q.image ?? q.imageUrl ?? q.articleImageUrl ?? q.article_image ?? null,
+    // 백엔드에서 type이 없더라도 이미지가 있으면 articleImage로 간주
+    type: q.type ?? ((q.image ?? q.imageUrl ?? q.articleImageUrl ?? q.article_image) ? 'articleImage' : undefined),
+    options: (q.options || []).map((o) => ({
       ...o,
         text: o.text ?? o.optionText ?? '',
         isCorrect: typeof o.isCorrect === 'boolean' ? o.isCorrect : !!o.correct,

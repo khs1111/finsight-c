@@ -9,19 +9,26 @@ import antCharacter from '../../assets/explore/antCharacter.svg';
 import './ExploreMain.css';
 
 // ExploreMain: 학습 진입 전 개요 UI
-export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel }) {
+export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel, initialTopic, initialSubTopic }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false); // 메뉴 토글 상태
   const [filterOpen, setFilterOpen] = useState(false);
   // propSelectedLevel이 있으면 그걸로, 없으면 '초보자'로 초기화
   const [selectedLevel, setSelectedLevel] = useState(propSelectedLevel || '초보자');
-  const [selectedTopic, setSelectedTopic] = useState('은행');
-  const [selectedSubTopic, setSelectedSubTopic] = useState('예금/적금');
+  const [selectedTopic, setSelectedTopic] = useState(initialTopic || '은행');
+  const [selectedSubTopic, setSelectedSubTopic] = useState(initialSubTopic || '예금/적금');
   const [totalQuestions, setTotalQuestions] = useState(0); // 서버에서 받아온 총 질문 수
   // propSelectedLevel이 바뀌면 selectedLevel도 동기화
   useEffect(() => {
     if (propSelectedLevel) setSelectedLevel(propSelectedLevel);
   }, [propSelectedLevel]);
+
+  // 상위(TopicPicker)에서 전달된 초기 주제/소주제 동기화
+  useEffect(() => {
+    if (initialTopic) setSelectedTopic(initialTopic);
+    if (initialSubTopic) setSelectedSubTopic(initialSubTopic);
+    // 초기값만 반영하고, 이후에는 필터에서 자유롭게 변경 가능
+  }, [initialTopic, initialSubTopic]);
   const todayDateObj = new Date();
   const today = todayDateObj.getDate(); // 오늘 날짜 (일)
   // Calculate current week's (Sunday to Saturday) dates
@@ -370,10 +377,10 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
   const topics = ['은행', '카드', '세금/절세', '투자'];
   
   const subTopicMap = {
-    '은행': ['예금/적금', '금융권', '계좌의 종류와 기능', '인터넷/모바일 뱅킹', '대출의 기초 이해'],
-    '카드': ['체크카드', '신용카드', '선불카드', ],
-    '투자': ['주식', '채권', '펀드'],
-    '세금/절세': ['소득세', '절세 전략']
+    '은행': ['금융권', '예금/적금', '계좌의 종류와 기능', '인터넷/모바일 뱅킹', '대출의 기초 이해'],
+    '카드': ['카드의 종류', '카드 수수료 및 혜택 이해', '카드 사용 전략',"신용 점수와 카드 사용의 관계" ],
+    '투자': ['거래소 사용', '주식', '채권', '펀드'],
+    '세금/절세': ['세금이란', '영수증과 세금 혜택','연말정산']
   };
 
   React.useEffect(() => {

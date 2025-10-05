@@ -81,6 +81,8 @@ export default function Explore() {
         total={questions.length}
         done={current - 1}
         selectedLevel={level}
+        initialTopic={mainTopic}
+        initialSubTopic={subTopic}
         onStart={() => setStep(4)}
       />
     );
