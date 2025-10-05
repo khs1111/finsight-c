@@ -9,7 +9,7 @@ import antCharacter from '../../assets/explore/antCharacter.svg';
 import './ExploreMain.css';
 
 // ExploreMain: 학습 진입 전 개요 UI
-export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel, initialTopic, initialSubTopic, onSelectionConfirm }) {
+export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel, initialTopic, initialSubTopic, onSelectionConfirm, isLoading }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false); // 메뉴 토글 상태
   const [filterOpen, setFilterOpen] = useState(false);
@@ -48,6 +48,7 @@ useEffect(() => {
     try {
       const response = await getQuestions({ 
         topicId: selectedTopic, 
+        subTopic: selectedSubTopic,
         levelId: selectedLevel
       });
       
@@ -197,7 +198,7 @@ const activeStage = currentIndex < totalStages ? currentIndex : -1;
       </div>
 
       <div className="explore-main-cta-fixed">
-        <FloatingQuizCTA onClick={onStart} label="퀴즈 풀러가기" />
+  <FloatingQuizCTA onClick={isLoading ? undefined : onStart} label={isLoading ? '문제 불러오는 중...' : '퀴즈 풀러가기'} disabled={!!isLoading} />
       </div>
     </div>
   );

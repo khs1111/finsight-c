@@ -19,6 +19,7 @@ export default function Explore() {
   const [current, setQid] = useState(0);
   const [questions, setQuestions] = useState([]);
   const [results, setResults] = useState([]);
+  const [isFetchingQuestions, setIsFetchingQuestions] = useState(false);
   const { setHide } = useNavVisibility();
 
   useEffect(() => {
@@ -50,11 +51,8 @@ export default function Explore() {
           try {
             // getQuestions API 사용 (더미 데이터 우선)
             console.log('🎯 퀴즈 데이터 요청 중...');
-            const result = await apiGetQuestions({ 
-              topicId: mainTopic, 
-              subTopic: subTopic,
-              levelId: lv 
-            });
+            setIsFetchingQuestions(true);
+            const result = await apiGetQuestions({ topicId: mainTopic, subTopic: subTopic, levelId: lv });
             if (result && result.questions && result.questions.length > 0) {
               console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
               setQuestions(result.questions);
@@ -66,7 +64,7 @@ export default function Explore() {
             console.error("❌ 문제 불러오기 실패:", err);
             console.log('🔄 더미 퀴즈 데이터로 폴백');
             setQuestions(dummyQuizzes);
-          }
+          } finally { setIsFetchingQuestions(false); }
           setQid(0);
           setStep(3);
         }}
@@ -84,6 +82,7 @@ export default function Explore() {
         selectedLevel={level}
         initialTopic={mainTopic}
         initialSubTopic={subTopic}
+        isLoading={isFetchingQuestions}
         onSelectionConfirm={async ({ level: newLevel, topic: newTopic, subTopic: newSub }) => {
           // 부모 상태 업데이트
           setLevel(newLevel);
@@ -91,13 +90,14 @@ export default function Explore() {
           setSubTopic(newSub);
           // 질문 재조회
           try {
+            setIsFetchingQuestions(true);
             const result = await apiGetQuestions({ topicId: newTopic, subTopic: newSub, levelId: newLevel });
             if (result && Array.isArray(result.questions)) {
               setQuestions(result.questions);
             }
           } catch (e) {
             console.warn('질문 재조회 실패:', e);
-          }
+          } finally { setIsFetchingQuestions(false); }
           // 진행도/현재 인덱스 초기화
           setQid(0);
           setResults([]);
