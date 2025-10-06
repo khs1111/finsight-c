@@ -1,5 +1,5 @@
 // 탐험 메인화면
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 
 import FloatingQuizCTA from './FloatingQuizCTA';
@@ -29,18 +29,27 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     if (initialSubTopic) setSelectedSubTopic(initialSubTopic);
     // 초기값만 반영하고, 이후에는 필터에서 자유롭게 변경 가능
   }, [initialTopic, initialSubTopic]);
-  const todayDateObj = new Date();
+  const todayDateObj = useMemo(() => new Date(), []);
   const z = (n) => (n < 10 ? `0${n}` : `${n}`);
   const todayKey = `${todayDateObj.getFullYear()}-${z(todayDateObj.getMonth() + 1)}-${z(todayDateObj.getDate())}`;
   const today = todayDateObj.getDate(); // 오늘 날짜 (일)
-  // Calculate current week's (Sunday to Saturday) dates
-  const startOfWeek = new Date(todayDateObj);
-  startOfWeek.setDate(todayDateObj.getDate() - todayDateObj.getDay()); // Sunday
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(startOfWeek);
-    d.setDate(startOfWeek.getDate() + i);
-    return d.getDate();
-  });
+  // Calculate current week's (Sunday to Saturday) dates, memoized
+  const startOfWeek = useMemo(() => {
+    const s = new Date(todayDateObj);
+    s.setHours(0, 0, 0, 0);
+    s.setDate(todayDateObj.getDate() - todayDateObj.getDay()); // Sunday
+    return s;
+  }, [todayDateObj]);
+
+  const weekDates = useMemo(() => {
+    const base = new Date(startOfWeek);
+    base.setHours(0, 0, 0, 0);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      return d.getDate();
+    });
+  }, [startOfWeek]);
   const [solvedDates, setSolvedDates] = React.useState([todayKey]);
 
   // 주간 출석(해당 주의 날짜 키)을 localStorage 'attendance'에서 읽어와 표시
