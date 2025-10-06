@@ -10,12 +10,18 @@
     }
   ],
   "routes": [
+    { "src": "/api/news/(.*)", "dest": "https://finsight-server.store/api/$1" },
     {
       "src": "/static/(.*)",
       "headers": {
         "cache-control": "s-maxage=31536000,immutable"
       }
     },
+    { "src": "/favicon.ico", "dest": "/favicon.ico" },
+    { "src": "/logo192.png", "dest": "/logo192.png" },
+    { "src": "/logo512.png", "dest": "/logo512.png" },
+    { "src": "/manifest.json", "dest": "/manifest.json" },
+    { "src": "/robots.txt", "dest": "/robots.txt" },
     {
       "src": "/(.*)",
       "dest": "/index.html"
