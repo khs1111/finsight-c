@@ -481,18 +481,21 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
                 </button>
 
                 {/* 드롭다운 옵션들 */}
-                {subTopicDropdownOpen && subTopicMap[tempTopic]?.slice(1).map((subTopic, index) => (
-                  <button
-                    key={subTopic}
-                    className={`explore-main-subtopic-dropdown-option${index === subTopicMap[tempTopic].length - 2 ? ' last' : ''}`}
-                    onClick={() => {
-                      setTempSubTopic(subTopic);
-                      setSubTopicDropdownOpen(false);
-                    }}
-                  >
-                    <span className="explore-main-subtopic-dropdown-option-text">{subTopic}</span>
-                  </button>
-                ))}
+                {subTopicDropdownOpen && (() => {
+                  const options = (subTopicMap[tempTopic] || []).filter(st => st !== tempSubTopic);
+                  return options.map((subTopic, index) => (
+                    <button
+                      key={subTopic}
+                      className={`explore-main-subtopic-dropdown-option${index === options.length - 1 ? ' last' : ''}`}
+                      onClick={() => {
+                        setTempSubTopic(subTopic);
+                        setSubTopicDropdownOpen(false);
+                      }}
+                    >
+                      <span className="explore-main-subtopic-dropdown-option-text">{subTopic}</span>
+                    </button>
+                  ));
+                })()}
               </div>
               {/* 확인 버튼 */}
               <button className="explore-main-selector-confirm-btn" onClick={handleConfirm}>

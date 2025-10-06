@@ -7,6 +7,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden; /* guard against horizontal bounce across pages */
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;

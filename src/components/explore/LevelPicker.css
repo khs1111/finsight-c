@@ -44,6 +44,7 @@
   left: 16px;
   right: 16px;
   width: auto;
+  max-width: calc(100% - 32px);
   height: 24px;
   display: flex;
   flex-direction: row;
@@ -59,9 +60,10 @@
   left: 16px;
   right: 16px;
   width: auto;
+  max-width: calc(100% - 32px);
   height: 70px;
   font-family: 'Roboto', sans-serif;
-  font-weight: 700;
+  font-weight: 900;
   font-size: 30px;
   line-height: 35px;
   color: #000;
@@ -77,6 +79,7 @@
   left: 16px;
   right: 16px;
   width: auto;
+  max-width: calc(100% - 32px);
   height: 19px;
   font-family: 'Roboto', sans-serif;
   font-weight: 400;
@@ -95,6 +98,7 @@
   left: 16px;
   right: 16px;
   width: auto;
+  max-width: calc(100% - 32px);
   height: 263px;
   display: flex;
   flex-direction: column;

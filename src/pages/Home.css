@@ -30,7 +30,7 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
   /* Ensure 16px left/right gutter + safe-area */
   padding: 20px calc(16px + env(safe-area-inset-right)) calc(20px + var(--nav-h) + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left));
   width: 100%;
-  max-width: 100%; /* remove desktop fixed width to keep 16px gutters */
+  max-width: 100%; /* keep within viewport */
   margin: 0;
 }
 
@@ -304,6 +304,9 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
     min-height: 100dvh; /* 주소창 변화 대응 */
     min-height: 100vh;  /* 폴백 */
     padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+    width: 100%;
+    max-width: 100%;
+    left: 0; right: 0; /* avoid subpixel shifts */
   }
   /* Tighten top gap between header and title on mobile */
   .home-container { padding-top: 0; }
