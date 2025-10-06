@@ -1,9 +1,10 @@
 // src/api/news.js
-import { NEWS_API_BASE as API_BASE } from './config';
+const API_BASE = process.env.REACT_APP_NEWS_API_BASE;
 
 /**
  * HTTP 요청 헬퍼 함수
  */
+
 async function apiRequest(endpoint, options = {}) {
   try {
     const url = `${API_BASE}${endpoint}`;
@@ -38,7 +39,7 @@ async function apiRequest(endpoint, options = {}) {
  * @param {number} limit - 가져올 기사 수 (최대 100)
  */
 export const getTodayNews = async (skip = 0, limit = 20) => {
-  return await apiRequest(`/articles/today?skip=${skip}&limit=${limit}`);
+  return await apiRequest(`/api/articles/today?skip=${skip}&limit=${limit}`);
 };
 
 /**
@@ -49,7 +50,7 @@ export const getTodayNews = async (skip = 0, limit = 20) => {
  */
 export const getNewsByCategory = async (category, skip = 0, limit = 20) => {
   const encodedCategory = encodeURIComponent(category);
-  return await apiRequest(`/articles/category/${encodedCategory}?skip=${skip}&limit=${limit}`);
+  return await apiRequest(`/api/articles/category/${encodedCategory}?skip=${skip}&limit=${limit}`);
 };
 
 /**
@@ -57,7 +58,7 @@ export const getNewsByCategory = async (category, skip = 0, limit = 20) => {
  * @param {number} articleId - 기사 ID
  */
 export const getArticleDetail = async (articleId) => {
-  return await apiRequest(`/articles/${articleId}`);
+  return await apiRequest(`/api/articles/${articleId}`);
 };
 
 /**
@@ -68,7 +69,7 @@ export const getArticleDetail = async (articleId) => {
  */
 export const searchArticles = async (q, skip = 0, limit = 20) => {
   const encoded = encodeURIComponent(q);
-  return await apiRequest(`/articles/search?q=${encoded}&skip=${skip}&limit=${limit}`);
+  return await apiRequest(`/api/articles/search?q=${encoded}&skip=${skip}&limit=${limit}`);
 };
 
 /**

@@ -63,17 +63,17 @@
   grid-template-columns: repeat(7, 1fr);
   width: 100%;
   justify-items: center;          /* 칸 안 가운데 */
-  margin-bottom: 8px;
+  margin-bottom: 8px;             /* header -> 8px -> weekdays */
 }
 
 /* 4) 날짜 그리드: 컨테이너 너비 전체 사용 + 가운데 정렬 */
 .p-calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr)); /* 균등 7등분 */
-  gap: 8px 12px;                   /* 세로 8, 가로 12 (피그마 느낌) */
+  gap: 8px 12px;                   /* 세로 8, 가로 12 */
   width: 100%;
   justify-items: center;           /* 셀 내용 가운데 */
-  align-items: start;
+  align-items: center;
   height: auto;                    /* 고정값 제거 */
 }
 
@@ -198,15 +198,15 @@ body.profile-route { background:#F4F6FA; }
 .tier-badge { display:flex; align-items:center; gap:8px; height:32px; }
   .cal-cell.header {
     height: 12px;
-    line-height: 20px;
+    line-height: 12px;
     font-weight: 700;
     font-size: 10px;
     display: flex;
     align-items: center;
+    justify-content: center;
     text-align: center;
     font-family: 'Roboto';
     width: 32px;
-    justify-content: center;
   }
 .tier-badge .tier-star { width:32px; height:32px; position:relative; border-radius:4px; }
 .tier-badge .tier-star::before { content:''; position:absolute; inset:0; background:linear-gradient(180deg,#FFCD42 0%,#FFBC02 35.58%,#B94D00 100%); border:1.6px solid #FFFFFF; border-radius:4px; }
@@ -260,15 +260,14 @@ body.profile-route { background:#F4F6FA; }
   position: static;
 }
 
-/* indicator (extracted from invalid nested block) */
+/* indicator (normalized base; final overrides keep same values) */
 .cal-indicator {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: visible;
+  position: static;
 }
 
 /* 달력 헤더 (년월 + 화살표) */
@@ -285,23 +284,19 @@ body.profile-route { background:#F4F6FA; }
   position: static;
 }
 
-/* star in calendar (extracted from invalid nested block; keep consistent) */
+/* star in calendar (normalized base; no offsets) */
 .cal-star {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: visible;
-  top: -8px;
+  position: static;
 }
 .cal-star svg {
-  width: 24.77px;
-  height: 23.93px;
-  position: absolute;
-  top: 2px;
-  left: 4px;
+  width: 18px;
+  height: 18px;
+  position: static;
   opacity: 1;
 }
 
@@ -352,10 +347,10 @@ body.profile-route { background:#F4F6FA; }
   display: grid;
   grid-template-columns: repeat(7, 32px);
   grid-auto-rows: auto;
-  gap: 4px 22px;
+  gap: 8px 22px; /* vertical 8px, horizontal 22px */
   justify-content: center;
   width: 356px;
-  height: 316px;
+  height: auto;
   margin: 0 auto;
   position: static;
 }
@@ -445,7 +440,7 @@ body.profile-route { background:#F4F6FA; }
     .p-stats-card {
       width: 100%;
       min-width: 0;
-      margin: 8px 0 32px 0;
+      margin: 16px 0 32px 0;
       box-sizing: border-box;
       padding: 10px 8px;
     }
@@ -474,7 +469,7 @@ body.profile-route { background:#F4F6FA; }
       min-width: 0;
       font-size: 9px;
       box-sizing: border-box;
-      height: 48px;
+      height: 64px;
       max-width: 32px;
       display: flex;
       flex-direction: column;
@@ -484,24 +479,21 @@ body.profile-route { background:#F4F6FA; }
     .cal-date-container {
       width: 100%;
       min-width: 0;
-      gap: 6px;
-      height: 48px;
+      gap: 0;
+      height: 64px;
       max-width: 32px;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-rows: 20px 8px 28px 8px;
       align-items: center;
-      justify-content: center;
+      justify-items: center;
     }
     .cal-indicator, .no-attendance-circle, .cal-star {
-      width: 24px;
-      height: 24px;
-      top: -4px;
+      width: 28px;
+      height: 28px;
     }
     .cal-star svg {
       width: 18px;
       height: 18px;
-      top: 2px;
-      left: 3px;
     }
     .today-circle {
       width: 14px;
@@ -546,7 +538,7 @@ body.profile-route { background:#F4F6FA; }
   justify-content: flex-start;
   width: 100%;
   max-width: 32px;
-  height: auto;
+  height: 64px;
 }
 
 .cal-cell.day.outside { 
@@ -556,12 +548,13 @@ body.profile-route { background:#F4F6FA; }
 
 /* 날짜 컨테이너 */
 .cal-date-container {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 20px 8px 28px 8px;
   align-items: center;
-  gap: 8px;
+  justify-items: center;
+  gap: 0;
   width: 100%;
-  height: 56px;
+  height: 64px;
 }
 
 .cal-date-container:last-child {
@@ -584,6 +577,7 @@ body.profile-route { background:#F4F6FA; }
   color: #282828;
   position: relative;
   z-index: 2;
+  grid-row: 1;
 }
 
 .cal-cell.day.outside .cal-day-number {
@@ -603,11 +597,7 @@ body.profile-route { background:#F4F6FA; }
   display: flex;
   align-items: center;
   justify-content: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: visible;
+  position: static;
 }
 
 /* 오늘 날짜 파란 원 */
@@ -627,6 +617,7 @@ body.profile-route { background:#F4F6FA; }
   place-items: center;
   position: static;
   overflow: visible;
+  grid-row: 3;
 }
 
 .cal-star svg {
@@ -637,8 +628,8 @@ body.profile-route { background:#F4F6FA; }
 
 /* 출석하지 않은 날 회색 원 */
 .no-attendance-circle {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background: #F7F7F7;
   border-radius: 50%;
   position: static;
@@ -673,42 +664,8 @@ body.profile-route { background:#F4F6FA; }
 /* removed invalid media query (max-width: 100%) */
   }
 
-/* --- Final overrides: normalize calendar star vs gray circle alignment --- */
-/* Ensure star and gray circle share identical container size and center perfectly */
-.cal-indicator,
-.no-attendance-circle,
-.cal-star {
-  width: 28px !important;
-  height: 28px !important;
-  border-radius: 50% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  position: static !important;
-  top: 0 !important;
-  left: 0 !important;
-}
-
-/* Gray circle visual */
-.no-attendance-circle {
-  background: #F7F7F7 !important;
-}
-
-/* Star icon sizing and optical centering */
-.cal-star svg {
-  width: 18px !important;
-  height: 18px !important;
-  display: block !important;
-  position: static !important;
-  margin: 0 auto !important;
-  transform: translateY(0); /* center baseline to match gray circle */
-}
-
-/* Today circle remains inside the same 28px container; just ensure it's centered */
-.today-circle {
-  display: block;
-  margin: 0 auto;
-}
+/* Today circle remains inside the same 28px container; ensure it's centered */
+.today-circle { display: block; margin: 0 auto; }
 
 /* --- Final overrides: ensure calendar bottom spacing is exactly 12px --- */
 /* Some earlier rules and mobile blocks remove padding or add margins. Force a clean 12px gap. */

@@ -184,7 +184,7 @@ function Calendar() {
                 <div className="cal-day-number">
                   {isToday ? <div className="today-circle">{c.day}</div> : c.day}
                 </div>
-                <div className="cal-indicator" style={{ marginTop: '8px' }}>
+                <div className="cal-indicator">
                   {(isCompleted || isToday) ? (
                     <div className="cal-star">
                       <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
