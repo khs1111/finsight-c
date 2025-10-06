@@ -8,8 +8,9 @@ import RankFilterDropdown from '../components/community/RankFilterDropdown';
 import { fetchCommunityPosts, likeCommunityPost } from '../api/community';
 import { useNavigate } from 'react-router-dom';
 
-// 카테고리 목록 (디자인 스펙 기반) - '오늘의 뉴스' = 전체 개념
-const CATEGORIES = ['자유게시판', '탐험지', '경제 시사', '투자'];
+// 카테고리 목록 (디자인 스펙 기반)
+// '오늘의 뉴스'는 전체(ALL) 개념으로 처리
+const CATEGORIES = ['오늘의 뉴스', '자유게시판', '탐험지', '경제 시사', '투자'];
 
 // CommunityPage: 커뮤니티 메인 피드 컴포넌트
 export default function CommunityPage() {
@@ -18,6 +19,7 @@ export default function CommunityPage() {
   const [showRank, setShowRank] = useState(false);
   const [rank, setRank] = useState(null); // 마스터, 다이아 등
   const [posts, setPosts] = useState([]);
+  const [likedMap, setLikedMap] = useState(() => new Map()); // postId -> boolean
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -30,10 +32,22 @@ export default function CommunityPage() {
       setError(null);
       try {
         const token = localStorage.getItem('accessToken');
-        const { data } = await fetchCommunityPosts({ category, tier: rank }, token);
+        // '오늘의 뉴스'는 전체 조회로 간주하여 category를 undefined로 전달
+        const apiCategory = category === '오늘의 뉴스' ? undefined : category;
+        const { data } = await fetchCommunityPosts({ category: apiCategory, tier: rank }, token);
         if (!mounted) return;
         // 서버 응답 배열 가정: [{ id, author:{nickname,profileImage,tier}, body, tags, likeCount, commentCount, createdAt }]
         setPosts(Array.isArray(data) ? data : []);
+        // 초기 likedMap 동기화 (서버에 liked 여부가 있다면 반영)
+        if (Array.isArray(data)) {
+          setLikedMap(prev => {
+            const next = new Map(prev);
+            data.forEach(p => {
+              if (typeof p.liked === 'boolean') next.set(p.id, p.liked);
+            });
+            return next;
+          });
+        }
       } catch (e) {
         if (mounted) setError('글 목록을 불러오지 못했습니다.');
       } finally {
@@ -42,6 +56,47 @@ export default function CommunityPage() {
     })();
     return () => { mounted = false; };
   }, [category, rank]);
+
+  const formatKDate = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  };
+
+  const tierToClass = (tier) => {
+    const t = String(tier || '').toLowerCase();
+    if (t.includes('master')) return 'tier-master';
+    if (t.includes('diamond') || t.includes('dia')) return 'tier-diamond';
+    if (t.includes('gold')) return 'tier-gold';
+    if (t.includes('silver')) return 'tier-silver';
+    if (t.includes('bronze')) return 'tier-bronze';
+    return '';
+  };
+
+  const toggleLike = async (post) => {
+    const wasLiked = !!likedMap.get(post.id);
+    const nextLiked = !wasLiked;
+    // 낙관적 업데이트: likeCount 조정 + liked 상태 토글
+    setLikedMap(prev => new Map(prev).set(post.id, nextLiked));
+    setPosts(prev => prev.map(p => p.id === post.id
+      ? { ...p, likeCount: (p.likeCount ?? 0) + (nextLiked ? 1 : -1) }
+      : p));
+    try {
+      if (nextLiked) {
+        const token = localStorage.getItem('accessToken');
+        await likeCommunityPost(post.id, token);
+      } else {
+        // TODO: unlike 엔드포인트가 준비되면 호출로 대체
+      }
+    } catch (_) {
+      // 실패 시 롤백
+      setLikedMap(prev => new Map(prev).set(post.id, wasLiked));
+      setPosts(prev => prev.map(p => p.id === post.id
+        ? { ...p, likeCount: (p.likeCount ?? 0) + (wasLiked ? 1 : -1) }
+        : p));
+    }
+  };
 
   return (
     <div className="community-container has-bottom-nav">
@@ -98,48 +153,56 @@ export default function CommunityPage() {
         )}
         {!loading && !error && posts.length > 0 && (
           <div className="community-feed-list">
-            {posts.map(post => (
-              <div key={post.id} className="community-feed-card">
-                <div className="feed-card-header">
-                  <img src={post.author?.profileImage || '/default-profile.png'} alt="프로필" className="feed-card-profile" />
-                  <div className="feed-card-author">
-                    <span className="feed-card-nickname">{post.author?.nickname || '익명'}</span>
-                    {post.author?.badge?.iconUrl && (
-                      <img
-                        src={post.author.badge.iconUrl}
-                        alt={post.author.badge.name || 'badge'}
-                        className="feed-card-badge"
-                        style={{ width: 20, height: 20, marginLeft: 6 }}
-                      />
-                    )}
+            {posts.map(post => {
+              const liked = !!likedMap.get(post.id);
+              const likeColor = liked ? '#FF4D4F' : '#999999';
+              return (
+                <div key={post.id} className="community-feed-card">
+                  <div className="feed-card-header">
+                    <div className="avatar-wrap">
+                      <img src={post.author?.profileImage || '/default-profile.png'} alt="프로필" className="feed-card-profile" />
+                      {/* 티어 배지: 프로필 왼쪽 아래 오버레이 */}
+                      {post.author?.tier && (
+                        <span className={`avatar-tier-badge feed-card-tier ${tierToClass(post.author.tier)}`}>{post.author.tier}</span>
+                      )}
+                    </div>
+                    <div className="feed-card-author-col">
+                      <div className="feed-card-author-row">
+                        <span className="feed-card-nickname">{post.author?.nickname || '익명'}</span>
+                        {post.author?.badge?.iconUrl && (
+                          <img
+                            src={post.author.badge.iconUrl}
+                            alt={post.author.badge.name || 'badge'}
+                            className="feed-card-badge"
+                            style={{ width: 16, height: 16, marginLeft: 6 }}
+                          />
+                        )}
+                      </div>
+                      <div className="feed-card-date-small">{formatKDate(post.createdAt)}</div>
+                    </div>
+                  </div>
+                  <div className="feed-card-content">{post.body}</div>
+                  <div className="feed-card-actions">
+                    <button type="button" className="action" onClick={() => toggleLike(post)} aria-label={liked ? '좋아요 취소' : '좋아요'}>
+                      <span className="icon" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M8.06683 13.8667C7.7335 13.8667 7.3335 13.7333 7.06683 13.4667C2.7335 9.66667 2.66683 9.6 2.66683 9.53333L2.60016 9.46667C1.80016 8.66667 1.3335 7.53333 1.3335 6.4V6.26667C1.40016 3.86667 3.3335 2 5.7335 2C6.46683 2 7.46683 2.4 8.06683 3.2C8.66683 2.4 9.73349 2 10.4668 2C12.8668 2 14.7335 3.86667 14.8668 6.26667V6.4C14.8668 7.6 14.4002 8.66667 13.6002 9.53333L13.5335 9.6C13.4668 9.66667 12.9335 10.1333 9.13349 13.5333C8.80016 13.7333 8.46683 13.8667 8.06683 13.8667ZM3.66683 9.33333C3.9335 9.6 5.26683 10.5333 7.7335 12.6667C7.9335 12.8667 8.20016 12.8667 8.40016 12.6667C10.9335 10.4 12.4002 9.13333 12.7335 8.86667L12.8002 8.8C13.4668 8.13333 13.8002 7.26667 13.8002 6.4V6.26667C13.7335 4.4 12.2668 3 10.4002 3C9.9335 3 9.00016 3.33333 8.66683 4.06667C8.5335 4.33333 8.26683 4.46667 8.00016 4.46667C7.7335 4.46667 7.46683 4.33333 7.3335 4.06667C7.00016 3.4 6.13349 3 5.60016 3C3.80016 3 2.26683 4.46667 2.20016 6.26667V6.46667C2.20016 7.33333 2.60016 8.2 3.20016 8.8L3.66683 9.33333Z" style={{ fill: likeColor }} />
+                        </svg>
+                      </span>
+                      <span className="count" aria-live="polite">{post.likeCount ?? 0}</span>
+                    </button>
+                    <div className="action" aria-label="댓글">
+                      <span className="icon" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path fillRule="evenodd" clipRule="evenodd" d="M6.33345 1.47975C6.78698 1.38226 7.24956 1.33309 7.71345 1.33308C9.56804 1.32402 11.3355 2.11906 12.5592 3.51273C13.7828 4.9064 14.3424 6.76193 14.0935 8.59975C13.6935 11.6664 10.6668 14.1464 7.57345 14.1464H3.13345C2.75603 14.1466 2.40627 13.9485 2.21229 13.6247C2.01831 13.301 2.00863 12.8991 2.18679 12.5664L2.36679 12.2198C2.54593 11.8859 2.53322 11.4817 2.33345 11.1598C1.21459 9.40082 1.02249 7.20718 1.81862 5.28056C2.61474 3.35394 4.29931 1.93578 6.33345 1.47975ZM7.52012 13.1397C10.2379 13.0969 12.5492 11.1452 13.0468 8.47308C13.2728 6.92447 12.8073 5.35472 11.7735 4.17975C10.7494 3.00793 9.26965 2.33487 7.71345 2.33308C7.31932 2.33384 6.92625 2.37404 6.54012 2.45308C4.82355 2.83502 3.39997 4.02793 2.72361 5.65121C2.04725 7.27448 2.20261 9.12528 3.14012 10.6131C3.53898 11.2397 3.56705 12.0332 3.21345 12.6864L3.03345 13.0264C3.0188 13.0487 3.0188 13.0775 3.03345 13.0997C3.06012 13.1398 3.10012 13.1397 3.10012 13.1397H7.52012Z" fill="#999999" />
+                        </svg>
+                      </span>
+                      <span className="count">{post.commentCount ?? 0}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="feed-card-content">{post.body}</div>
-                <div className="feed-card-tags">
-                  {post.tags && post.tags.map(tag => <span key={tag} className="feed-card-tag">#{tag}</span>)}
-                </div>
-                <div className="feed-card-footer">
-                  <span className="feed-card-date">{post.createdAt ? post.createdAt.slice(0, 10) : ''}</span>
-                  <button
-                    type="button"
-                    className="feed-card-like-btn"
-                    onClick={async () => {
-                      try {
-                        const token = localStorage.getItem('accessToken');
-                        // 낙관적 업데이트
-                        setPosts(prev => prev.map(p => p.id === post.id ? { ...p, likeCount: (p.likeCount ?? 0) + 1 } : p));
-                        await likeCommunityPost(post.id, token);
-                      } catch {
-                        // 실패 시 롤백 최소화(선택적으로 구현 가능)
-                      }
-                    }}
-                  >
-                    좋아요 {post.likeCount ?? 0}
-                  </button>
-                  <span className="feed-card-comments">댓글 {post.commentCount ?? 0}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

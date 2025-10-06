@@ -2,7 +2,7 @@
 // 프로필 정보 및 활동(출석) API 래퍼
 
 import axios from 'axios';
-import { API_BASE } from './config';
+import { API_BASE, HAS_PROFILE_ENDPOINTS } from './config';
 
 async function http(path, opts = {}) {
   const token = localStorage.getItem('accessToken');
@@ -26,45 +26,41 @@ async function http(path, opts = {}) {
 
 // 프로필 기본 정보: 닉네임/티어/티어 이미지
 export async function fetchProfile() {
+  // 1) 대시보드 기반 우선 시도 (404 소음 방지)
   try {
-    const data = await http('/profile');
-    return { data };
-  } catch (e) {
-    // 백엔드에 /profile이 없을 경우, /dashboard 기반으로 폴백 시도
-    try {
-      const userId = Number(localStorage.getItem('userId')) || undefined;
-      if (!userId) throw new Error('no userId');
+    const userId = Number(localStorage.getItem('userId')) || undefined;
+    if (userId) {
       const dash = await http(`/dashboard?userId=${userId}`);
       const nickname = dash?.userInfo?.nickname || localStorage.getItem('username') || '퍼니의 동료';
-      // tier/tierImageUrl은 대시보드 스키마에 없을 수 있어 기본값
-      return {
-        data: { nickname, tier: 'EMERALD', tierImageUrl: '' },
-        isFallback: true,
-      };
-    } catch (_) {
-      // 최종 안전 폴백
-      return {
-        data: {
-          nickname: localStorage.getItem('username') || '퍼니의 동료',
-          tier: 'EMERALD',
-          tierImageUrl: '',
-        },
-        isDummy: true,
-      };
+      return { data: { nickname, tier: 'EMERALD', tierImageUrl: '' }, isFallback: true };
     }
+  } catch (_) {}
+
+  // 2) 환경에서 /profile 엔드포인트 제공 시 직접 호출
+  if (HAS_PROFILE_ENDPOINTS) {
+    try {
+      const data = await http('/profile');
+      return { data };
+    } catch (_) {}
   }
+
+  // 3) 최종 안전 폴백
+  return {
+    data: {
+      nickname: localStorage.getItem('username') || '퍼니의 동료',
+      tier: 'EMERALD',
+      tierImageUrl: '',
+    },
+    isDummy: true,
+  };
 }
 
 // 프로필 활동(출석) 정보: YYYY-MM-DD 문자열 배열을 반환한다고 가정
 export async function fetchProfileActivity() {
+  // 1) 대시보드 기반 우선 시도 (404 소음 방지)
   try {
-    const data = await http('/profile/activity');
-    return { data };
-  } catch (e) {
-    // 백엔드에 /profile/activity가 없을 경우, /dashboard의 weeklyProgress로 유사 폴백
-    try {
-      const userId = Number(localStorage.getItem('userId')) || undefined;
-      if (!userId) throw new Error('no userId');
+    const userId = Number(localStorage.getItem('userId')) || undefined;
+    if (userId) {
       const dash = await http(`/dashboard?userId=${userId}`);
       const arr = Array.isArray(dash?.weeklyProgress) ? dash.weeklyProgress : [];
       const attendance = arr
@@ -72,13 +68,22 @@ export async function fetchProfileActivity() {
         .map((d) => d?.date)
         .filter(Boolean);
       if (attendance.length) return { data: { attendance }, isFallback: true };
+    }
+  } catch (_) {}
+
+  // 2) 환경에서 /profile/activity 엔드포인트 제공 시 직접 호출
+  if (HAS_PROFILE_ENDPOINTS) {
+    try {
+      const data = await http('/profile/activity');
+      return { data };
     } catch (_) {}
-    // 최종 폴백: 오늘 날짜만 출석으로 처리
-    const today = new Date();
-    const z = (n) => (n < 10 ? `0${n}` : `${n}`);
-    const key = `${today.getFullYear()}-${z(today.getMonth() + 1)}-${z(today.getDate())}`;
-    return { data: { attendance: [key] }, isDummy: true };
   }
+
+  // 3) 최종 폴백: 오늘 날짜만 출석으로 처리
+  const today = new Date();
+  const z = (n) => (n < 10 ? `0${n}` : `${n}`);
+  const key = `${today.getFullYear()}-${z(today.getMonth() + 1)}-${z(today.getDate())}`;
+  return { data: { attendance: [key] }, isDummy: true };
 }
 
 // (선택) 대시보드/배지 Axios 래퍼

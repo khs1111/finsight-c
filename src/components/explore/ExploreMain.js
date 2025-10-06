@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import FloatingQuizCTA from './FloatingQuizCTA';
 import useProgress from '../useProgress';
 import { getQuestions } from '../../api/explore';
-import antCharacter from '../../assets/explore/antCharacter.svg';
+import antCharacter from '../../assets/explore/stepant.png';
 import './ExploreMain.css';
 
 // ExploreMain: 학습 진입 전 개요 UI
@@ -332,10 +332,11 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
           style={{
             position: 'absolute',
             // 루트 기준 (64, 511)을 스크롤 영역 내부 좌표로 변환: left는 OFFSET_LEFT를 보정, top은 minTop/MICRO_SHIFT_Y/STONES_SHIFT_Y 반영
-            left: 64 - OFFSET_LEFT,
+            left: 40 - OFFSET_LEFT,
             top: 511 - minTop + MICRO_SHIFT_Y + STONES_SHIFT_Y,
-            width: 92,
+            width: 140,
             height: 140,
+            objectFit: 'contain',
             pointerEvents: 'none',
             zIndex: 5,
           }}

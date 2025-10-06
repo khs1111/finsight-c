@@ -7,17 +7,18 @@
 }
 
 .community-feed-card {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  padding: 20px 16px 16px 16px;
+  background: #FFFFFF; /* Rectangle 1112 */
+  border-radius: 8px;
+  box-shadow: 0 0 2px rgba(0,0,0,0.08);
+  padding: 16px;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  height: 188px; /* Spec height */
+  overflow: hidden;
 }
 
 .feed-card-header {
-  top: 24px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -31,6 +32,12 @@
   object-fit: cover;
   background: #eee;
 }
+
+.avatar-wrap { position: relative; display:inline-flex; }
+.avatar-tier-badge { position:absolute; left:-6px; bottom:-6px; font-size:10px; line-height:12px; padding:2px 6px; border-radius:12px; box-shadow:0 0 0 2px #fff; white-space:nowrap; }
+.feed-card-author-col { display:flex; flex-direction:column; gap:2px; }
+.feed-card-author-row { display:flex; align-items:center; gap:6px; }
+.feed-card-date-small { font-size:12px; color:#999; }
 
 .feed-card-author {
   display: flex;
@@ -66,12 +73,24 @@
   word-break: break-word;
 }
 
+.feed-card-actions { display:flex; align-items:center; gap:16px; color:#999; font-size:12px; }
+.feed-card-actions .action { display:flex; align-items:center; gap:6px; background:none; border:none; padding:0; color:inherit; cursor:pointer; }
+.feed-card-actions .action .icon { display:inline-flex; width:16px; height:16px; }
+
 .feed-card-footer {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 13px;
   color: #888;
+  margin-top: auto; /* stick footer to bottom inside fixed-height card */
 }
+
+.feed-card-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom: 8px; }
+.feed-card-tag { font-size: 11px; color:#626262; background:#EEF2F6; border:1px solid #DFE5EE; border-radius: 14px; padding: 4px 8px; }
+
+.feed-card-like-btn { background:#EEF2F6; border:1px solid #DFE5EE; color:#474747; font-size:12px; border-radius: 8px; padding:6px 10px; cursor:pointer; }
+.feed-card-like-btn:hover { filter: brightness(0.98); }
 
 .feed-card-category {
   font-weight: 500;

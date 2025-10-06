@@ -2,11 +2,11 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  position: relative;            /* ensure absolutely positioned children anchor here */
-  min-height: 100vh;             /* fill screen height */
-  overflow-x: hidden;            /* prevent horizontal bounce */
-  /* push flow content below the absolute hero (top:103 + height:340 + gap) */
-  padding-top: 480px;
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+  /* Hero를 문서 흐름으로 올리므로 상단 패딩 제거 */
+  padding-top: 0;
 }
 
 /* 1) 달력 카드: 좌우 16px, 아래는 주 끝나고 12px로 끝 */
@@ -212,7 +212,7 @@ body.profile-route { background:#F4F6FA; }
 .tier-badge .tier-star::before { content:''; position:absolute; inset:0; background:linear-gradient(180deg,#FFCD42 0%,#FFBC02 35.58%,#B94D00 100%); border:1.6px solid #FFFFFF; border-radius:4px; }
 .tier-badge .tier-label { font-size:18px; font-weight:700; letter-spacing:-0.02em; color:#474747; }
 .p-stats-card {
-  margin:16px 32px 32px 32px;
+  margin:16px 32px 32px 32px; /* hero 아래 16px */
   width:auto;
   min-width:0;
   height:100px;
@@ -222,6 +222,8 @@ body.profile-route { background:#F4F6FA; }
   display:flex;
   justify-content:space-between;
   padding:10px 32px 10px 32px;
+  position: relative;
+  z-index: 1; /* hero 아래에서 겹침 방지 */
 }
 .p-stats-card .stat {
   width:64px;
@@ -439,7 +441,7 @@ body.profile-route { background:#F4F6FA; }
       align-items: center;
     }
     .p-stats-card {
-      width: 100vw;
+      width: 100%;
       min-width: 0;
       margin: 16px 0 32px 0;
       box-sizing: border-box;
@@ -637,8 +639,7 @@ body.profile-route { background:#F4F6FA; }
   height: 32px;
   background: #F7F7F7;
   border-radius: 50%;
-  position: relative;
-  top: -8px;
+  position: static;
 }
 
 /* 기존 스타일 정리 */
@@ -698,7 +699,7 @@ body.profile-route { background:#F4F6FA; }
   display: block !important;
   position: static !important;
   margin: 0 auto !important;
-  transform: translateY(-1px); /* nudge up slightly to avoid looking saggy */
+  transform: translateY(0); /* center baseline to match gray circle */
 }
 
 /* Today circle remains inside the same 28px container; just ensure it's centered */
@@ -710,7 +711,7 @@ body.profile-route { background:#F4F6FA; }
 /* --- Final overrides: ensure calendar bottom spacing is exactly 12px --- */
 /* Some earlier rules and mobile blocks remove padding or add margins. Force a clean 12px gap. */
 .p-calendar-wrapper {
-  padding-bottom: 12px !important;
+  padding: 16px 16px 12px 16px !important; /* consistent side padding */
 }
 .p-calendar-grid {
   margin-bottom: 0 !important;
@@ -718,16 +719,17 @@ body.profile-route { background:#F4F6FA; }
 
 /* --- Final overrides: Profile header matches Community header --- */
 /* Absolute header bar at top:24px, height:56px, with 16px side padding */
+/* 프로필 상단 헤더는 문서 흐름에 두고, 히어로는 헤더 아래 18px에서 시작 */
 .p-topbar {
-  position: absolute !important;
-  top: 24px !important;
-  left: 0 !important;
-  right: 0 !important;
-  height: 24px !important; /* match Level Picker header visual height */
+  position: static !important;
+  height: 24px !important;
   padding: 0 16px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
+  /* place header title 24px from the top */
+  margin-top: 24px !important;
+  margin-bottom: 0 !important;
 }
 
 /* Title aligns to left padding inside header (16px) */
@@ -739,18 +741,48 @@ body.profile-route { background:#F4F6FA; }
 }
 
 /* --- Profile hero composition (background + character + overlays) --- */
-.p-hero { position:absolute; top:103px; left:0; right:0; height:340px; border-radius:16px 16px 0 0; overflow:hidden; background: transparent; }
-.p-hero-bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; border-radius:0; }
+.p-hero { position:relative; margin-top:18px; left:0; right:0; top:0 !important; height:auto !important; min-height:460px !important; border-radius:0 0 16px 16px !important; overflow:hidden; background: transparent; z-index: 0; }
+.p-hero-bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; border-radius:0 0 16px 16px !important; }
 /* Gradient layer like Rectangle 32977 */
-.p-hero::before { content:""; position:absolute; left:1px; top:108px; width:412px; height:242px; max-width:100%; background: linear-gradient(180deg, #F4F6FA 0%, #A0C6FF 100%); z-index:0; }
-/* Bottom bar like Rectangle 32978 */
-.p-hero-bottom { position:absolute; left:-1px; top:339px; width:413px; height:104px; background:#754D4D; border-radius:0 0 12px 12px; z-index:2; }
+.p-hero::before { content:""; position:absolute; inset:0; background: linear-gradient(180deg, #F4F6FA 0%, #A0C6FF 100%); z-index:0; opacity: 0.0; /* keep as optional overlay: set >0 to show */ }
+/* Bottom bar deprecated: hide to avoid clipping */
+.p-hero-bottom { display:none; }
 /* Character block centered */
-.p-avatar-block { position:absolute; left:50%; top:129px; transform: translateX(-50%); width:266px; height:266px; display:flex; align-items:center; justify-content:center; z-index:3; }
+.p-avatar-block { position:absolute; left:50%; top:120px; transform: translateX(-50%); width:266px; height:266px; display:flex; align-items:center; justify-content:center; z-index:3; }
 .p-avatar-block img { width:266px; height:266px; object-fit:contain; display:block; }
 /* Shadow ellipse under character (Ellipse 268) */
-.p-hero-shadow { position:absolute; left:144px; top:365px; width:139px; height:30px; background:#573131; filter: blur(2px); border-radius:9999px; z-index:2; opacity:0.9; }
+.p-hero-shadow { position:absolute; left:50%; transform: translateX(-50%); top:390px; width:160px; height:28px; background:#573131; filter: blur(2px); border-radius:9999px; z-index:2; opacity:0.35; }
 /* Tier + nickname overlay above character */
-.p-hero-title { position:absolute; left:0; right:0; top:332px; display:flex; align-items:center; justify-content:center; z-index:4; }
-.p-hero-title .tier-inline { display:flex; align-items:center; gap:8px; background:transparent; }
-.p-hero-title .nickname-inline { color:#FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.p-hero-title { position:absolute; left:0; right:0; bottom:24px; display:flex; align-items:center; justify-content:center; z-index:10; }
+/* 가독성을 위한 반투명 배경(유리 효과) */
+.p-hero-title .tier-inline { display:flex; align-items:center; gap:8px; background: transparent; padding: 0; border-radius: 0; box-shadow: none; }
+.p-hero-title .nickname-inline { color:#FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,.35); font-weight: 700; }
+.p-hero-title .tier-image { width:24px; height:24px; }
+
+@media (max-width: 100%) {
+  /* Hero should start 18px below header on mobile as well; no extra top offset */
+  .p-hero { margin-top:18px; height:800px; border-radius:16px; top:0 !important; }
+  .p-hero-title { bottom: 24px; }
+}
+
+/* Ensure stats card starts 16px below hero, consistent margins */
+.p-stats-card {
+  margin: 16px 16px 32px 16px !important;
+}
+
+/* --- Final overrides: Calendar header vertical centering --- */
+.p-calendar-head {
+  display: grid !important;
+  grid-template-columns: 32px 1fr 32px !important;
+  align-items: center !important;
+  justify-items: center !important;
+  width: 100% !important;
+  height: 28px !important; /* was 40px, make slimmer */
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0 !important;
+}
+.p-calendar-head .nav-btn:first-child { grid-column: 1; justify-self: start; }
+.p-calendar-head .month-label { grid-column: 2; justify-self: center; height: 28px !important; line-height: 28px !important; margin: 0 !important; display: flex; align-items: center; justify-content: center; }
+.p-calendar-head .nav-btn:last-child { grid-column: 3; justify-self: end; }
+.p-calendar-head .nav-btn { width: 32px !important; height: 32px !important; padding: 0 !important; }
