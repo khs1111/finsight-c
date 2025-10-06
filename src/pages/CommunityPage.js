@@ -17,6 +17,7 @@ export default function CommunityPage() {
   // 선택된 카테고리/랭크 상태
   const [showRank, setShowRank] = useState(false);
   const [rank, setRank] = useState(null); // 마스터, 다이아 등
+  const [category, setCategory] = useState(undefined); // undefined는 전체(ALL)
   const [posts, setPosts] = useState([]);
   const [likedMap, setLikedMap] = useState(() => new Map()); // postId -> boolean
   const [loading, setLoading] = useState(false);
@@ -30,9 +31,9 @@ export default function CommunityPage() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem('accessToken');
-        // '오늘의 뉴스'는 전체 조회로 간주하여 category를 undefined로 전달
-        const apiCategory = category === '오늘의 뉴스' ? undefined : category;
+  const token = localStorage.getItem('accessToken');
+  // category가 비어있으면 전체 조회로 간주
+  const apiCategory = category || undefined;
         const { data } = await fetchCommunityPosts({ category: apiCategory, tier: rank }, token);
         if (!mounted) return;
         // 서버 응답 배열 가정: [{ id, author:{nickname,profileImage,tier}, body, tags, likeCount, commentCount, createdAt }]
