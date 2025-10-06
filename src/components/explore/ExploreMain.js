@@ -30,6 +30,8 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     // 초기값만 반영하고, 이후에는 필터에서 자유롭게 변경 가능
   }, [initialTopic, initialSubTopic]);
   const todayDateObj = new Date();
+  const z = (n) => (n < 10 ? `0${n}` : `${n}`);
+  const todayKey = `${todayDateObj.getFullYear()}-${z(todayDateObj.getMonth() + 1)}-${z(todayDateObj.getDate())}`;
   const today = todayDateObj.getDate(); // 오늘 날짜 (일)
   // Calculate current week's (Sunday to Saturday) dates
   const startOfWeek = new Date(todayDateObj);
@@ -39,8 +41,27 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     d.setDate(startOfWeek.getDate() + i);
     return d.getDate();
   });
-  // eslint-disable-next-line no-unused-vars
-  const [solvedDates, setSolvedDates] = React.useState([today]);
+  const [solvedDates, setSolvedDates] = React.useState([todayKey]);
+
+  // 주간 출석(해당 주의 날짜 키)을 localStorage 'attendance'에서 읽어와 표시
+  useEffect(() => {
+    try {
+      const arr = JSON.parse(localStorage.getItem('attendance') || '[]');
+      if (!Array.isArray(arr)) return;
+      // 이번 주의 날짜 키 목록 생성
+      const start = new Date(startOfWeek);
+      const weekKeys = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+      });
+      const inWeek = arr.filter(k => weekKeys.includes(k));
+      const includeToday = inWeek.includes(todayKey) ? inWeek : [...inWeek, todayKey];
+      setSolvedDates(includeToday);
+    } catch (_) {
+      setSolvedDates([todayKey]);
+    }
+  }, [startOfWeek, todayKey]);
 
 // 서버에서 질문 수 가져오기
 useEffect(() => {
@@ -168,11 +189,16 @@ const activeStage = currentIndex < totalStages ? currentIndex : -1;
           ))}
         </div>
   <div className="explore-main-attendance-icons">
-          {weekDates.map(date => (
+          {weekDates.map((date, i) => {
+            const d = new Date(startOfWeek); d.setDate(startOfWeek.getDate() + i);
+            const key = `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+            const on = solvedDates.includes(key);
+            return (
             <div key={date} className="explore-main-attendance-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M10.1244 4.55018C10.4124 3.61856 11.2793 2.9877 12.2544 3.00018C13.2349 2.99033 14.1036 3.63063 14.3844 4.57018L15.0444 6.57018C15.3408 7.49581 16.2025 8.12289 17.1744 8.12018H19.2544C20.2492 8.08249 21.1495 8.70582 21.4643 9.65023C21.7791 10.5946 21.4328 11.6335 20.6144 12.2002L18.9044 13.4502C18.1162 14.0163 17.7846 15.0272 18.0844 15.9502L18.7444 17.9502C18.9712 18.6425 18.8487 19.4019 18.4157 19.9878C17.9827 20.5737 17.2928 20.9137 16.5644 20.9002C16.092 20.8966 15.6331 20.7425 15.2544 20.4602L13.6144 19.2102C12.8279 18.6365 11.7609 18.6365 10.9744 19.2102L9.25439 20.4602C8.87111 20.7686 8.39625 20.9409 7.90439 20.9502C7.17067 20.9563 6.48006 20.6042 6.05396 20.0069C5.62785 19.4095 5.51978 18.642 5.76439 17.9502L6.42439 15.9502C6.74237 15.03 6.42662 14.0098 5.64439 13.4302L3.93439 12.1802C3.14176 11.6115 2.8083 10.5953 3.10992 9.66755C3.41154 8.73983 4.27889 8.11399 5.25439 8.12018H7.33439C8.31172 8.12014 9.17514 7.48372 9.46439 6.55018L10.1244 4.55018Z" fill={solvedDates.includes(date) ? '#FFBC02' : '#B0B0B0'} /></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M10.1244 4.55018C10.4124 3.61856 11.2793 2.9877 12.2544 3.00018C13.2349 2.99033 14.1036 3.63063 14.3844 4.57018L15.0444 6.57018C15.3408 7.49581 16.2025 8.12289 17.1744 8.12018H19.2544C20.2492 8.08249 21.1495 8.70582 21.4643 9.65023C21.7791 10.5946 21.4328 11.6335 20.6144 12.2002L18.9044 13.4502C18.1162 14.0163 17.7846 15.0272 18.0844 15.9502L18.7444 17.9502C18.9712 18.6425 18.8487 19.4019 18.4157 19.9878C17.9827 20.5737 17.2928 20.9137 16.5644 20.9002C16.092 20.8966 15.6331 20.7425 15.2544 20.4602L13.6144 19.2102C12.8279 18.6365 11.7609 18.6365 10.9744 19.2102L9.25439 20.4602C8.87111 20.7686 8.39625 20.9409 7.90439 20.9502C7.17067 20.9563 6.48006 20.6042 6.05396 20.0069C5.62785 19.4095 5.51978 18.642 5.76439 17.9502L6.42439 15.9502C6.74237 15.03 6.42662 14.0098 5.64439 13.4302L3.93439 12.1802C3.14176 11.6115 2.8083 10.5953 3.10992 9.66755C3.41154 8.73983 4.27889 8.11399 5.25439 8.12018H7.33439C8.31172 8.12014 9.17514 7.48372 9.46439 6.55018L10.1244 4.55018Z" fill={on ? '#FFBC02' : '#B0B0B0'} /></svg>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

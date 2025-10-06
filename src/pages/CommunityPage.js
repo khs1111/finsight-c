@@ -74,6 +74,20 @@ export default function CommunityPage() {
     return '';
   };
 
+  // 백엔드 필드 보강: author.tierName / author.rank / author.levelName 등 다양한 키 대응
+  const resolveTierText = (author = {}) => {
+    const raw = author.tier ?? author.tierName ?? author.rank ?? author.levelName ?? author.grade;
+    if (!raw) return null;
+    // 한국어 매핑도 허용
+    const s = String(raw);
+    if (/마스터/i.test(s)) return 'Master';
+    if (/다이아|diamond|dia/i.test(s)) return 'Diamond';
+    if (/골드|gold/i.test(s)) return 'Gold';
+    if (/실버|silver/i.test(s)) return 'Silver';
+    if (/브론즈|bronze/i.test(s)) return 'Bronze';
+    return s; // 알 수 없는 텍스트는 그대로 표시
+  };
+
   const toggleLike = async (post) => {
     const wasLiked = !!likedMap.get(post.id);
     const nextLiked = !wasLiked;
@@ -155,14 +169,15 @@ export default function CommunityPage() {
           <div className="community-feed-list">
             {posts.map(post => {
               const liked = !!likedMap.get(post.id);
+              const tierText = resolveTierText(post.author || {});
               return (
                 <div key={post.id} className="community-feed-card">
                   <div className="feed-card-header">
                     <div className="avatar-wrap">
                       <img src={post.author?.profileImage || '/default-profile.png'} alt="프로필" className="feed-card-profile" />
                       {/* 티어 배지: 프로필 왼쪽 아래 오버레이 */}
-                      {post.author?.tier && (
-                        <span className={`avatar-tier-badge feed-card-tier ${tierToClass(post.author.tier)}`}>{post.author.tier}</span>
+                      {tierText && (
+                        <span className={`avatar-tier-badge feed-card-tier ${tierToClass(tierText)}`}>{tierText}</span>
                       )}
                     </div>
                     <div className="feed-card-author-col">
@@ -179,9 +194,7 @@ export default function CommunityPage() {
                       </div>
                       <div className="feed-card-date-small">{formatKDate(post.createdAt)}</div>
                     </div>
-                    {post.author?.tier && (
-                      <span className="feed-card-tier-inline">{post.author.tier}</span>
-                    )}
+                    {/* 인라인 티어 라벨 제거: 오버레이 배지로 대체 */}
                   </div>
                   <div className="feed-card-content">{post.body}</div>
                   <div className="feed-card-actions">

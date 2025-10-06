@@ -23,6 +23,38 @@ export default function Explore() {
   const [isFetchingQuestions, setIsFetchingQuestions] = useState(false);
   const { setHide } = useNavVisibility();
 
+  // 퀴즈 진행도 저장용: useProgress 훅이 읽는 키와 동일한 스키마로 localStorage에 기록
+  const persistProgress = (lvl, question, selectedOptionId, isCorrect, currentIndex) => {
+    try {
+      const key = `explorer:${lvl || 'default'}:progress`;
+      const saved = JSON.parse(localStorage.getItem(key) || 'null') || { index: 0, answers: [] };
+      const answers = Array.isArray(saved.answers) ? saved.answers.slice() : [];
+      // 동일 qid가 이미 있으면 덮어쓰기, 없으면 추가
+      const qid = question?.id ?? `${Date.now()}`;
+      const existingIdx = answers.findIndex(a => String(a.qid) === String(qid));
+      const record = { qid, choice: selectedOptionId, correct: !!isCorrect };
+      if (existingIdx >= 0) answers[existingIdx] = record; else answers.push(record);
+      const idx = Math.max(saved.index || 0, (Number.isFinite(currentIndex) ? currentIndex : 0) + 1);
+      localStorage.setItem(key, JSON.stringify({ index: idx, answers }));
+    } catch (_) { /* noop */ }
+  };
+
+  // 완료 시(5단계 진입) 오늘 날짜를 attendance에 기록(중복 방지)
+  useEffect(() => {
+    if (step === 5) {
+      const today = new Date();
+      const z = (n) => (n < 10 ? `0${n}` : `${n}`);
+      const key = `${today.getFullYear()}-${z(today.getMonth() + 1)}-${z(today.getDate())}`;
+      try {
+        const arr = JSON.parse(localStorage.getItem('attendance') || '[]');
+        if (!arr.includes(key)) {
+          arr.push(key);
+          localStorage.setItem('attendance', JSON.stringify(arr));
+        }
+      } catch (_) { /* noop */ }
+    }
+  }, [step]);
+
   useEffect(() => {
     if (step === 4 || step === 5) setHide(true); else setHide(false);
     return () => setHide(false); 
@@ -209,16 +241,21 @@ export default function Explore() {
               setQuestions(updatedQuestions);
             }
 
-            const finalCorrectIdx = backendCorrectIdx >= 0
-              ? backendCorrectIdx
-              : (opts.findIndex(o => o.isCorrect));
-            const isCorrect = Number.isInteger(selectedIdx) && selectedIdx === finalCorrectIdx
-              ? true
-              : Boolean(r?.correct);
+            const localIdx = opts.findIndex(o => o.isCorrect);
+            const finalCorrectIdx = backendCorrectIdx >= 0 ? backendCorrectIdx : localIdx;
+            // 우선순위: 백엔드 인덱스 > 로컬 isCorrect > r.correct(boolean)
+            let isCorrect = false;
+            if (Number.isInteger(finalCorrectIdx) && finalCorrectIdx >= 0) {
+              isCorrect = (Number.isInteger(selectedIdx) && selectedIdx === finalCorrectIdx);
+            } else if (typeof r?.correct === 'boolean') {
+              isCorrect = r.correct;
+            }
 
             const newResults = [...results];
             newResults[current] = { ...currentResult, checked: true, correct: isCorrect };
             setResults(newResults);
+            // 진행도 로컬 저장 (ExploreMain의 useProgress에서 읽어 반영)
+            persistProgress(level, question, selectedOptionId, isCorrect, current);
           } catch (e) {
             console.warn('⚠️ 백엔드 채점 실패, 로컬 판정으로 폴백:', e);
             const correctOption = question.options?.find(o => o.isCorrect);
@@ -227,6 +264,8 @@ export default function Explore() {
             const newResults = [...results];
             newResults[current] = { ...currentResult, checked: true, correct: isCorrect };
             setResults(newResults);
+            // 백엔드 실패 시에도 로컬 진행도 저장
+            persistProgress(level, question, selectedOptionId, isCorrect, current);
           }
         }}
         onComplete={() => setStep(5)}

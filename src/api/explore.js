@@ -4,7 +4,6 @@ import {
   dummyProgress, 
   dummyBadges, 
   dummyTopicStats,
-  dummySubmitResponse,
   dummyQuestionsData
 } from '../utils/testData.js';
 import { API_BASE } from './config';
@@ -239,25 +238,31 @@ function normalizeQuizPayload(raw) {
     const image = sanitizeImageUrl(img);
       const mapped = {
       ...q,
-      question: q.question ?? q.questionText ?? q.stemMd ?? '',
-      stemMd: q.stemMd ?? q.questionText ?? q.question ?? '',
+      // 질문 본문/지문 매핑 보강
+      question: (
+        q.question ?? q.questionText ?? q.prompt ?? q.title ?? q.text ?? q.stem ?? q.stemMd ?? ''
+      ),
+      stemMd: (
+        q.stemMd ?? q.stem ?? q.questionText ?? q.prompt ?? q.text ?? q.question ?? ''
+      ),
       // 학습/핵심포인트/힌트 정규화
       solvingKeypointsMd: (
-        q.solvingKeypointsMd ?? q.solvingKeypoints ?? q.keypointsMd ?? q.keyPointsMd ?? q.keypoints ?? q.keyPoints ?? q.key_points ?? null
+        q.solvingKeypointsMd ?? q.solvingKeypoints ?? q.keypointsMd ?? q.keyPointsMd ?? q.keypoints ?? q.keyPoints ?? q.key_points ??
+        q.studyPointsMd ?? q.study_points_md ?? q.study_points ?? q.learnKeypointsMd ?? q.learningKeypointsMd ?? null
       ),
       teachingExplainerMd: (
-        q.teachingExplainerMd ?? q.explainerMd ?? q.explainer ?? q.explanationMd ?? q.explanation ?? null
+        q.teachingExplainerMd ?? q.explainerMd ?? q.explainer ?? q.explanationMd ?? q.explanation ?? q.teachingMd ?? q.explainMd ?? null
       ),
       hintMd: (
-        q.hintMd ?? q.hint ?? q.tipsMd ?? q.tips ?? null
+        q.hintMd ?? q.hint ?? q.tipsMd ?? q.tips ?? q.helpMd ?? q.help ?? null
       ),
   // 기사형 문제 처리: 다양한 키에서 이미지 필드 정규화 (확장)
   image,
   // 유효한 이미지가 있으면 타입을 강제로 articleImage로 통일 (이질적 타입 네이밍 방지)
   type: image ? 'articleImage' : (q.type ?? undefined),
-      options: (q.options || []).map((o) => ({
+      options: (q.options || []).map((o, i) => ({
         ...o,
-        id: o.id ?? o.optionId ?? o.valueId ?? o.value ?? null,
+        id: o.id ?? o.optionId ?? o.valueId ?? o.value ?? (i + 1),
         // 서버가 label("A"/"B"/...)와 실제 내용 분리 제공 시, 내용 필드 우선 사용
         text: (
           o.text ?? o.optionText ?? o.content ?? o.description ?? o.desc ?? o.body ??
@@ -351,13 +356,8 @@ export const submitAnswer = async ({ quizId, userId, answers, token }) => {
       token
     }, token);
   } catch {
-    const isCorrect = Math.random() > 0.4;
-    return {
-      ...dummySubmitResponse,
-      correct: isCorrect,
-      selectedOptionId: answers?.[0]?.selectedOptionId,
-      correctOptionId: isCorrect ? answers?.[0]?.selectedOptionId : ((answers?.[0]?.selectedOptionId % 4) + 1)
-    };
+    // 백엔드 실패 시 임의 채점을 하지 않고, 프론트가 로컬 정답(옵션의 isCorrect)으로 판정하도록 최소 정보만 반환
+    return { selectedOptionId: answers?.[0]?.selectedOptionId };
   }
 };
 
@@ -546,11 +546,29 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
       return Array.from(new Set([...t, ...s]));
     };
 
-    const kw = getKeywords(topicId, subTopic).map(k => String(k).toLowerCase());
+    // 토픽 이름/ID 보정: 숫자 ID가 들어오면 키워드가 비게 되어 오선택될 수 있으므로
+    // topicName/topic/subTopicName/subTopic 등 문자열 값을 우선 사용
+    const topicStr = [topicId, (typeof topicId === 'object' ? null : undefined)]
+      .filter(v => typeof v === 'string')?.[0] || topicId;
+    const kw = getKeywords(topicStr, subTopic).map(k => String(k).toLowerCase());
+
+    // 퀴즈 메타 텍스트 추출: 제목/설명/토픽명/태그 등을 모두 포함시켜 매칭 정확도 향상
+    const metaTextOfQuiz = (norm) => {
+      if (!norm) return '';
+      const fields = [
+        norm.title, norm.name, norm.quizTitle, norm.subtitle, norm.description,
+        norm.topic, norm.topicName, norm.category, norm.categoryName,
+        norm.subTopic, norm.subtopic, norm.subTopicName, norm.sectorName, norm.subsectorName,
+      ];
+      const tags = Array.isArray(norm.tags) ? norm.tags : (Array.isArray(norm.keywords) ? norm.keywords : []);
+      return [...fields.filter(Boolean), ...tags].join(' ');
+    };
+
     const textOfQuiz = (norm) => {
       if (!norm?.questions) return '';
-      return norm.questions.map(q => [q.question, q.stemMd, q.teachingExplainerMd, q.solvingKeypointsMd, ...(q.options||[]).map(o=>o.text)]
+      const qText = norm.questions.map(q => [q.question, q.stemMd, q.teachingExplainerMd, q.solvingKeypointsMd, ...(q.options||[]).map(o=>o.text)]
         .flat().filter(Boolean).join(' ')).join(' ');
+      return `${metaTextOfQuiz(norm)} ${qText}`;
     };
     const scoreOf = (norm) => {
       if (!kw.length) return 0;
@@ -563,12 +581,15 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
     const onlyArticle = withScores.filter(d => d.norm && d.hasArticle);
     let chosenEntry;
     if (onlyArticle.length) {
-      chosenEntry = onlyArticle.sort((a,b) => (b.score - a.score))[0];
+      // 키워드가 하나라도 매칭되는 후보가 있으면 그 안에서 선택
+      const positive = onlyArticle.filter(d => d.score > 0);
+      const pool = positive.length ? positive : onlyArticle;
+      chosenEntry = pool.sort((a,b) => (b.score - a.score))[0];
     } else {
       // 기사형이 하나도 없으면 주제 매칭 점수 기준으로 선택 (백엔드 데이터 이슈 가능성 로그)
-      chosenEntry = withScores
-        .filter(d => d.norm)
-        .sort((a,b) => (b.score - a.score))[0];
+      const positive = withScores.filter(d => d.norm && d.score > 0);
+      const pool = positive.length ? positive : withScores.filter(d => d.norm);
+      chosenEntry = pool.sort((a,b) => (b.score - a.score))[0];
       console.log('ℹ️ 선택된 레벨 퀴즈들 중 기사형 문항이 없습니다. 백엔드에서 이미지가 포함된 문항을 제공하지 않는 상태일 수 있습니다.');
     }
 
