@@ -249,17 +249,7 @@ export default function QuizQuestion({ current,
     }
   };
 
-  // 이미지 로드 에러 시 다음 후보로 전환
-  const handleArticleImgError = () => {
-    setImgError(true);
-    const nextIdx = Math.min(q4FallbackIndexRef.current + 1, imgCandidates.length - 1);
-    if (nextIdx !== q4FallbackIndexRef.current) {
-      q4FallbackIndexRef.current = nextIdx;
-      const nextSrc = imgCandidates[nextIdx];
-      console.warn('🖼️ 기사 이미지 로드 실패, 다음 후보로 전환:', nextSrc);
-      setImgSrc(nextSrc || q4ArticlePng);
-    }
-  };
+  // 이미지 로드 에러 시 다음 후보로 전환 (inline handler에서 동일 로직 사용)
 
   /**
    * 📱 창 크기 변경 시 이미지 높이 재계산 (반응형 처리)
