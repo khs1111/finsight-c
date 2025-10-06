@@ -196,13 +196,15 @@ function normalizeQuizPayload(raw) {
     const looksLikeImageFile = /\.(png|jpe?g|gif|webp|svg)$/i.test(s) && !/[\s"'<>]/.test(s);
     if (looksLikeImageFile) {
       try {
-        const origin = new URL(API_BASE, (typeof window !== 'undefined' ? window.location.origin : undefined)).origin;
-        const normalized = s.replace(/^\/+/, ''); // 선행 슬래시 제거 후 추가
-        const abs = `${origin}/${normalized}`;
+        // API_BASE가 https://host[:port]/api 형태라면 /api 경로를 유지해서 상대 이미지 파일을 보정한다
+        const apiUrl = new URL(API_BASE, (typeof window !== 'undefined' ? window.location.origin : undefined));
+        const origin = apiUrl.origin;                  // https://host
+        const basePath = apiUrl.pathname.replace(/\/$/, ''); // /api 또는 ''
+        const normalized = s.replace(/^\/+/, '');
+        const abs = `${origin}${basePath ? basePath + '/' : '/'}${normalized}`;
         console.log(`🖼️ 이미지 상대경로 보정: '${s}' -> '${abs}'`);
         return abs;
       } catch (_) {
-        // URL 계산 실패 시 원본 반환하지 않고 null 처리
         return null;
       }
     }
@@ -242,7 +244,12 @@ function normalizeQuizPayload(raw) {
       options: (q.options || []).map((o) => ({
         ...o,
         id: o.id ?? o.optionId ?? o.valueId ?? o.value ?? null,
-        text: o.text ?? o.optionText ?? o.label ?? '',
+        // 서버가 label("A"/"B"/...)와 실제 내용 분리 제공 시, 내용 필드 우선 사용
+        text: (
+          o.text ?? o.optionText ?? o.content ?? o.description ?? o.desc ?? o.body ??
+          o.text_kr ?? o.option_text ?? o.option_text_kr ?? o.valueText ?? o.value_text ??
+          o.title ?? o.name ?? o.label ?? ''
+        ),
         // 다양한 백엔드 케이스 처리 (isCorrect/correct/is_correct/answer/isRight 등)
         isCorrect: parseBoolLoose(
           o.isCorrect ?? o.correct ?? o.is_correct ?? o.answer ?? o.isRight ?? o.is_right

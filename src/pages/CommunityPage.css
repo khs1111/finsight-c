@@ -3,7 +3,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 0 16px;
+  /* Remove inner padding so cards align to the page's 16px gutters provided by .community-content */
+  padding: 0;
 }
 
 .community-feed-card {
@@ -14,6 +15,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  width: 100%;
   height: 188px; /* Spec height */
   overflow: hidden;
 }

@@ -32,7 +32,22 @@ export async function fetchProfile() {
     if (userId) {
       const dash = await http(`/dashboard?userId=${userId}`);
       const nickname = dash?.userInfo?.nickname || localStorage.getItem('username') || '퍼니의 동료';
-      return { data: { nickname, tier: 'EMERALD', tierImageUrl: '' }, isFallback: true };
+      // 가능한 위치에서 티어 문자열 추출 시도
+      const fromObj = (obj) => {
+        if (!obj || typeof obj !== 'object') return undefined;
+        // 우선순위: tierName > tier > rank.name > level.name > grade > badge.tier
+        const t1 = obj.tierName || obj.tier || obj.rank?.name || obj.level?.name || obj.grade || obj.badge?.tier;
+        if (typeof t1 === 'string' && t1.trim()) return t1;
+        // 객체형이면 name/title 필드 시도
+        if (typeof obj.rank === 'object') {
+          const t2 = obj.rank?.title || obj.rank?.label || obj.rank?.code;
+          if (typeof t2 === 'string' && t2.trim()) return t2;
+        }
+        return undefined;
+      };
+      const tierRaw = fromObj(dash?.userInfo) || fromObj(dash) || fromObj(dash?.profile) || 'EMERALD';
+      const tierImageUrl = dash?.userInfo?.tierImageUrl || dash?.tierImageUrl || dash?.profile?.tierImageUrl || '';
+      return { data: { nickname, tier: tierRaw, tierImageUrl }, isFallback: true };
     }
   } catch (_) {}
 

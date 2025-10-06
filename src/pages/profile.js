@@ -1,5 +1,11 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import TierDummy from '../assets/tier/gold.png';
+import TierMaster from '../assets/tier/master.png';
+import TierDiamond from '../assets/tier/diamond.png';
+import TierGold from '../assets/tier/gold.png';
+import TierSilver from '../assets/tier/silver.png';
+import TierBronze from '../assets/tier/bronze.png';
+import TierEmerald from '../assets/tier/emerald.png';
 import AntImg from '../assets/profile/ant.png';
 import BackImg from '../assets/profile/back.png';
 import { fetchProfile, fetchProfileActivity } from '../api/profile';
@@ -201,6 +207,29 @@ function Calendar() {
 
 export default function Profile() {
   const [profile, setProfile] = useState({ nickname: '', tier: '', tierImageUrl: '' });
+  const normalizeTier = (t) => {
+    const s = String(t || '').trim().toLowerCase();
+    if (!s) return '';
+    if (/(master|마스터)/.test(s)) return 'MASTER';
+    if (/(diamond|다이아|dia)/.test(s)) return 'DIAMOND';
+    if (/(emerald|에메랄드)/.test(s)) return 'EMERALD';
+    if (/(gold|골드)/.test(s)) return 'GOLD';
+    if (/(silver|실버)/.test(s)) return 'SILVER';
+    if (/(bronze|브론즈)/.test(s)) return 'BRONZE';
+    return s.toUpperCase();
+  };
+  const tierImageFor = (tier, urlFromApi) => {
+    if (urlFromApi && typeof urlFromApi === 'string' && urlFromApi.startsWith('http')) return urlFromApi;
+    switch (normalizeTier(tier)) {
+      case 'MASTER': return TierMaster;
+      case 'DIAMOND': return TierDiamond;
+      case 'EMERALD': return TierEmerald;
+      case 'GOLD': return TierGold;
+      case 'SILVER': return TierSilver;
+      case 'BRONZE': return TierBronze;
+      default: return TierDummy;
+    }
+  };
   useEffect(() => {
     fetchProfile().then(res => {
       setProfile({
@@ -211,7 +240,7 @@ export default function Profile() {
       });
     }).catch(() => setProfile({ nickname: '', tier: '', tierImageUrl: '' }));
   }, []);
-  const displayTier = (profile && profile.tier) ? profile.tier : 'EMERALD';
+  const displayTier = (profile && profile.tier) ? normalizeTier(profile.tier) : 'EMERALD';
   const displayNickname = (profile && profile.nickname) ? profile.nickname : '퍼니의 동료';
   return (
     <>
@@ -232,7 +261,7 @@ export default function Profile() {
             <div className="tier-inline">
               <img
                 className="tier-image"
-                src={profile.tierImageUrl || TierDummy}
+                src={tierImageFor(displayTier, profile.tierImageUrl)}
                 alt={displayTier}
                 width={32}
                 height={32}
