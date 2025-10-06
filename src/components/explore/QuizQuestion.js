@@ -200,16 +200,18 @@ export default function QuizQuestion({ current,
   // 이미지 후보 목록: 문제에서 제공한 이미지(있다면) + 프로젝트 내 더미 이미지
   const imgCandidates = React.useMemo(() => {
     const list = [];
-    // 유효한 이미지 URL만 포함 (스킴/상대경로 검사)
     const isValidUrl = (v) => {
       if (!v || typeof v !== 'string') return false;
       const s = v.trim();
       return /^(https?:\/\/|data:|blob:|\/|\.\/|\.\.\/)/i.test(s);
     };
-    if (isValidUrl(question?.image)) list.push(question.image.trim());
-    list.push(q4ArticlePng);
-    // 중복 제거
-    return Array.from(new Set(list.filter(Boolean)));
+    if (isValidUrl(question?.image)) list.push(question.image.trim()); // 백엔드 이미지 우선
+    list.push(q4ArticlePng); // 최종 폴백
+    const unique = Array.from(new Set(list.filter(Boolean)));
+    if (!isValidUrl(question?.image)) {
+      console.log('ℹ️ 기사 이미지: 백엔드 이미지가 비어있거나 유효하지 않아 더미를 사용합니다.');
+    }
+    return unique;
   }, [question?.image]);
   const q4FallbackIndexRef = useRef(0);
 
@@ -244,6 +246,18 @@ export default function QuizQuestion({ current,
       // 🚨 계산 실패 시 최소 높이 사용
       console.warn('이미지 크기 계산 실패:', err);
       setArticleImgHeight(ARTICLE_IMG_MIN);
+    }
+  };
+
+  // 이미지 로드 에러 시 다음 후보로 전환
+  const handleArticleImgError = () => {
+    setImgError(true);
+    const nextIdx = Math.min(q4FallbackIndexRef.current + 1, imgCandidates.length - 1);
+    if (nextIdx !== q4FallbackIndexRef.current) {
+      q4FallbackIndexRef.current = nextIdx;
+      const nextSrc = imgCandidates[nextIdx];
+      console.warn('🖼️ 기사 이미지 로드 실패, 다음 후보로 전환:', nextSrc);
+      setImgSrc(nextSrc || q4ArticlePng);
     }
   };
 

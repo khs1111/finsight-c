@@ -190,23 +190,37 @@ function normalizeQuizPayload(raw) {
     if (typeof v !== 'string') return null;
     const s = v.trim();
     if (!s) return null;
-    // 허용되는 스킴 또는 경로 패턴만 통과
-    if (/^(https?:\/\/|data:|blob:|\/|\.\/|\.\.\/)/i.test(s)) return s;
+    // 절대 URL은 그대로 사용
+    if (/^(https?:\/\/|data:|blob:)/i.test(s)) return s;
     // 파일명 또는 선행 슬래시가 없는 상대경로 처리 (예: "news.png" 또는 "uploads/news.png")
     const looksLikeImageFile = /\.(png|jpe?g|gif|webp|svg)$/i.test(s) && !/[\s"'<>]/.test(s);
-    if (looksLikeImageFile) {
-      try {
-        // API_BASE가 https://host[:port]/api 형태라면 /api 경로를 유지해서 상대 이미지 파일을 보정한다
-        const apiUrl = new URL(API_BASE, (typeof window !== 'undefined' ? window.location.origin : undefined));
-        const origin = apiUrl.origin;                  // https://host
-        const basePath = apiUrl.pathname.replace(/\/$/, ''); // /api 또는 ''
+    try {
+      const apiUrl = new URL(API_BASE, (typeof window !== 'undefined' ? window.location.origin : undefined));
+      const origin = apiUrl.origin;                  // https://host
+      const basePath = apiUrl.pathname.replace(/\/$/, ''); // /api 또는 ''
+      // 1) 루트 기준 경로("/uploads/x.png")는 origin과 결합 (대부분 정적 리소스 루트)
+      if (/^\//.test(s)) {
+        const abs = `${origin}${s}`;
+        console.log(`🖼️ 이미지 루트경로 보정: '${s}' -> '${abs}'`);
+        return abs;
+      }
+      // 2) ./ 또는 ../ 로 시작하는 경로는 API_BASE 경로를 기준으로 결합
+      if (/^(\.\/|\.\.\/)/.test(s)) {
+        const base = `${origin}${basePath ? basePath + '/' : '/'}`;
+        const normalized = s.replace(/^\.\//, '').replace(/^\.\.\//, '');
+        const abs = `${base}${normalized}`;
+        console.log(`🖼️ 이미지 상대경로 보정(./, ../): '${s}' -> '${abs}'`);
+        return abs;
+      }
+      // 3) 단순 파일명 또는 슬래시 없는 상대경로
+      if (looksLikeImageFile) {
         const normalized = s.replace(/^\/+/, '');
         const abs = `${origin}${basePath ? basePath + '/' : '/'}${normalized}`;
-        console.log(`🖼️ 이미지 상대경로 보정: '${s}' -> '${abs}'`);
+        console.log(`🖼️ 이미지 파일명 보정: '${s}' -> '${abs}'`);
         return abs;
-      } catch (_) {
-        return null;
       }
+    } catch (_) {
+      /* fallthrough */
     }
     return null;
   };
@@ -223,7 +237,7 @@ function normalizeQuizPayload(raw) {
       null
     );
     const image = sanitizeImageUrl(img);
-    const mapped = {
+      const mapped = {
       ...q,
       question: q.question ?? q.questionText ?? q.stemMd ?? '',
       stemMd: q.stemMd ?? q.questionText ?? q.question ?? '',
@@ -237,10 +251,10 @@ function normalizeQuizPayload(raw) {
       hintMd: (
         q.hintMd ?? q.hint ?? q.tipsMd ?? q.tips ?? null
       ),
-      // 기사형 문제 처리: 다양한 키에서 이미지 필드 정규화 (확장)
-      image,
-      // 백엔드에서 type이 없더라도 유효한 이미지가 있으면 articleImage로 간주
-      type: q.type ?? (image ? 'articleImage' : undefined),
+  // 기사형 문제 처리: 다양한 키에서 이미지 필드 정규화 (확장)
+  image,
+  // 유효한 이미지가 있으면 타입을 강제로 articleImage로 통일 (이질적 타입 네이밍 방지)
+  type: image ? 'articleImage' : (q.type ?? undefined),
       options: (q.options || []).map((o) => ({
         ...o,
         id: o.id ?? o.optionId ?? o.valueId ?? o.value ?? null,
@@ -560,6 +574,10 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
 
     const chosen = chosenEntry?.norm;
     const chosenId = chosenEntry?.id || prioritizedId;
+    if (chosen) {
+      const hasAnyImg = Array.isArray(chosen.questions) && chosen.questions.some(q => !!q.image);
+      console.log(`🧩 선택된 퀴즈 ${chosenId} | 기사문항 포함: ${hasAnyImg}`);
+    }
 
     // 기사형 문항을 4번째 위치(인덱스 3)로 이동
     let qs = Array.isArray(chosen?.questions) ? chosen.questions : [];

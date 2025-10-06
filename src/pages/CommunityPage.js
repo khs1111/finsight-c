@@ -10,12 +10,11 @@ import { useNavigate } from 'react-router-dom';
 
 // 카테고리 목록 (디자인 스펙 기반)
 // '오늘의 뉴스'는 전체(ALL) 개념으로 처리
-const CATEGORIES = ['오늘의 뉴스', '자유게시판', '탐험지', '경제 시사', '투자'];
+const CATEGORIES = ['자유게시판', '탐험지', '경제 시사', '투자'];
 
 // CommunityPage: 커뮤니티 메인 피드 컴포넌트
 export default function CommunityPage() {
   // 선택된 카테고리/랭크 상태
-  const [category, setCategory] = useState('오늘의 뉴스');
   const [showRank, setShowRank] = useState(false);
   const [rank, setRank] = useState(null); // 마스터, 다이아 등
   const [posts, setPosts] = useState([]);
@@ -179,6 +178,9 @@ export default function CommunityPage() {
                       </div>
                       <div className="feed-card-date-small">{formatKDate(post.createdAt)}</div>
                     </div>
+                    {post.author?.tier && (
+                      <span className="feed-card-tier-inline">{post.author.tier}</span>
+                    )}
                   </div>
                   <div className="feed-card-content">{post.body}</div>
                   <div className="feed-card-actions">
