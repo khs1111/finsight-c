@@ -2,6 +2,7 @@
   "name": "finsight-c",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://khs1111.github.io/finsight-c",
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -19,7 +20,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "react-scripts build && npm run postbuild",
+    "postbuild": "copy build\\index.html build\\404.html > NUL 2>&1 || cp build/index.html build/404.html || true",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

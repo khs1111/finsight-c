@@ -132,6 +132,17 @@ function Calendar() {
   }, [viewYear, viewMonth]);
 
   const cells = useMemo(() => buildMonthDays(viewYear, viewMonth), [viewYear, viewMonth]);
+  // Find the last in-current-month cell and compute the end index of that row (to keep placeholders in final row)
+  const { lastInCurrentIdx, lastRowEndIdx } = useMemo(() => {
+    let lastIdx = -1;
+    for (let i = cells.length - 1; i >= 0; i--) {
+      if (cells[i] && cells[i].inCurrent) { lastIdx = i; break; }
+    }
+    // If nothing found, keep all cells to avoid layout break
+    if (lastIdx < 0) return { lastInCurrentIdx: -1, lastRowEndIdx: cells.length - 1 };
+    const rowEnd = Math.min(cells.length - 1, (Math.ceil((lastIdx + 1) / 7) * 7) - 1);
+    return { lastInCurrentIdx: lastIdx, lastRowEndIdx: rowEnd };
+  }, [cells]);
   const headers = ['일', '월', '화', '수', '목', '금', '토'];
   const todayKey = `${todayDate.getFullYear()}-${z(todayDate.getMonth() + 1)}-${z(todayDate.getDate())}`;
   const changeMonth = useCallback((delta) => {
@@ -167,7 +178,9 @@ function Calendar() {
           <div key={h} className={`cal-cell header ${h === '일' ? 'sun' : h === '토' ? 'sat' : ''}`}>{h}</div>
         ))}
         <div className="calendar-divider" />
-        {cells.map((c, idx) => {
+  {cells.map((c, idx) => {
+          // Drop trailing full empty rows after the last actual week
+          if (idx > lastRowEndIdx) return null;
           const baseClasses = ['cal-cell','day'];
           if(!c.inCurrent) baseClasses.push('outside');
           const dateKey = c.key;
@@ -176,7 +189,8 @@ function Calendar() {
           if (isCompleted) baseClasses.push('active');
           if (isToday) baseClasses.push('today');
           if (!c.inCurrent) {
-            return <div key={dateKey} className={baseClasses.join(' ')} style={{opacity:0, pointerEvents:'none'}} aria-hidden="true" />;
+            baseClasses.push('empty');
+            return <div key={dateKey} className={baseClasses.join(' ')} aria-hidden="true" />;
           }
           return (
             <div key={dateKey} className={baseClasses.join(' ')} aria-label={`${dateKey}${isCompleted ? ' 완료' : ''}${isToday ? ' 오늘' : ''}`}>
@@ -187,7 +201,7 @@ function Calendar() {
                 <div className="cal-indicator">
                   {(isCompleted || isToday) ? (
                     <div className="cal-star">
-                      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path fillRule="evenodd" clipRule="evenodd" d="M13.4992 6.06691C13.8832 4.82475 15.0391 3.9836 16.3392 4.00024C17.6466 3.98711 18.8048 4.84084 19.1792 6.09358L20.0592 8.76024C20.4543 9.99441 21.6033 10.8305 22.8992 10.8269H25.6725C26.9989 10.7766 28.1993 11.6078 28.619 12.867C29.0387 14.1262 28.5771 15.5113 27.4859 16.2669L25.2059 17.9336C24.1549 18.6884 23.7129 20.0363 24.1125 21.2669L24.9925 23.9336C25.2949 24.8567 25.1316 25.8691 24.5543 26.6504C23.9769 27.4316 23.0571 27.885 22.0859 27.8669C21.456 27.8622 20.8442 27.6566 20.3392 27.2802L18.1525 25.6136C17.1038 24.8487 15.6812 24.8487 14.6325 25.6136L12.3392 27.2802C11.8281 27.6914 11.195 27.9213 10.5392 27.9336C9.56089 27.9417 8.64008 27.4723 8.07194 26.6759C7.5038 25.8794 7.35971 24.8559 7.68585 23.9336L8.56585 21.2669C8.98983 20.04 8.56882 18.6798 7.52585 17.9069L5.24585 16.2402C4.18901 15.482 3.74439 14.127 4.14656 12.8901C4.54872 11.6531 5.70518 10.8186 7.00585 10.8269H9.77918C11.0823 10.8269 12.2335 9.9783 12.6192 8.73358L13.4992 6.06691ZM17.0459 6.76024C16.9639 6.44096 16.6684 6.22354 16.3392 6.24024C15.9936 6.22841 15.6922 6.47299 15.6325 6.81358L14.7525 9.48024C14.0531 11.6353 12.0449 13.0944 9.77918 13.0936H6.95252C6.63833 13.1026 6.36345 13.3075 6.26495 13.6059C6.16645 13.9044 6.26542 14.2326 6.51252 14.4269L8.79252 16.0936C10.6316 17.4237 11.4019 19.7888 10.6992 21.9469L9.81918 24.6136C9.73276 24.8326 9.76823 25.0809 9.91252 25.2669C10.0621 25.4823 10.3038 25.6155 10.5659 25.6269C10.7259 25.6221 10.8801 25.566 11.0059 25.4669L13.2592 23.8002C15.0957 22.4659 17.5826 22.4659 19.4192 23.8002L21.6459 25.3869C21.7716 25.486 21.9258 25.5421 22.0858 25.5469C22.336 25.5307 22.5658 25.4035 22.7125 25.2002C22.8568 25.0142 22.8923 24.7659 22.8059 24.5469L21.9258 21.8802C21.2231 19.7221 21.9935 17.3571 23.8325 16.0269L26.1125 14.3736C26.3596 14.1793 26.4586 13.8511 26.3601 13.5526C26.2616 13.2541 25.9867 13.0493 25.6725 13.0402H22.8992C20.6335 13.0411 18.6252 11.582 17.9258 9.42691L17.0459 6.76024Z" fill="#FFBC02"/>
                         <path d="M17.0459 6.76024C16.9639 6.44096 16.6684 6.22354 16.3392 6.24024C15.9936 6.22841 15.6922 6.47299 15.6325 6.81358L14.7525 9.48024C14.0531 11.6353 12.0449 13.0944 9.77918 13.0936H6.95252C6.63833 13.1026 6.36345 13.3075 6.26495 13.6059C6.16645 13.9044 6.26542 14.2326 6.51252 14.4269L8.79252 16.0936C10.6316 17.4237 11.4019 19.7888 10.6992 21.9469L9.81918 24.6136C9.73276 24.8326 9.76823 25.0809 9.91252 25.2669C10.0621 25.4823 10.3038 25.6155 10.5659 25.6269C10.7259 25.6221 10.8801 25.566 11.0059 25.4669L13.2592 23.8002C15.0957 22.4659 17.5826 22.4659 19.4192 23.8002L21.6459 25.3869C21.7716 25.486 21.9258 25.5421 22.0858 25.5469C22.336 25.5307 22.5658 25.4035 22.7125 25.2002C22.8568 25.0142 22.8923 24.7659 22.8059 24.5469L21.9258 21.8802C21.2231 19.7221 21.9935 17.3571 23.8325 16.0269L26.1125 14.3736C26.3596 14.1793 26.4586 13.8511 26.3601 13.5526C26.2616 13.2541 25.9867 13.0493 25.6725 13.0402H22.8992C20.6335 13.0411 18.6252 11.582 17.9258 9.42691L17.0459 6.76024Z" fill="#FFBC02"/>
                       </svg>

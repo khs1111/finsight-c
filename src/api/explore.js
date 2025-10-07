@@ -224,6 +224,13 @@ function normalizeQuizPayload(raw) {
     return null;
   };
 
+  // 백엔드가 type 값을 다양하게 줄 수 있으므로 기사형 판별 보조 함수
+  const looksArticleType = (t) => {
+    if (!t) return false;
+    const s = String(t).trim().toLowerCase();
+    return s === 'article' || s === 'articleimage' || s === 'news' || s === 'article_img' || s === 'article-img';
+  };
+
   const questions = (raw.questions || []).map((q) => {
     // 이미지 후보 키들(백엔드 다양성 대응): 가장 먼저 매칭되는 값을 사용
     const img = (
@@ -236,6 +243,8 @@ function normalizeQuizPayload(raw) {
       null
     );
     const image = sanitizeImageUrl(img);
+    const rawType = q.type ?? q.questionType ?? q.kind;
+    const isArticleLike = looksArticleType(rawType) || !!image;
       const mapped = {
       ...q,
       // 질문 본문/지문 매핑 보강
@@ -244,6 +253,16 @@ function normalizeQuizPayload(raw) {
       ),
       stemMd: (
         q.stemMd ?? q.stem ?? q.questionText ?? q.prompt ?? q.text ?? q.question ?? ''
+      ),
+      // 기사형 본문/제목 매핑 (백엔드 다양한 키 대응)
+      articleTitleMd: (
+        q.articleTitleMd ?? q.article_title_md ?? q.articleTitle ?? q.article_title ??
+        q.newsTitle ?? q.news_title ?? q.contextTitle ?? q.context_title ?? null
+      ),
+      articleBodyMd: (
+        q.articleBodyMd ?? q.article_body_md ?? q.articleBody ?? q.article_body ??
+        q.articleMd ?? q.article_md ?? q.article ?? q.contentMd ?? q.content_md ?? q.content ??
+        q.contextMd ?? q.context_md ?? q.context ?? q.passageMd ?? q.passage_md ?? q.passage ?? null
       ),
       // 학습/핵심포인트/힌트 정규화
       solvingKeypointsMd: (
@@ -258,8 +277,9 @@ function normalizeQuizPayload(raw) {
       ),
   // 기사형 문제 처리: 다양한 키에서 이미지 필드 정규화 (확장)
   image,
-  // 유효한 이미지가 있으면 타입을 강제로 articleImage로 통일 (이질적 타입 네이밍 방지)
-  type: image ? 'articleImage' : (q.type ?? undefined),
+  // 기사형으로 보이는 경우(백엔드 type이 ARTICLE 또는 이미지가 있는 경우) UI 타입을 articleImage로 통일
+  // 이미지가 없어도 placeholder + 폴백 이미지를 통해 동일한 렌더링을 보장
+  type: isArticleLike ? 'articleImage' : (rawType ?? undefined),
       options: (q.options || []).map((o, i) => ({
         ...o,
         id: o.id ?? o.optionId ?? o.valueId ?? o.value ?? (i + 1),

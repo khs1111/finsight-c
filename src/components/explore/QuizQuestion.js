@@ -51,6 +51,8 @@ export default function QuizQuestion({ current,
   // 📚 문제 데이터 처리
   const questionList = questions && questions.length > 0 ? questions : [];
   const question = questionList[current];
+  // 기사형 판별(호환): 백엔드에서 'ARTICLE' 등으로 내려오거나 정규화된 'articleImage' 모두 지원
+  const isArticleType = String(question?.type || '').toLowerCase() === 'articleimage' || String(question?.type || '').toLowerCase() === 'article';
   
   // ✅ 정답 인덱스 계산 (백엔드에서 받은 isCorrect 필드 기반)
   const correctOption = question?.options?.find(option => option.isCorrect);
@@ -293,7 +295,7 @@ export default function QuizQuestion({ current,
 
     
     // 🖼️ 기사 이미지 타입의 경우 이미지 소스 설정 (후보군 순차 시도)
-    if (question?.type === 'articleImage') {
+    if (isArticleType) {
       q4FallbackIndexRef.current = 0;
       setImgSrc(imgCandidates[0] || null);
     } else {
@@ -545,15 +547,27 @@ export default function QuizQuestion({ current,
           {question?.stemMd || question?.question || "문제를 불러오는 중입니다..."}
         </h2>
 
-        {/* 문제와 기사 이미지 사이 안내 문구 (요청 사양) */}
-        {question?.type === 'articleImage' && (
+        {/* 기사형 지문: 제목/본문 렌더링 (있을 때만) */}
+        {isArticleType && (question?.articleTitleMd || question?.articleBodyMd) && (
+          <div className="quiz-question-article-text-block">
+            {question?.articleTitleMd && (
+              <div className="quiz-question-article-title">{question.articleTitleMd}</div>
+            )}
+            {question?.articleBodyMd && (
+              <div className="quiz-question-article-body">{question.articleBodyMd}</div>
+            )}
+          </div>
+        )}
+
+        {/* 문제와 기사 이미지 사이 안내 문구 (요청 사양/샘플 텍스트는 숨김, 필요 시 서버 제공 문구 사용) */}
+        {isArticleType && !question?.articleTitleMd && !question?.articleBodyMd && (
           <div className="quiz-question-article-guide">
-            ( 6개월 이상 쓸 계획이 없는 1,000 만원 가진 경우)
+            {/* 서버에서 별도 지시문이 오지 않은 경우 가이드 문구는 생략 */}
           </div>
         )}
 
         {/* 기사 이미지 타입이면 제목 아래에 이미지(또는 플레이스홀더) */}
-        {question.type === 'articleImage' && (
+        {isArticleType && (
           <div className="article-image-wrap" ref={articleImgWrapperRef}>
             {imgSrc && !imgError ? (
               <img

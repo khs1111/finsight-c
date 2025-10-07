@@ -175,7 +175,7 @@ export default function CommunityPage() {
                   <div className="feed-card-header">
                     <div className="avatar-wrap">
                       <img src={post.author?.profileImage || '/default-profile.png'} alt="프로필" className="feed-card-profile" />
-                      {/* 티어 배지: 프로필 왼쪽 아래 오버레이 */}
+                      {/* 티어 배지: 프로필 오른쪽 아래 오버레이 */}
                       {tierText && (
                         <span className={`avatar-tier-badge feed-card-tier ${tierToClass(tierText)}`}>{tierText}</span>
                       )}
