@@ -21,7 +21,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build && npm run postbuild",
-    "postbuild": "copy build\\index.html build\\404.html > NUL 2>&1 || cp build/index.html build/404.html || true",
+    "postbuild": "node scripts/copy-build-to-docs.mjs",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
