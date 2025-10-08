@@ -77,8 +77,13 @@
 .feed-card-content {
   font-size: 15px;
   color: #333;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   word-break: break-word;
+  display: -webkit-box;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .feed-card-actions { display:flex; align-items:center; gap:16px; color:#999; font-size:12px; position:absolute; left:16px; right:16px; bottom:12px; }

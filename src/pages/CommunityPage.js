@@ -220,7 +220,21 @@ export default function CommunityPage() {
                     </div>
                     {/* 인라인 티어 라벨 제거: 오버레이 배지로 대체 */}
                   </div>
+                  {/* 본문 텍스트 */}
                   <div className="feed-card-content">{post.body}</div>
+
+                  {/* 태그 영역: 문자열 배열 또는 {name} 배열 모두 지원 */}
+                  {Array.isArray(post.tags) && post.tags.length > 0 && (
+                    <div className="feed-card-tags">
+                      {post.tags.map((t, i) => {
+                        const label = typeof t === 'string' ? t : (t?.name || t?.label || '');
+                        if (!label) return null;
+                        return (
+                          <span key={`tag-${post.id}-${i}`} className="feed-card-tag">#{label}</span>
+                        );
+                      })}
+                    </div>
+                  )}
                   <div className="feed-card-actions">
                     <button type="button" className="action" onClick={() => toggleLike(post)} aria-label={liked ? '좋아요 취소' : '좋아요'}>
                       <span className="icon" aria-hidden="true">
@@ -243,6 +257,11 @@ export default function CommunityPage() {
                       </span>
                       <span className="count">{post.commentCount ?? 0}</span>
                     </div>
+                  </div>
+                  {/* 카드 푸터: 카테고리와 날짜 표시 (디자인 스펙 반영) */}
+                  <div className="feed-card-footer">
+                    <span className="feed-card-category">{post.categoryName || post.category || category}</span>
+                    <span className="feed-card-date">{formatKDate(post.createdAt)}</span>
                   </div>
                 </div>
               );

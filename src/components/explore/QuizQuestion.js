@@ -257,16 +257,21 @@ export default function QuizQuestion({ current,
   // 이미지 후보 목록: 문제에서 제공한 이미지(있다면) + 프로젝트 내 더미 이미지
   const imgCandidates = React.useMemo(() => {
     const list = [];
-    const isValidUrl = (v) => {
-      if (!v || typeof v !== 'string') return false;
-      const s = v.trim();
-      return /^(https?:\/\/|data:|blob:|\/|\.\/|\.\.\/)/i.test(s);
-    };
-    if (isValidUrl(question?.image)) list.push(question.image.trim()); // 백엔드 이미지 우선
-    list.push(q4ArticlePng); // 최종 폴백
+    const normalize = (v) => (typeof v === 'string' ? v.trim() : '');
+    const isHttpLike = (s) => /^(https?:\/\/|data:|blob:)/i.test(s);
+    const isRelLike = (s) => /^(\.\/|\.\.\/)/.test(s);
+    const isRootLike = (s) => /^\//.test(s);
+    const img = normalize(question?.image);
+    // GitHub Pages 하위 경로 문제 회피: '/assets/..' 같은 앱 루트 기준 경로는 빌드에서 존재하지 않으므로 제외
+    const looksBrokenAppAsset = isRootLike(img) && /\/assets\//i.test(img);
+    if (img && (isHttpLike(img) || isRelLike(img) || (isRootLike(img) && !looksBrokenAppAsset))) {
+      list.push(img);
+    }
+    // 항상 프로젝트 내 더미 이미지를 후보로 추가 (안정적인 폴백)
+    list.push(q4ArticlePng);
     const unique = Array.from(new Set(list.filter(Boolean)));
-    if (!isValidUrl(question?.image)) {
-      console.log('ℹ️ 기사 이미지: 백엔드 이미지가 비어있거나 유효하지 않아 더미를 사용합니다.');
+    if (!img || looksBrokenAppAsset) {
+      console.log('ℹ️ 기사 이미지: 제공된 경로가 유효하지 않아 내장 더미 이미지로 폴백합니다.', img);
     }
     return unique;
   }, [question?.image]);
