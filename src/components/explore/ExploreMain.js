@@ -398,6 +398,23 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
 
 // 새로운 주제/레벨 선택 컴포넌트
 function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selectedTopic, selectedSubTopic, onConfirm }) {
+  const [tree, setTree] = React.useState([]); // [{id,name,subsectors:[{id,name}]}]
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState(null);
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const mod = await import('../../api/explore');
+        const sectors = await mod.getSectorsWithSubsectors();
+        if (mounted) { setTree(Array.isArray(sectors) ? sectors : []); setError(null); }
+      } catch (e) {
+        if (mounted) setError('주제를 불러오지 못했습니다.');
+      } finally { if (mounted) setLoading(false); }
+    })();
+    return () => { mounted = false; };
+  }, []);
   const [tempLevel, setTempLevel] = React.useState(selectedLevel);
   const [tempTopic, setTempTopic] = React.useState(selectedTopic);
   const [tempSubTopic, setTempSubTopic] = React.useState(selectedSubTopic);
@@ -414,15 +431,13 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
     }
   }, [subTopicDropdownOpen, tempTopic]);
 
-  const levels = ['초급자', '중급자', '고급자'];
-  const topics = ['은행', '카드', '세금/절세', '투자'];
-  
-  const subTopicMap = {
-    '은행': ['금융권', '예금/적금', '계좌의 종류와 기능', '인터넷/모바일 뱅킹', '대출의 기초 이해'],
-    '카드': ['카드의 종류', '카드 수수료 및 혜택 이해', '카드 사용 전략',"신용 점수와 카드 사용의 관계" ],
-    '투자': ['거래소 사용', '주식', '채권', '펀드'],
-    '세금/절세': ['세금이란', '영수증과 세금 혜택','연말정산']
-  };
+  const levels = ['초보자','중급자','고급자']; // 레이블은 유지, ID 변환은 onConfirm에서 처리
+  const topics = React.useMemo(() => tree.map(s => s.name), [tree]);
+  const subTopicMap = React.useMemo(() => {
+    const m = {};
+    tree.forEach(s => { m[s.name] = (s.subsectors||[]).map(ss => ss.name); });
+    return m;
+  }, [tree]);
 
   React.useEffect(() => {
     if (open) {
@@ -433,12 +448,8 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
   }, [open, selectedLevel, selectedTopic, selectedSubTopic]);
 
   const handleConfirm = () => {
-    const payload = {
-      level: tempLevel,
-      topic: tempTopic,
-      subTopic: tempSubTopic,
-    };
-    onConfirm(payload);
+    // 레벨을 백엔드 기대값(숫자 1~3)으로 변환은 상위 getQuestions에서 처리하므로 여기선 라벨 유지
+    onConfirm({ level: tempLevel, topic: tempTopic, subTopic: tempSubTopic });
     onClose();
   };
 
@@ -455,6 +466,12 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
         style={containerHeight ? { height: containerHeight, transition: 'height .2s' } : {}}
       >
         <div className={`explore-main-selector-content${subTopicDropdownOpen ? ' open' : ''}`}> 
+          {error && (
+            <div style={{ color:'#c00', fontSize:12, marginBottom:8 }}>{String(error)}</div>
+          )}
+          {loading && (
+            <div style={{ color:'#666', fontSize:12, marginBottom:8 }}>주제를 불러오는 중...</div>
+          )}
           {/* 난이도 선택 섹션 */}
           <div className="explore-main-level-section">
             <div className="explore-main-level-title">난이도 선택</div>
@@ -482,7 +499,7 @@ function TopicLevelSelector({ open, onClose, selectedLevel, onSelectLevel, selec
                   type="button"
                   onClick={() => {
                     setTempTopic(topic);
-                    const firstSubTopic = subTopicMap[topic]?.[0];
+                      const firstSubTopic = subTopicMap[topic]?.[0];
                     if (firstSubTopic) {
                       setTempSubTopic(firstSubTopic);
                     }

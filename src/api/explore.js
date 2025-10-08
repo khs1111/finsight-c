@@ -1,11 +1,4 @@
 // src/api/explore.js - 백엔드 API 연동
-import { 
-  dummyQuizzes, 
-  dummyProgress, 
-  dummyBadges, 
-  dummyTopicStats,
-  dummyQuestionsData
-} from '../utils/testData.js';
 import { API_BASE, IMAGE_BASE } from './config';
 import { guestLogin } from './auth';
 
@@ -46,7 +39,6 @@ async function checkBackendConnection() {
   isBackendConnected = false;
   console.log('🔄 백엔드 서버 연결 안됨 - 더미 데이터로 디자인 확인 모드');
   console.log(`   API_BASE: ${API_BASE}`);
-  console.log(`   더미 퀴즈 ${dummyQuizzes.length}개 준비됨`);
   return false;
 }
 
@@ -210,8 +202,8 @@ export const getQuiz = async (quizId) => {
     const raw = await http(`/quizzes/${quizId}`);
     return normalizeQuizPayload(raw);
   } catch {
-    const dummyQuiz = dummyQuizzes.find(q => q.id === parseInt(quizId)) || dummyQuizzes[0];
-    return dummyQuiz;
+    // 더미 데이터 사용 제거: 실패 시 null 반환
+    return null;
   }
 };
 
@@ -694,9 +686,11 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
     );
 
     // 선호도 함수들
-    const hasArticle = (norm) => Array.isArray(norm?.questions) && norm.questions.some(
-      (q) => (String(q?.type||'').toLowerCase() === 'articleimage' || String(q?.type||'').toLowerCase() === 'article') && !!q?.image
-    );
+    // 기사형 퀴즈 선호 판단: 이미지 유무와 무관하게 type 또는 articleId가 있으면 기사형으로 간주
+    const hasArticle = (norm) => Array.isArray(norm?.questions) && norm.questions.some((q) => {
+      const t = String(q?.type || '').toLowerCase();
+      return t === 'articleimage' || t === 'article' || q?.articleId != null || q?.article_id != null;
+    });
 
     // 주제/세부주제 관련 키워드 매칭 가중치
     const getKeywords = (topic, sub) => {
@@ -760,7 +754,7 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
       return kw.reduce((s,k)=> s + (hay.includes(k) ? 1 : 0), 0);
     };
 
-    // 1순위: 기사형 포함 퀴즈 우선 선택, 그 안에서 주제/세부주제 매칭 점수 높은 퀴즈
+  // 1순위: 기사형 포함 퀴즈 우선 선택 (이미지 없어도 type/articleId가 있으면 기사형)
     const withScores = details.map(d => ({ ...d, score: scoreOf(d.norm), hasArticle: hasArticle(d.norm) }));
     const onlyArticle = withScores.filter(d => d.norm && d.hasArticle);
     let chosenEntry;
@@ -872,8 +866,9 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
     console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항${hasAnyArticle?', 기사형 포함' : ''}; 주제 매칭 점수=${chosenEntry?.score||0})`);
     return { questions: qs, totalCount: qs.length, quizId: chosenId };
   } catch (error) {
-    console.log('🎯 백엔드 로드 실패 - 더미 questions 사용:', error.message);
-    return { questions: dummyQuizzes, totalCount: dummyQuizzes.length };
+    console.log('❌ 백엔드 로드 실패 (getQuestions):', error.message);
+    // 더미 데이터 사용 제거: 빈 결과 반환
+    return { questions: [], totalCount: 0 };
   }
 };
 
@@ -889,34 +884,21 @@ export const getKeyPoints = async ({ questionId } = {}) => {
     console.log('✅ 백엔드에서 keypoints 로드됨');
     return keypoints;
   } catch (error) {
-    console.log('🎯 백엔드 연결 실패 - 더미 keypoints 데이터 사용:', error.message);
-    const question = dummyQuestionsData.find(q => q.id === questionId) || dummyQuestionsData[0];
-    return {
-      text: question.teachingExplainerMd || "서버 연결 실패로 더미 데이터를 사용합니다.",
-      keypoints: question.solvingKeypointsMd || "기본 학습 내용"
-    };
+    console.log('❌ 백엔드 연결 실패 (getKeyPoints):', error.message);
+    // 더미 사용 제거: 최소 안전 형태 반환
+    return { text: '', keypoints: '' };
   }
 };
 
 // 폴백 함수들 (하위 호환성) - 더미 데이터 사용
 export const getTopics = async () => {
-  // 현재 백엔드 스펙에 /topics는 없음 → 항상 더미 데이터 반환
-  return dummyTopicStats.map(topic => ({
-    id: topic.topicId,
-    name: topic.topicName,
-    completion: topic.completion,
-    totalQuestions: topic.totalQuestions,
-    completedQuestions: topic.completedQuestions
-  }));
+  // 현재 백엔드 스펙에 /topics는 없음 → 빈 배열 반환
+  return [];
 };
 
 export const getLevels = async () => {
-  // 백엔드에는 "레벨 목록" 전용 엔드포인트가 명세되어 있지 않음 → 더미 고정
-  return [
-    { id: 1, name: '기초', difficulty: 'easy' },
-    { id: 2, name: '중급', difficulty: 'medium' },
-    { id: 3, name: '고급', difficulty: 'hard' }
-  ];
+  // 백엔드에는 "레벨 목록" 전용 엔드포인트가 명세되어 있지 않음 → 빈 배열 반환
+  return [];
 };
 
 // UI 편의 래퍼: 단일 문항 답안 제출
@@ -932,8 +914,8 @@ export const getProgress = async () => {
   try {
     return await http('/progress');
   } catch (error) {
-    console.log('🎯 백엔드 연결 실패 - 더미 진행률 데이터 사용');
-    return dummyProgress;
+    console.log('❌ 백엔드 연결 실패 (getProgress)');
+    return null;
   }
 };
 
@@ -954,13 +936,13 @@ export const getBadges = async () => {
   try {
     return await http('/badges');
   } catch (error) {
-    console.log('🎯 백엔드 연결 실패 - 더미 뱃지 데이터 사용');
-    return dummyBadges;
+    console.log('❌ 백엔드 연결 실패 (getBadges)');
+    return [];
   }
 };
 
 // 토픽별 통계 조회
 export const getTopicStats = async () => {
-  // 백엔드 스펙에 /topic-stats 없음 → 더미 고정
-  return dummyTopicStats;
+  // 백엔드 스펙에 /topic-stats 없음 → 빈 객체/배열 반환
+  return [];
 };

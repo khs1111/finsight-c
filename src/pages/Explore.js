@@ -9,7 +9,6 @@ import CompletionScreen from "../components/explore/CompletionScreen";
 import {getQuestions as apiGetQuestions, postAttempt } from "../api/explore";
 import { createWrongNote } from "../api/community";
 import { addWrongNoteImmediate } from "../components/study/useWrongNoteStore";
-import { dummyQuizzes } from "../utils/testData.js";
 import CategoryNav from "../components/news/CategoryNav";
 import { useNavVisibility } from "../components/navigation/NavVisibilityContext";
 
@@ -88,7 +87,7 @@ export default function Explore() {
         onConfirm={async (lv) => {
           setLevel(lv); // 선택한 레벨 저장
           try {
-            // getQuestions API 사용 (더미 데이터 우선)
+            // getQuestions API 사용 (더미 데이터 제거)
             console.log('🎯 퀴즈 데이터 요청 중...');
             setIsFetchingQuestions(true);
             const result = await apiGetQuestions({ 
@@ -102,14 +101,13 @@ export default function Explore() {
               setQuestions(result.questions);
               setQuizId(result.quizId || null);
             } else {
-              console.log('🔄 더미 퀴즈 데이터 사용');
-              setQuestions(dummyQuizzes);
+              console.warn('⚠️ 퀴즈 데이터가 비어 있습니다.');
+              setQuestions([]);
               setQuizId(null);
             }
           } catch (err) {
             console.error("❌ 문제 불러오기 실패:", err);
-            console.log('🔄 더미 퀴즈 데이터로 폴백');
-            setQuestions(dummyQuizzes);
+            setQuestions([]);
             setQuizId(null);
           } finally { setIsFetchingQuestions(false); }
           setQid(0);
