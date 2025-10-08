@@ -124,6 +124,13 @@
 .feed-card-category { display:none; }
 .feed-card-date { display:none; }
 
+/* ===== Overlay tier badge hardening (priority overrides) ===== */
+.feed-card-header { position: static !important; }
+.avatar-wrap { position: relative !important; display: inline-block !important; flex-shrink: 0 !important; }
+.feed-card-profile { width: 40px !important; height: 40px !important; border-radius: 50% !important; object-fit: cover !important; }
+.avatar-tier-badge { position: absolute !important; right: -4px !important; bottom: -4px !important; width: 16px !important; height: 16px !important; z-index: 5 !important; }
+.feed-card-header .avatar-tier-badge { position: absolute !important; }
+
 /* page container */
 .community-container {
   position: relative;
