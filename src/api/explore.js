@@ -228,6 +228,10 @@ function parseBoolLoose(v) {
 
 function normalizeQuizPayload(raw) {
   if (!raw) return raw;
+  // 미리 기사 맵 구성: raw.articles 배열로 내려오는 경우 id->article 매핑
+  const articlesMap = Array.isArray(raw?.articles)
+    ? raw.articles.reduce((acc, a) => { const id = a?.id ?? a?.articleId ?? a?.article_id; if (id != null) acc[String(id)] = a; return acc; }, {})
+    : {};
   // 이미지 URL 유효성 검사 및 보정: 숫자/불린 등은 무시하고,
   // 파일명/상대경로만 온 경우 API origin 기준 절대 URL로 변환하여 기사문제 표시를 지원
   const sanitizeImageUrl = (v) => {
@@ -296,6 +300,15 @@ function normalizeQuizPayload(raw) {
       const artImg = nestedArticle.image_url || nestedArticle.imageUrl || nestedArticle.image_path || nestedArticle.imagePath;
       image = sanitizeImageUrl(artImg);
     }
+    // raw.articles에서 보강
+    if (!image) {
+      const aId = q.articleId ?? q.article_id;
+      if (aId != null && articlesMap && articlesMap[String(aId)]) {
+        const art = articlesMap[String(aId)];
+        const artImg = art?.image_url || art?.imageUrl || art?.image_path || art?.imagePath;
+        image = sanitizeImageUrl(artImg);
+      }
+    }
   const rawType = q.type ?? q.questionType ?? q.kind;
   const hasArticleId = q.articleId != null || q.article_id != null;
   // 기사형 판정: 명시적 type 기사, 이미지가 있거나, article_id 또는 중첩 기사객체가 있는 경우 모두 인정
@@ -313,13 +326,14 @@ function normalizeQuizPayload(raw) {
       articleTitleMd: (
         q.articleTitleMd ?? q.article_title_md ?? q.articleTitle ?? q.article_title ??
         q.newsTitle ?? q.news_title ?? q.contextTitle ?? q.context_title ??
-        nestedArticle?.title ?? null
+        nestedArticle?.title ?? (articlesMap[String(q.articleId ?? q.article_id)]?.title) ?? null
       ),
       articleBodyMd: (
         q.articleBodyMd ?? q.article_body_md ?? q.articleBody ?? q.article_body ??
         q.articleMd ?? q.article_md ?? q.article ?? q.contentMd ?? q.content_md ?? q.content ??
         q.contextMd ?? q.context_md ?? q.context ?? q.passageMd ?? q.passage_md ?? q.passage ??
-        nestedArticle?.body_md ?? nestedArticle?.bodyMd ?? nestedArticle?.body ?? null
+        nestedArticle?.body_md ?? nestedArticle?.bodyMd ?? nestedArticle?.body ??
+        (articlesMap[String(q.articleId ?? q.article_id)]?.body_md || articlesMap[String(q.articleId ?? q.article_id)]?.bodyMd || articlesMap[String(q.articleId ?? q.article_id)]?.body) ?? null
       ),
       // 학습/핵심포인트/힌트 정규화
       solvingKeypointsMd: (
@@ -430,11 +444,11 @@ export const submitAnswer = async ({ quizId, userId, answers, token, articleId }
   }
   const payload = { quizId, userId: withUserId(userId), answers, articleId };
   const paths = [
-    '/quizzes/submit-answer',
+    '/quizzes/submit-answer', // 스펙 우선
     '/quiz/submit',
     '/quiz/answers',
   ];
-  // 일부 백엔드가 단일 답안 스키마를 기대하는 경우를 대비
+  // 일부 백엔드가 단일 답안 스키마를 기대하는 경우 우선 시도
   const single = answers && answers[0] ? {
     quizId,
     userId: withUserId(userId),
@@ -442,7 +456,7 @@ export const submitAnswer = async ({ quizId, userId, answers, token, articleId }
     selectedOptionId: answers[0].selectedOptionId,
     articleId,
   } : null;
-  const bodies = [payload, single].filter(Boolean);
+  const bodies = [single, payload].filter(Boolean);
   for (const p of paths) {
     for (const b of bodies) {
       try {
