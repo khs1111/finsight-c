@@ -6,8 +6,7 @@ import ExploreMain from "../components/explore/ExploreMain";
 import QuizQuestion from "../components/explore/QuizQuestion";
 import CompletionScreen from "../components/explore/CompletionScreen";
 
-import {getQuestions as apiGetQuestions, postAttempt } from "../api/explore";
-import { createWrongNote } from "../api/community";
+import { getQuizzes, fetchQuizNormalized, postAttempt } from "../api/explore";
 import { addWrongNoteImmediate } from "../components/study/useWrongNoteStore";
 import CategoryNav from "../components/news/CategoryNav";
 import { useNavVisibility } from "../components/navigation/NavVisibilityContext";
@@ -16,8 +15,7 @@ export default function Explore() {
   const [step, setStep] = useState(1);
   const [mainTopic, setMainTopic] = useState(null);      // name
   const [subTopic, setSubTopic] = useState(null);        // name
-  const [mainTopicId, setMainTopicId] = useState(null);  // id
-  const [subTopicId, setSubTopicId] = useState(null);    // id
+  // Topic IDs not used in quizId-based flow
   const [level, setLevel] = useState(null); // 난이도 상태 추가
   const [current, setQid] = useState(0);
   const [questions, setQuestions] = useState([]);
@@ -67,11 +65,9 @@ export default function Explore() {
   if (step === 1) {
     content = (
       <TopicPicker
-        onConfirm={(tName, subName, tId, sId) => {
+        onConfirm={(tName, subName/*, tId, sId*/ ) => {
           setMainTopic(tName);
           setSubTopic(subName);
-          setMainTopicId(tId);
-          setSubTopicId(sId);
           setStep(2);
         }}
       />
@@ -88,22 +84,27 @@ export default function Explore() {
           setLevel(lv); // 선택한 레벨 저장
           try {
             // getQuestions API 사용 (더미 데이터 제거)
-            console.log('🎯 퀴즈 데이터 요청 중...');
+            console.log('🎯 레벨별 퀴즈 목록 요청 중...');
             setIsFetchingQuestions(true);
-            const result = await apiGetQuestions({ 
-              topicId: (mainTopicId != null ? mainTopicId : mainTopic),
-              subTopic: (subTopicId != null ? subTopicId : subTopic),
-              subTopicId: subTopicId,
-              levelId: lv 
-            });
+            const list = await getQuizzes(lv);
+            const quizzes = Array.isArray(list) ? list : [];
+            if (!quizzes.length) throw new Error('No quizzes for selected level');
+            // 우선순위: NOT_STARTED → IN_PROGRESS → 그 외, 없으면 첫 번째
+            const prioritized =
+              quizzes.find(q => q.status === 'NOT_STARTED') ||
+              quizzes.find(q => q.status === 'IN_PROGRESS') ||
+              quizzes[0];
+            const qid = prioritized?.id || prioritized?.quizId || quizzes[0]?.id;
+            if (!qid) throw new Error('No quizId');
+            const result = await fetchQuizNormalized(qid);
             if (result && result.questions && result.questions.length > 0) {
-              console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
+              console.log('✅ 퀴즈 로드 성공:', result.questions.length, '개 문제');
               setQuestions(result.questions);
-              setQuizId(result.quizId || null);
+              setQuizId(result.quizId || qid);
             } else {
               console.warn('⚠️ 퀴즈 데이터가 비어 있습니다.');
               setQuestions([]);
-              setQuizId(null);
+              setQuizId(qid);
             }
           } catch (err) {
             console.error("❌ 문제 불러오기 실패:", err);
@@ -136,10 +137,19 @@ export default function Explore() {
           // 질문 재조회
           try {
             setIsFetchingQuestions(true);
-            const result = await apiGetQuestions({ topicId: newTopic, subTopic: newSub, levelId: newLevel });
+            const list = await getQuizzes(newLevel);
+            const quizzes = Array.isArray(list) ? list : [];
+            if (!quizzes.length) throw new Error('No quizzes for selected level');
+            const prioritized =
+              quizzes.find(q => q.status === 'NOT_STARTED') ||
+              quizzes.find(q => q.status === 'IN_PROGRESS') ||
+              quizzes[0];
+            const qid = prioritized?.id || prioritized?.quizId || quizzes[0]?.id;
+            if (!qid) throw new Error('No quizId');
+            const result = await fetchQuizNormalized(qid);
             if (result && Array.isArray(result.questions)) {
               setQuestions(result.questions);
-              setQuizId(result.quizId || null);
+              setQuizId(result.quizId || qid);
             }
           } catch (e) {
             console.warn('질문 재조회 실패:', e);
@@ -287,18 +297,8 @@ export default function Explore() {
                   category: question?.category || subTopic || mainTopic || '기타',
                   meta: { quizId: quizId ?? undefined, questionId: question.id }
                 });
-                // 백엔드 저장 시도
-                const token = localStorage.getItem('accessToken');
-                const userId = localStorage.getItem('userId') || undefined;
-                await createWrongNote({
-                  userId,
-                  quizId: quizId ?? undefined,
-                  questionId: question.id,
-                  selectedOptionId,
-                  correctOptionId: correctOpt?.id ?? undefined,
-                  category: question?.category || undefined,
-                  meta: { topic: mainTopic, subTopic }
-                }, token);
+                // 백엔드 오답 생성은 submit-answer 시점에 서버가 처리
+                // 프론트에서는 별도 POST를 호출하지 않습니다.
               } catch (_) { /* ignore */ }
             }
           } catch (e) {
@@ -311,7 +311,7 @@ export default function Explore() {
             setResults(newResults);
             // 백엔드 실패 시에도 로컬 진행도 저장
             persistProgress(level, question, selectedOptionId, isCorrect, current);
-            // 오답 로컬 기록 (백엔드 실패 케이스)
+            // 오답 로컬 기록 (백엔드 실패 케이스). 서버 POST는 호출하지 않음.
             if (!isCorrect) {
               try {
                 const correctOption = question.options?.find(o => o.isCorrect);

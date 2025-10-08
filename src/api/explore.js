@@ -1,5 +1,6 @@
 // src/api/explore.js - 백엔드 API 연동
 import { API_BASE, IMAGE_BASE } from './config';
+// axios was removed from this module to avoid unused import warnings (http() covers auth-aware requests)
 import { guestLogin } from './auth';
 
 // 백엔드 연결 상태 확인 (정보용)
@@ -189,6 +190,14 @@ export const getLevelQuizzes = async (levelId, userId, token) => {
     } catch { return []; }
 };
 
+// Explicit axios wrapper aligned with backend spec: GET /api/levels/{id}/quizzes
+export async function getQuizzes(levelId) {
+  const lid = coerceLevelId(levelId);
+  // use http() to include Authorization/cookies
+  const data = await http(`/levels/${lid}/quizzes`);
+  return Array.isArray(data) ? data : (data?.quizzes || []);
+}
+
 // 4. 레벨별 진행도 조회
 export const getLevelProgress = async (levelId, userId, token) => {
   const uid = withUserId(userId);
@@ -206,6 +215,12 @@ export const getQuiz = async (quizId) => {
     return null;
   }
 };
+
+// Explicit axios wrapper aligned with backend spec: GET /api/quizzes/{id}
+export async function getQuizQuestions(quizId) {
+  // prefer http() for consistent auth
+  return await http(`/quizzes/${quizId}`);
+}
 
 // 서버 응답 키를 UI에서 쓰는 형태로 정규화 (questionText/optionText → question/text)
 function parseBoolLoose(v) {
@@ -521,15 +536,7 @@ export const submitAnswer = async ({ quizId, userId, answers, token, articleId }
 
   // 다양한 엔드포인트 변형 지원
   const paths = [
-    '/quizzes/submit-answer', // 스펙 우선
-    '/quiz/submit',
-    '/quiz/answers',
-    `/quizzes/${nQuizId}/answers`,
-    `/quizzes/${nQuizId}/submit`,
-    `/quizzes/${nQuizId}/attempt`,
-    '/answers/submit',
-    '/answers',
-    '/attempts',
+    '/quizzes/submit-answer', // backend spec
   ];
 
   const bodies = [payload, ...singleVariants];
@@ -888,6 +895,86 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
     return { questions: [], totalCount: 0 };
   }
 };
+
+// Convenience: finish a quiz by id (backend spec)
+export async function finishQuiz(quizId) {
+  return await http(`/quizzes/${quizId}/complete`, { method: 'POST' });
+}
+
+// Fetch a single quiz by ID, normalize, enrich article fields, and enforce STORY@2 and ARTICLE@3 positions
+export async function fetchQuizNormalized(quizId) {
+  try {
+    const rawQ = await http(`/quizzes/${quizId}`);
+    const norm = normalizeQuizPayload(rawQ);
+    if (Array.isArray(norm?.questions) && norm.questions.length) {
+      // Enrich article questions with /articles/{id} (image/title/body)
+      await Promise.all(norm.questions.map(async (q, idx) => {
+        const aId = q.articleId ?? q.article_id;
+        if (!aId) return;
+        try {
+          const art = await http(`/articles/${aId}`);
+          const artImg = art?.image_url || art?.imageUrl || art?.image_path || art?.imagePath || art?.image || art?.img || art?.thumbnail;
+          const image = artImg ? (() => {
+            const s = String(artImg).trim();
+            if (/^(https?:\/\/|data:|blob:)/i.test(s)) return s;
+            try {
+              const apiUrl = new URL(API_BASE, (typeof window !== 'undefined' ? window.location.origin : undefined));
+              const origin = apiUrl.origin;
+              if (/^\//.test(s)) {
+                const base = IMAGE_BASE || origin;
+                return `${base}${s}`;
+              }
+              const normalized = s.replace(/^\/+/, '');
+              const base = (IMAGE_BASE || origin).replace(/\/$/, '');
+              return `${base}/${normalized}`;
+            } catch { return null; }
+          })() : null;
+          norm.questions[idx] = {
+            ...q,
+            type: (String(q?.type||'').toLowerCase().includes('article') || image) ? 'articleImage' : q.type,
+            image: q.image || image || null,
+            articleTitleMd: q.articleTitleMd || art?.title || null,
+            articleBodyMd: q.articleBodyMd || art?.body_md || art?.bodyMd || art?.body || null,
+          };
+        } catch (_) { /* ignore per-question failure */ }
+      }));
+    }
+    // Reorder: STORY to index 2, ARTICLE to index 3
+    let qs = Array.isArray(norm?.questions) ? norm.questions : [];
+    const isArticleQ = (q) => {
+      const t = String(q?.type||'').toLowerCase();
+      return (t === 'articleimage' || t === 'article') || (q?.articleId != null || q?.article_id != null);
+    };
+    const isStoryQ = (q) => {
+      const t = String(q?.type || q?.questionType || '').toLowerCase();
+      if (t.includes('story')) return true;
+      const text = [q?.question, q?.stemMd, q?.teachingExplainerMd].filter(Boolean).join(' ').toLowerCase();
+      return /스토리|story|case|사례/.test(text);
+    };
+    const moveToIndex = (arr, pred, targetIdx) => {
+      if (!Array.isArray(arr) || arr.length === 0) return arr || [];
+      const idx = arr.findIndex(pred);
+      if (idx === -1) return arr;
+      const ti = Math.min(targetIdx, Math.max(0, arr.length - 1));
+      if (idx === ti) return arr;
+      const clone = arr.slice();
+      const [item] = clone.splice(idx, 1);
+      clone.splice(ti, 0, item);
+      return clone;
+    };
+    qs = moveToIndex(qs, isStoryQ, 2);
+    qs = moveToIndex(qs, isArticleQ, 3);
+    try {
+      const storyIdx = qs.findIndex(q => isStoryQ(q));
+      const articleIdx = qs.findIndex(q => isArticleQ(q));
+      console.log(`✅ 문항 배치 확인: STORY@${storyIdx} | ARTICLE@${articleIdx} | total=${qs.length}`);
+    } catch (_) {}
+    return { questions: qs, totalCount: qs.length, quizId };
+  } catch (e) {
+    console.log('❌ fetchQuizNormalized 실패:', e?.message);
+    return { questions: [], totalCount: 0, quizId };
+  }
+}
 
 // 레벨 메타데이터 조회 (설명/목표 등) - 존재하지 않으면 null 반환
 // 현재 스펙에는 별도 Level 메타 조회 엔드포인트가 없으므로, 호출을 제거합니다.
