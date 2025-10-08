@@ -198,6 +198,15 @@ export async function getQuizzes(levelId) {
   return Array.isArray(data) ? data : (data?.quizzes || []);
 }
 
+// GET /api/subsectors/{subsectorId}/levels/{levelId}/quizzes
+export async function getQuizzesBySubsector(subsectorId, levelId) {
+  const lid = coerceLevelId(levelId);
+  if (subsectorId == null) return getQuizzes(lid);
+  const sid = encodeURIComponent(String(subsectorId));
+  const data = await http(`/subsectors/${sid}/levels/${lid}/quizzes`);
+  return Array.isArray(data) ? data : (data?.quizzes || []);
+}
+
 // 4. 레벨별 진행도 조회
 export const getLevelProgress = async (levelId, userId, token) => {
   const uid = withUserId(userId);

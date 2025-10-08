@@ -6,7 +6,7 @@ import ExploreMain from "../components/explore/ExploreMain";
 import QuizQuestion from "../components/explore/QuizQuestion";
 import CompletionScreen from "../components/explore/CompletionScreen";
 
-import { getQuizzes, fetchQuizNormalized, postAttempt } from "../api/explore";
+import { getQuizzes, getQuizzesBySubsector, fetchQuizNormalized, postAttempt } from "../api/explore";
 import { addWrongNoteImmediate } from "../components/study/useWrongNoteStore";
 import CategoryNav from "../components/news/CategoryNav";
 import { useNavVisibility } from "../components/navigation/NavVisibilityContext";
@@ -86,7 +86,8 @@ export default function Explore() {
             // getQuestions API 사용 (더미 데이터 제거)
             console.log('🎯 레벨별 퀴즈 목록 요청 중...');
             setIsFetchingQuestions(true);
-            const list = await getQuizzes(lv);
+            // README 설계: /subsectors/{subsectorId}/levels/{levelId}/quizzes 우선
+            const list = await getQuizzesBySubsector(subTopic /* may be name */, lv).catch(() => getQuizzes(lv));
             const quizzes = Array.isArray(list) ? list : [];
             if (!quizzes.length) throw new Error('No quizzes for selected level');
             // 우선순위: NOT_STARTED → IN_PROGRESS → 그 외, 없으면 첫 번째
@@ -137,7 +138,7 @@ export default function Explore() {
           // 질문 재조회
           try {
             setIsFetchingQuestions(true);
-            const list = await getQuizzes(newLevel);
+            const list = await getQuizzesBySubsector(newSub, newLevel).catch(() => getQuizzes(newLevel));
             const quizzes = Array.isArray(list) ? list : [];
             if (!quizzes.length) throw new Error('No quizzes for selected level');
             const prioritized =
