@@ -187,6 +187,7 @@ export default function Explore() {
             const resp = await postAttempt({
               quizId: quizId ?? undefined,
               questionId: question.id,
+              articleId: question.articleId || question.article_id || undefined,
               selectedOptionId,
             });
 

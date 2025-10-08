@@ -418,14 +418,14 @@ function normalizeQuizPayload(raw) {
 
 // 6. 답안 제출
 // 답안 제출 (백엔드 명세: quizId, userId, answers 배열, JWT 토큰)
-export const submitAnswer = async ({ quizId, userId, answers, token }) => {
+export const submitAnswer = async ({ quizId, userId, answers, token, articleId }) => {
   // 퀴즈 ID가 없거나 비정상인 경우 백엔드 호출을 생략하고 로컬 판정 경로로 위임
   const nQuizId = Number(quizId);
   if (!Number.isFinite(nQuizId)) {
     // 빈 객체를 반환하면 상위 로직이 옵션의 isCorrect로 로컬 판정합니다.
     return {};
   }
-  const payload = { quizId, userId: withUserId(userId), answers };
+  const payload = { quizId, userId: withUserId(userId), answers, articleId };
   const paths = [
     '/quizzes/submit-answer',
     '/quiz/submit',
@@ -437,6 +437,7 @@ export const submitAnswer = async ({ quizId, userId, answers, token }) => {
     userId: withUserId(userId),
     questionId: answers[0].questionId,
     selectedOptionId: answers[0].selectedOptionId,
+    articleId,
   } : null;
   const bodies = [payload, single].filter(Boolean);
   for (const p of paths) {
