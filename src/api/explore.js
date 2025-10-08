@@ -280,6 +280,7 @@ function normalizeQuizPayload(raw) {
 
   const questions = (raw.questions || []).map((q) => {
     // 이미지 후보 키들(백엔드 다양성 대응): 가장 먼저 매칭되는 값을 사용
+    const nestedArticle = q.article || q.news || null;
     const img = (
       q.image ?? q.imageUrl ?? q.imageURL ?? q.imgUrl ?? q.img_url ??
       q.imagePath ?? q.image_path ?? q.mediaUrl ?? q.media_url ??
@@ -289,9 +290,15 @@ function normalizeQuizPayload(raw) {
       q.picture ?? q.photo ?? q.coverImage ?? q.cover_image ?? q.coverImageUrl ?? q.cover_image_url ??
       null
     );
-    const image = sanitizeImageUrl(img);
+    // nested article 이미지 보강
+    let image = sanitizeImageUrl(img);
+    if (!image && nestedArticle) {
+      const artImg = nestedArticle.image_url || nestedArticle.imageUrl || nestedArticle.image_path || nestedArticle.imagePath;
+      image = sanitizeImageUrl(artImg);
+    }
     const rawType = q.type ?? q.questionType ?? q.kind;
-    const isArticleLike = looksArticleType(rawType) || !!image;
+    const hasArticleId = q.articleId != null || q.article_id != null;
+    const isArticleLike = looksArticleType(rawType) || !!image || !!nestedArticle || hasArticleId;
       const mapped = {
       ...q,
       // 질문 본문/지문 매핑 보강
@@ -304,12 +311,14 @@ function normalizeQuizPayload(raw) {
       // 기사형 본문/제목 매핑 (백엔드 다양한 키 대응)
       articleTitleMd: (
         q.articleTitleMd ?? q.article_title_md ?? q.articleTitle ?? q.article_title ??
-        q.newsTitle ?? q.news_title ?? q.contextTitle ?? q.context_title ?? null
+        q.newsTitle ?? q.news_title ?? q.contextTitle ?? q.context_title ??
+        nestedArticle?.title ?? null
       ),
       articleBodyMd: (
         q.articleBodyMd ?? q.article_body_md ?? q.articleBody ?? q.article_body ??
         q.articleMd ?? q.article_md ?? q.article ?? q.contentMd ?? q.content_md ?? q.content ??
-        q.contextMd ?? q.context_md ?? q.context ?? q.passageMd ?? q.passage_md ?? q.passage ?? null
+        q.contextMd ?? q.context_md ?? q.context ?? q.passageMd ?? q.passage_md ?? q.passage ??
+        nestedArticle?.body_md ?? nestedArticle?.bodyMd ?? nestedArticle?.body ?? null
       ),
       // 학습/핵심포인트/힌트 정규화
       solvingKeypointsMd: (
