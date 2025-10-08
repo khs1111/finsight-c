@@ -684,15 +684,20 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
               try {
                 const art = await http(`/articles/${aId}`);
                 const artImg = art?.image_url || art?.imageUrl || art?.image_path || art?.imagePath;
-                const image = artImg ? ( () => {
+                // Use same rules as sanitizeImageUrl (no API path leakage)
+                const image = artImg ? (() => {
                   const s = String(artImg).trim();
                   if (/^(https?:\/\/|data:|blob:)/i.test(s)) return s;
                   try {
                     const apiUrl = new URL(API_BASE, (typeof window !== 'undefined' ? window.location.origin : undefined));
                     const origin = apiUrl.origin;
-                    const basePath = apiUrl.pathname.replace(/\/$/, '');
+                    if (/^\//.test(s)) {
+                      const base = IMAGE_BASE || origin;
+                      return `${base}${s}`;
+                    }
                     const normalized = s.replace(/^\/+/, '');
-                    return `${(IMAGE_BASE || origin)}${basePath ? basePath + '/' : '/'}${normalized}`;
+                    const base = (IMAGE_BASE || origin).replace(/\/$/, '');
+                    return `${base}/${normalized}`;
                   } catch { return null; }
                 })() : null;
                 norm.questions[idx] = {
@@ -709,13 +714,6 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
         } catch (_) { return { id, norm: null }; }
       })
     );
-
-    // 선호도 함수들
-    // 기사형 퀴즈 선호 판단: 이미지 유무와 무관하게 type 또는 articleId가 있으면 기사형으로 간주
-    const hasArticle = (norm) => Array.isArray(norm?.questions) && norm.questions.some((q) => {
-      const t = String(q?.type || '').toLowerCase();
-      return t === 'articleimage' || t === 'article' || q?.articleId != null || q?.article_id != null;
-    });
 
     // 주제/세부주제 관련 키워드 매칭 가중치
     const getKeywords = (topic, sub) => {
@@ -779,31 +777,18 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
       return kw.reduce((s,k)=> s + (hay.includes(k) ? 1 : 0), 0);
     };
 
-  // 1순위: 기사형 포함 퀴즈 우선 선택 (이미지 없어도 type/articleId가 있으면 기사형)
-    const withScores = details.map(d => ({ ...d, score: scoreOf(d.norm), hasArticle: hasArticle(d.norm) }));
-    const onlyArticle = withScores.filter(d => d.norm && d.hasArticle);
-    let chosenEntry;
-    if (onlyArticle.length) {
-      // 키워드가 하나라도 매칭되는 후보가 있으면 그 안에서 선택
-      const positive = onlyArticle.filter(d => d.score > 0);
-      const pool = positive.length ? positive : onlyArticle;
-      chosenEntry = pool.sort((a,b) => (b.score - a.score))[0];
-    } else {
-      // 기사형이 하나도 없으면 주제 매칭 점수 기준으로 선택 (백엔드 데이터 이슈 가능성 로그)
-      const positive = withScores.filter(d => d.norm && d.score > 0);
-      const pool = positive.length ? positive : withScores.filter(d => d.norm);
-      chosenEntry = pool.sort((a,b) => (b.score - a.score))[0];
-      console.log('ℹ️ 선택된 레벨 퀴즈들 중 기사형 문항이 없습니다. 백엔드에서 이미지가 포함된 문항을 제공하지 않는 상태일 수 있습니다.');
-    }
+    // 1순위: 주제 매칭 점수 우선 (기사형 여부와 무관) — 백엔드가 퀴즈 내부에서 3/4번 유형을 보장
+    const withScores = details.map(d => ({ ...d, score: scoreOf(d.norm) }));
+    const primaryEntry = withScores.find(d => d.id === prioritizedId && d.norm);
+    // 우선 선택: 주제 매칭 점수가 양수인 것 중 최고점, 없으면 우선순위 퀴즈 유지
+    const positive = withScores.filter(d => d.norm && d.score > 0);
+    const bestByTopic = positive.sort((a,b) => (b.score - a.score))[0];
+    const chosenEntry = bestByTopic || primaryEntry || withScores.find(d => d.norm) || null;
 
     const chosen = chosenEntry?.norm;
     const chosenId = chosenEntry?.id || prioritizedId;
     if (chosen) {
-      const hasAnyArticleQ = Array.isArray(chosen.questions) && chosen.questions.some((q) => {
-        const t = String(q?.type||'').toLowerCase();
-        return t === 'articleimage' || t === 'article' || q?.articleId != null || q?.article_id != null;
-      });
-      console.log(`🧩 선택된 퀴즈 ${chosenId} | 기사문항 포함: ${hasAnyArticleQ}`);
+      console.log(`🧩 선택된 퀴즈 ${chosenId} | 주제 매칭 점수=${chosenEntry?.score||0}`);
     }
 
     // 기사형 문항은 첫 번째 문제로 나오지 않도록 4번째(인덱스 3), 스토리텔링은 3번째(인덱스 2)
@@ -846,35 +831,11 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
     qs = moveStoryToIndex(qs, 2);
     qs = moveArticleToIndex(qs, 3);
 
-    // 보강 1) 기사형 문항이 하나도 없으면 가상 문항을 추가하여 4번째에 배치
-  let hasAnyArticle = qs.some(isArticleQ);
-    if (!hasAnyArticle) {
-      const virtualArticle = {
-        id: `virtual-article-${Date.now()}`,
-        type: 'articleImage',
-        image: null, // UI에서 기본 대체 이미지를 사용
-        stemMd: '다음 기사를 읽고 물음에 답하세요.',
-        question: '기사 내용을 바탕으로 올바른 선택지를 고르세요.',
-        options: [
-          { id: 'A', text: '선택지 A', isCorrect: false },
-          { id: 'B', text: '선택지 B', isCorrect: true },
-          { id: 'C', text: '선택지 C', isCorrect: false },
-          { id: 'D', text: '선택지 D', isCorrect: false },
-        ],
-      };
-      const clone = qs.slice();
-      const ti = Math.min(3, Math.max(0, clone.length));
-      clone.splice(ti, 0, virtualArticle);
-      qs = clone;
-      hasAnyArticle = true;
-      console.log('🧩 기사형 문항이 없어 가상 기사 문제를 4번째에 추가했습니다.');
-    }
-
-    // 보강 2) 총 문항 수가 4 미만이면 4개가 되도록 가상 문항(단답형)을 덧붙임
+    // 보강) 총 문항 수가 4 미만이면 4개가 되도록 가상 문항(단답형)을 덧붙임 (기사형/스토리형은 생성하지 않음)
     while (qs.length < 4) {
       const filler = {
         id: `virtual-filler-${qs.length}-${Date.now()}`,
-        type: qs.length === 3 ? 'articleImage' : undefined,
+        type: undefined,
         image: null,
         stemMd: '학습 효과 점검용 보강 문항입니다.',
         question: '가장 적절한 선택지를 고르세요.',
@@ -888,7 +849,7 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
       qs.push(filler);
     }
 
-    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항${hasAnyArticle?', 기사형 포함' : ''}; 주제 매칭 점수=${chosenEntry?.score||0})`);
+    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항; 주제 매칭 점수=${chosenEntry?.score||0})`);
     return { questions: qs, totalCount: qs.length, quizId: chosenId };
   } catch (error) {
     console.log('❌ 백엔드 로드 실패 (getQuestions):', error.message);
