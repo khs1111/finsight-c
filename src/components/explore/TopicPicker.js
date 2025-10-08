@@ -1,5 +1,3 @@
-// 주제 선택
-import { useState } from "react";
 // 주제 선택 - 백엔드 연동
 import { useState, useEffect, useMemo } from "react";
 import { getSectorsWithSubsectors } from "../../api/explore";
@@ -93,7 +91,7 @@ export default function TopicPicker({ onConfirm }) {
               width: 'calc(100vw - 32px)',
               maxWidth: 380,
               margin: '0 auto',
-              borderRadius: openTopic === topic ? '8px 8px 0 0' : 8,
+              borderRadius: openTopicId === topic.id ? '8px 8px 0 0' : 8,
               boxShadow: '0px 0px 2px rgba(0,0,0,0.10)',
               background: openTopicId === topic.id ? '#448FFF' : '#FFF',
               transition: 'box-shadow 0.2s, background 0.2s',
