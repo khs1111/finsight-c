@@ -90,17 +90,11 @@
 .feed-card-actions .action { display:flex; align-items:center; gap:6px; background:none; border:none; padding:0; color:inherit; cursor:pointer; }
 .feed-card-actions .action .icon { display:inline-flex; width:16px; height:16px; }
 
-.feed-card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  color: #888;
-  margin-top: auto; /* stick footer to bottom inside fixed-height card */
-}
+/* footer layout removed; overridden below */
 
-.feed-card-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom: 8px; }
-.feed-card-tag { font-size: 11px; color:#626262; background:#EEF2F6; border:1px solid #DFE5EE; border-radius: 14px; padding: 4px 8px; }
+/* tag chips removed per spec */
+.feed-card-tags { display:none; }
+.feed-card-tag { display:none; }
 
 .feed-card-like-btn { background:#EEF2F6; border:1px solid #DFE5EE; color:#474747; font-size:12px; border-radius: 8px; padding:6px 10px; cursor:pointer; }
 .feed-card-like-btn:hover { filter: brightness(0.98); }
@@ -108,18 +102,12 @@
 .feed-card-category {
   font-weight: 500;
 }
-.feed-card-date {
-  font-size: 12px;
-}
+/* footer removed per spec */
+.feed-card-footer { display:none; }
+.feed-card-category { display:none; }
+.feed-card-date { display:none; }
 
-.community-loading, .community-error, .community-empty {
-  text-align: center;
-  color: #888;
-  padding: 32px 0;
-  font-size: 16px;
-}
-@import './StudyPage.css';
-
+/* page container */
 .community-container {
   position: relative;
   width: 100%;

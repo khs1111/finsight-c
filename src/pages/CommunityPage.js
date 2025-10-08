@@ -7,6 +7,7 @@ import './CommunityPage.css';
 import RankFilterDropdown from '../components/community/RankFilterDropdown';
 import { fetchCommunityPosts, likeCommunityPost, unlikeCommunityPost } from '../api/community';
 import { useNavigate } from 'react-router-dom';
+import defaultAvatar from '../assets/community-default-avatar.svg';
 
 // 카테고리 목록 (디자인 스펙 기반)
 // '오늘의 뉴스'는 전체(ALL) 개념으로 처리
@@ -184,7 +185,7 @@ export default function CommunityPage() {
                 <div key={post.id} className="community-feed-card">
                   <div className="feed-card-header">
                     <div className="avatar-wrap">
-                      <img src={post.author?.profileImage || require('../assets/community-default-avatar.svg')} alt="프로필" className="feed-card-profile" />
+                      <img src={post.author?.profileImage || defaultAvatar} alt="프로필" className="feed-card-profile" />
                       {/* 티어 배지: 프로필 오른쪽 아래 오버레이 (작은 골드 스타) */}
                       {tierText && (
                         <span className="avatar-tier-badge is-star" aria-label={`티어 ${tierText}`} title={tierText}>
@@ -222,19 +223,6 @@ export default function CommunityPage() {
                   </div>
                   {/* 본문 텍스트 */}
                   <div className="feed-card-content">{post.body}</div>
-
-                  {/* 태그 영역: 문자열 배열 또는 {name} 배열 모두 지원 */}
-                  {Array.isArray(post.tags) && post.tags.length > 0 && (
-                    <div className="feed-card-tags">
-                      {post.tags.map((t, i) => {
-                        const label = typeof t === 'string' ? t : (t?.name || t?.label || '');
-                        if (!label) return null;
-                        return (
-                          <span key={`tag-${post.id}-${i}`} className="feed-card-tag">#{label}</span>
-                        );
-                      })}
-                    </div>
-                  )}
                   <div className="feed-card-actions">
                     <button type="button" className="action" onClick={() => toggleLike(post)} aria-label={liked ? '좋아요 취소' : '좋아요'}>
                       <span className="icon" aria-hidden="true">
@@ -257,11 +245,6 @@ export default function CommunityPage() {
                       </span>
                       <span className="count">{post.commentCount ?? 0}</span>
                     </div>
-                  </div>
-                  {/* 카드 푸터: 카테고리와 날짜 표시 (디자인 스펙 반영) */}
-                  <div className="feed-card-footer">
-                    <span className="feed-card-category">{post.categoryName || post.category || category}</span>
-                    <span className="feed-card-date">{formatKDate(post.createdAt)}</span>
                   </div>
                 </div>
               );

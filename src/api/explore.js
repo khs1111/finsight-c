@@ -350,7 +350,13 @@ function normalizeQuizPayload(raw) {
   image,
   // 기사형으로 보이는 경우(백엔드 type이 ARTICLE 또는 이미지가 있는 경우) UI 타입을 articleImage로 통일
   // 이미지가 없어도 placeholder + 폴백 이미지를 통해 동일한 렌더링을 보장
-  type: isArticleLike ? 'articleImage' : (rawType ?? undefined),
+  type: (() => {
+    const rawLower = String(rawType || '').trim().toLowerCase();
+    if (isArticleLike) return 'articleImage';
+    // 백엔드가 ARTICLE만 주는 경우 대비
+    if (rawLower === 'article') return 'articleImage';
+    return rawType ?? undefined;
+  })(),
       // articleId를 표준화해 보관
       articleId: q.articleId ?? q.article_id ?? undefined,
       options: (q.options || []).map((o, i) => ({
@@ -427,6 +433,15 @@ function normalizeQuizPayload(raw) {
         mapped.options = mapped.options.map((o, i) => ({ ...o, isCorrect: i === idx }));
       }
     }
+
+    // 진단 로그: 기사형 감지 여부
+    try {
+      if (mapped?.type === 'articleImage') {
+        console.log(`📰 [ARTICLE DETECTED] id=${mapped?.id ?? q?.id}, type=${rawType}, image=${!!image}, articleId=${mapped?.articleId ?? q?.article_id}`);
+      } else {
+        console.log(`⚠️ [NOT ARTICLE] id=${mapped?.id ?? q?.id}, type=${rawType}`);
+      }
+    } catch (_) { /* noop log */ }
 
     return mapped;
   });
