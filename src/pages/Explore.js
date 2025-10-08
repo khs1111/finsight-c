@@ -7,6 +7,8 @@ import QuizQuestion from "../components/explore/QuizQuestion";
 import CompletionScreen from "../components/explore/CompletionScreen";
 
 import {getQuestions as apiGetQuestions, postAttempt } from "../api/explore";
+import { createWrongNote } from "../api/community";
+import { addWrongNoteImmediate } from "../components/study/useWrongNoteStore";
 import { dummyQuizzes } from "../utils/testData.js";
 import CategoryNav from "../components/news/CategoryNav";
 import { useNavVisibility } from "../components/navigation/NavVisibilityContext";
@@ -266,6 +268,32 @@ export default function Explore() {
             setResults(newResults);
             // 진행도 로컬 저장 (ExploreMain의 useProgress에서 읽어 반영)
             persistProgress(level, question, selectedOptionId, isCorrect, current);
+            // 오답일 경우 즉시 오답노트에 기록 (로컬 + 백엔드)
+            if (!isCorrect) {
+              try {
+                // 로컬 즉시 반영
+                const correctOpt = (opts && opts.length) ? opts[backendCorrectIdx >= 0 ? backendCorrectIdx : opts.findIndex(o=>o.isCorrect)] : null;
+                addWrongNoteImmediate({
+                  question,
+                  userAnswer: selectedOption?.text ?? String(selectedOptionId),
+                  correctAnswer: correctOpt?.text ?? null,
+                  category: question?.category || subTopic || mainTopic || '기타',
+                  meta: { quizId: quizId ?? undefined, questionId: question.id }
+                });
+                // 백엔드 저장 시도
+                const token = localStorage.getItem('accessToken');
+                const userId = localStorage.getItem('userId') || undefined;
+                await createWrongNote({
+                  userId,
+                  quizId: quizId ?? undefined,
+                  questionId: question.id,
+                  selectedOptionId,
+                  correctOptionId: correctOpt?.id ?? undefined,
+                  category: question?.category || undefined,
+                  meta: { topic: mainTopic, subTopic }
+                }, token);
+              } catch (_) { /* ignore */ }
+            }
           } catch (e) {
             console.warn('⚠️ 백엔드 채점 실패, 로컬 판정으로 폴백:', e);
             const correctOption = question.options?.find(o => o.isCorrect);
@@ -276,6 +304,19 @@ export default function Explore() {
             setResults(newResults);
             // 백엔드 실패 시에도 로컬 진행도 저장
             persistProgress(level, question, selectedOptionId, isCorrect, current);
+            // 오답 로컬 기록 (백엔드 실패 케이스)
+            if (!isCorrect) {
+              try {
+                const correctOption = question.options?.find(o => o.isCorrect);
+                addWrongNoteImmediate({
+                  question,
+                  userAnswer: selectedOption?.text ?? String(selectedOptionId),
+                  correctAnswer: correctOption?.text ?? null,
+                  category: question?.category || subTopic || mainTopic || '기타',
+                  meta: { quizId: quizId ?? undefined, questionId: question.id }
+                });
+              } catch (_) { /* ignore */ }
+            }
           }
         }}
         onComplete={() => setStep(5)}

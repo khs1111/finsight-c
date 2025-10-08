@@ -29,6 +29,21 @@ export const createCommunityPost = (data, token) => getAxios(token).post('/commu
 export const fetchCommunityPostDetail = (postId, token) => getAxios(token).get(`/community/posts/${postId}`);
 export const createCommunityComment = (postId, data, token) => getAxios(token).post(`/community/posts/${postId}/comments`, data);
 export const likeCommunityPost = (postId, token) => getAxios(token).post(`/community/posts/${postId}/like`);
+// Unlike with fallbacks: try DELETE /like, then POST /unlike
+export const unlikeCommunityPost = async (postId, token) => {
+	const ax = getAxios(token);
+	try {
+		// Primary: RESTful unlike
+		return await ax.delete(`/community/posts/${postId}/like`);
+	} catch (_) {
+		try {
+			// Fallback: explicit unlike endpoint
+			return await ax.post(`/community/posts/${postId}/unlike`);
+		} catch (e) {
+			throw e;
+		}
+	}
+};
 export const fetchMyCommunityPosts = (token) => getAxios(token).get('/community/myposts');
 
 // --------------------
@@ -83,6 +98,20 @@ export function fetchWrongNoteStatistics(userId, token) {
 	return getAxios(token).get(`/wrong-notes/statistics`, {
 		params: { userId }
 	});
+}
+
+// 오답 노트 생성 (틀린 시도 기록)
+export function createWrongNote({ userId, quizId, questionId, selectedOptionId, correctOptionId, category, meta }, token) {
+	const payload = {
+		userId,
+		quizId,
+		questionId,
+		selectedOptionId,
+		correctOptionId,
+		category,
+		meta,
+	};
+	return getAxios(token).post(`/wrong-notes`, payload);
 }
 
 // --------------------

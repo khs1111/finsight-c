@@ -39,7 +39,17 @@ export function useWrongNoteStore() {
         // 2) list (first page)
         const { data: listResp } = await fetchWrongNotes({ userId, page: 0, size: 50, filter: 'all', token });
         const items = Array.isArray(listResp?.items) ? listResp.items : Array.isArray(listResp) ? listResp : [];
-        if (mounted) setWrongState(items);
+        if (mounted) {
+          // Merge with existing local state (avoid losing locally added notes)
+          setWrongState(prev => {
+            const byId = new Map();
+            const push = (arr) => arr.forEach(it => { const id = String(it.id ?? it.noteId ?? it.questionId ?? Math.random()); byId.set(id, { ...it, id }); });
+            push(prev);
+            push(items);
+            // newest first
+            return Array.from(byId.values()).sort((a,b) => (b.addedAt||0) - (a.addedAt||0));
+          });
+        }
       } catch (e) {
         if (mounted) setError(e?.message || '오답노트 불러오기 실패');
       }
@@ -79,3 +89,15 @@ export function useWrongNoteStore() {
 }
 
 export function _resetWrong(list) { setWrongState(list); }
+
+// 외부에서 즉시 추가할 수 있는 헬퍼 (퀴즈 제출 시 오답 기록 등)
+export function addWrongNoteImmediate({ question, userAnswer, correctAnswer, category, meta }) {
+  const item = {
+    question: question?.question || question?.stemMd || '',
+    userAnswer,
+    correctAnswer,
+    category: category || question?.category || '기타',
+    meta,
+  };
+  setWrongState(prev => [{ id: Date.now().toString(), addedAt: Date.now(), ...item }, ...prev]);
+}

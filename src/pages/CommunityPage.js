@@ -5,19 +5,34 @@ import React, { useState, useEffect } from 'react';
 import './StudyPage.css';
 import './CommunityPage.css';
 import RankFilterDropdown from '../components/community/RankFilterDropdown';
-import { fetchCommunityPosts, likeCommunityPost } from '../api/community';
+import { fetchCommunityPosts, likeCommunityPost, unlikeCommunityPost } from '../api/community';
 import { useNavigate } from 'react-router-dom';
 
 // 카테고리 목록 (디자인 스펙 기반)
 // '오늘의 뉴스'는 전체(ALL) 개념으로 처리
 const CATEGORIES = ['자유게시판', '탐험지', '경제 시사', '투자'];
+// 백엔드가 코드값을 기대할 수 있으므로 라벨→코드 매핑을 준비 (알 수 없으면 라벨 그대로 사용)
+const CATEGORY_CODE = {
+  '자유게시판': 'FREE',
+  '탐험지': 'EXPLORE',
+  '경제 시사': 'ECONOMY',
+  '투자': 'INVEST',
+};
+const RANK_CODE = {
+  '마스터': 'MASTER',
+  '다이아': 'DIAMOND',
+  '플레티넘': 'PLATINUM',
+  '골드': 'GOLD',
+  '실버': 'SILVER',
+  '브론즈': 'BRONZE',
+};
 
 // CommunityPage: 커뮤니티 메인 피드 컴포넌트
 export default function CommunityPage() {
   // 선택된 카테고리/랭크 상태
   const [showRank, setShowRank] = useState(false);
   const [rank, setRank] = useState(null); // 마스터, 다이아 등
-  const [category, setCategory] = useState(undefined); // undefined는 전체(ALL)
+  const [category, setCategory] = useState('자유게시판'); // 기본 탭: 자유게시판
   const [posts, setPosts] = useState([]);
   const [likedMap, setLikedMap] = useState(() => new Map()); // postId -> boolean
   const [loading, setLoading] = useState(false);
@@ -30,11 +45,13 @@ export default function CommunityPage() {
     (async () => {
       setLoading(true);
       setError(null);
-      try {
+  try {
   const token = localStorage.getItem('accessToken');
   // category가 비어있으면 전체 조회로 간주
   const apiCategory = category || undefined;
-        const { data } = await fetchCommunityPosts({ category: apiCategory, tier: rank }, token);
+  const apiCategoryCode = apiCategory ? (CATEGORY_CODE[apiCategory] || apiCategory) : undefined;
+  const apiTierCode = rank ? (RANK_CODE[rank] || rank) : undefined;
+    const { data } = await fetchCommunityPosts({ category: apiCategoryCode, tier: apiTierCode }, token);
         if (!mounted) return;
         // 서버 응답 배열 가정: [{ id, author:{nickname,profileImage,tier}, body, tags, likeCount, commentCount, createdAt }]
         setPosts(Array.isArray(data) ? data : []);
@@ -89,11 +106,11 @@ export default function CommunityPage() {
       ? { ...p, likeCount: (p.likeCount ?? 0) + (nextLiked ? 1 : -1) }
       : p));
     try {
+      const token = localStorage.getItem('accessToken');
       if (nextLiked) {
-        const token = localStorage.getItem('accessToken');
         await likeCommunityPost(post.id, token);
       } else {
-        // TODO: unlike 엔드포인트가 준비되면 호출로 대체
+        await unlikeCommunityPost(post.id, token);
       }
     } catch (_) {
       // 실패 시 롤백
@@ -143,6 +160,7 @@ export default function CommunityPage() {
               key={c}
               type="button"
               className={active ? 'cat-chip active' : 'cat-chip'}
+              aria-pressed={active}
               onClick={() => setCategory(c)}
             >
               {c}
@@ -166,7 +184,7 @@ export default function CommunityPage() {
                 <div key={post.id} className="community-feed-card">
                   <div className="feed-card-header">
                     <div className="avatar-wrap">
-                      <img src={post.author?.profileImage || '/default-profile.png'} alt="프로필" className="feed-card-profile" />
+                      <img src={post.author?.profileImage || require('../assets/community-default-avatar.svg')} alt="프로필" className="feed-card-profile" />
                       {/* 티어 배지: 프로필 오른쪽 아래 오버레이 (작은 골드 스타) */}
                       {tierText && (
                         <span className="avatar-tier-badge is-star" aria-label={`티어 ${tierText}`} title={tierText}>
