@@ -193,6 +193,13 @@ export default function Explore() {
 
             // 다양한 서버 응답 스키마 지원: id/index/text/letter
             const opts = question.options || [];
+            // 중첩 응답 평탄화: { data: {...} } 또는 { result: {...} }
+            const flatten = (r) => {
+              if (!r || typeof r !== 'object') return {};
+              const a = r.data && typeof r.data === 'object' ? r.data : {};
+              const b = r.result && typeof r.result === 'object' ? r.result : {};
+              return { ...r, ...a, ...b };
+            };
             const toIdxById = (id) => opts.findIndex(o => String(o.id) === String(id));
             const toIdxByText = (txt) => opts.findIndex(o => String(o.text).trim() === String(txt).trim());
             const clamp = (n) => Math.max(0, Math.min(opts.length - 1, n));
@@ -202,7 +209,9 @@ export default function Explore() {
               return NaN;
             };
 
-            const r = resp || {};
+            const r = flatten(resp || {});
+            // 진단 로그: 백엔드 응답 주요 키 요약
+            try { console.log('📥 postAttempt 응답 키:', Object.keys(r)); } catch (_) {}
             const idCandidates = [r.correctOptionId, r.correct_option_id, r.answerId, r.answer_id];
             const idxCandidates = [r.correctIndex, r.correct_index, r.answerIndex, r.answer_index];
             const textCandidates = [r.correctAnswer, r.correct_answer, r.answerText];
