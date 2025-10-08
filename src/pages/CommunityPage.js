@@ -183,12 +183,12 @@ export default function CommunityPage() {
               const tierText = resolveTierText(post.author || {});
               return (
                 <div key={post.id} className="community-feed-card">
-                  <div className="feed-card-header">
-                    <div className="avatar-wrap">
-                      <img src={post.author?.profileImage || defaultAvatar} alt="프로필" className="feed-card-profile" />
+                  <div className="feed-card-header" style={{ position: 'static' }}>
+                    <div className="avatar-wrap" style={{ position: 'relative', display: 'inline-block', flexShrink: 0, width: 40, height: 40 }}>
+                      <img src={post.author?.profileImage || defaultAvatar} alt="프로필" className="feed-card-profile" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
                       {/* 티어 배지: 프로필 오른쪽 아래 오버레이 (작은 골드 스타) */}
                       {tierText && (
-                        <span className="avatar-tier-badge is-star" aria-label={`티어 ${tierText}`} title={tierText}>
+                        <span className="avatar-tier-badge is-star" aria-label={`티어 ${tierText}`} title={tierText} style={{ position:'absolute', right: -4, bottom: -4, width:16, height:16, zIndex:5 }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
                             <defs>
                               <linearGradient id="tierGoldGrad" x1="0" y1="0" x2="0" y2="1">

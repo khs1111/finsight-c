@@ -495,31 +495,57 @@ export const submitAnswer = async ({ quizId, userId, answers, token, articleId }
     // 빈 객체를 반환하면 상위 로직이 옵션의 isCorrect로 로컬 판정합니다.
     return {};
   }
-  const payload = { quizId, userId: withUserId(userId), answers, articleId };
+  // 입력 유효성 검사: questionId/selectedOptionId 없는 경우 백엔드 호출 생략 (로컬 판정)
+  const first = Array.isArray(answers) && answers[0] ? answers[0] : null;
+  const hasQuestionId = first && (first.questionId != null && String(first.questionId).trim() !== '');
+  const hasSelectedOption = first && (first.selectedOptionId != null && String(first.selectedOptionId).trim() !== '');
+  if (!hasQuestionId || !hasSelectedOption) {
+    console.warn('⚠️ submitAnswer: questionId 또는 selectedOptionId 누락으로 로컬 판정으로 폴백합니다.', { hasQuestionId, hasSelectedOption });
+    return {};
+  }
+
+  const payload = { quizId: nQuizId, userId: withUserId(userId), answers, articleId };
+  const single = {
+    quizId: nQuizId,
+    userId: withUserId(userId),
+    questionId: first.questionId,
+    selectedOptionId: first.selectedOptionId,
+    articleId,
+  };
+  // 일부 백엔드가 다른 키명을 사용하는 경우 대비한 단일-답안 변형 바디들
+  const singleVariants = [
+    single,
+    { ...single, optionId: single.selectedOptionId },
+    { ...single, answerId: single.selectedOptionId },
+  ];
+
+  // 다양한 엔드포인트 변형 지원
   const paths = [
     '/quizzes/submit-answer', // 스펙 우선
     '/quiz/submit',
     '/quiz/answers',
+    `/quizzes/${nQuizId}/answers`,
+    `/quizzes/${nQuizId}/submit`,
+    `/quizzes/${nQuizId}/attempt`,
+    '/answers/submit',
+    '/answers',
+    '/attempts',
   ];
-  // 일부 백엔드가 단일 답안 스키마를 기대하는 경우 우선 시도
-  const single = answers && answers[0] ? {
-    quizId,
-    userId: withUserId(userId),
-    questionId: answers[0].questionId,
-    selectedOptionId: answers[0].selectedOptionId,
-    articleId,
-  } : null;
-  const bodies = [single, payload].filter(Boolean);
+
+  const bodies = [payload, ...singleVariants];
   for (const p of paths) {
     for (const b of bodies) {
       try {
-        return await http(p, {
+        // 진단 로그: 엔드포인트/바디 키만 출력 (민감정보 제외)
+        console.log(`📤 submitAnswer → POST ${p} | keys=[${Object.keys(b).join(', ')}]`);
+        const res = await http(p, {
           method: 'POST',
           body: JSON.stringify(b),
           token,
         }, token);
+        return res;
       } catch (e) {
-        // 400류는 다음 변형으로 시도 계속
+        // 4xx/5xx는 다음 변형으로 시도 계속
         continue;
       }
     }
@@ -683,7 +709,7 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
               if (!aId) return;
               try {
                 const art = await http(`/articles/${aId}`);
-                const artImg = art?.image_url || art?.imageUrl || art?.image_path || art?.imagePath;
+                const artImg = art?.image_url || art?.imageUrl || art?.image_path || art?.imagePath || art?.image || art?.img || art?.thumbnail;
                 // Use same rules as sanitizeImageUrl (no API path leakage)
                 const image = artImg ? (() => {
                   const s = String(artImg).trim();
@@ -830,6 +856,11 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
     // 순서: 먼저 스토리 2번 인덱스로, 그 다음 기사 3번 인덱스로 배치
     qs = moveStoryToIndex(qs, 2);
     qs = moveArticleToIndex(qs, 3);
+    try {
+      const storyIdx = qs.findIndex(q => isStoryQ(q));
+      const articleIdx = qs.findIndex(q => isArticleQ(q));
+      console.log(`✅ 문항 배치 확인: STORY@${storyIdx} | ARTICLE@${articleIdx} | total=${qs.length}`);
+    } catch (_) {}
 
     // 보강) 총 문항 수가 4 미만이면 4개가 되도록 가상 문항(단답형)을 덧붙임 (기사형/스토리형은 생성하지 않음)
     while (qs.length < 4) {
