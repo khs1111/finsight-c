@@ -1,29 +1,50 @@
 // 주제 선택
 import { useState } from "react";
-
-const subTopicMap = {
-  은행: ["금융권", "예금/적금", "계좌의 종류와 기능", "인터넷/모바일 뱅킹", "은행 수수료와 금융 혜택", "대출의 기초 이해"],
-  카드: ["카드의 종류", "카드 수수료 및 혜택 이해", "카드 사용 전략", "신용 점수와 카드 사용의 관계"],
-  투자: ["거래소 사용", "주식", "채권", "펀드"],
-  "세금/절세": ["세금이란", "영수증과 세금 혜택","연말정산"]
-};
-
-
-
+// 주제 선택 - 백엔드 연동
+import { useState, useEffect, useMemo } from "react";
+import { getSectorsWithSubsectors } from "../../api/explore";
 
 export default function TopicPicker({ onConfirm }) {
-  const [openTopic, setOpenTopic] = useState(null);
-  const [selectedTopic, setSelectedTopic] = useState(null);
-  const [selectedSub, setSelectedSub] = useState(null);
+  const [openTopicId, setOpenTopicId] = useState(null);
+  const [selectedTopic, setSelectedTopic] = useState(null); // { id, name }
+  const [selectedSub, setSelectedSub] = useState(null);     // { id, name }
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [tree, setTree] = useState([]);
 
-  const topics = Object.keys(subTopicMap);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const sectors = await getSectorsWithSubsectors();
+        if (!mounted) return;
+        setTree(Array.isArray(sectors) ? sectors : []);
+        setError(null);
+      } catch (e) {
+        if (!mounted) return;
+        setTree([]);
+        setError(e?.message || '주제를 불러오지 못했습니다.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
-  const toggleTopic = (topic) => {
-    setOpenTopic(openTopic === topic ? null : topic);
+  const topics = useMemo(() => tree.map(s => ({ id: s.id, name: s.name })), [tree]);
+  const subTopicMap = useMemo(() => {
+    const m = {};
+    tree.forEach(s => { m[s.id] = s.subsectors || []; });
+    return m;
+  }, [tree]);
+
+  const toggleTopic = (topicId) => {
+    setOpenTopicId(openTopicId === topicId ? null : topicId);
     setSelectedSub(null);
-    setSelectedTopic(topic);
+    const t = topics.find(t => String(t.id) === String(topicId));
+    if (t) setSelectedTopic(t);
   };
-
   // 모바일 대응: 600px 이하에서 width 100%
   const containerStyle = {
     maxWidth: "auto",
@@ -58,8 +79,15 @@ export default function TopicPicker({ onConfirm }) {
         깊이 있게 배워 봐요!
       </h1>
 
+      {loading && (
+        <div style={{ maxWidth: 380, margin: '0 auto 24px', color: '#666' }}>주제를 불러오는 중...</div>
+      )}
+      {error && !loading && (
+        <div style={{ maxWidth: 380, margin: '0 auto 24px', color: '#c00' }}>{String(error)}</div>
+      )}
+
       {topics.map((topic) => (
-        <div key={topic} style={{ marginBottom: "12px" }}>
+        <div key={topic.id} style={{ marginBottom: "12px" }}>
           <div
             style={{
               width: 'calc(100vw - 32px)',
@@ -67,7 +95,7 @@ export default function TopicPicker({ onConfirm }) {
               margin: '0 auto',
               borderRadius: openTopic === topic ? '8px 8px 0 0' : 8,
               boxShadow: '0px 0px 2px rgba(0,0,0,0.10)',
-              background: openTopic === topic ? '#448FFF' : '#FFF',
+              background: openTopicId === topic.id ? '#448FFF' : '#FFF',
               transition: 'box-shadow 0.2s, background 0.2s',
               cursor: 'pointer',
               display: 'flex',
@@ -78,7 +106,7 @@ export default function TopicPicker({ onConfirm }) {
               padding: 0,
               position: 'relative',
             }}
-            onClick={() => toggleTopic(topic)}
+            onClick={() => toggleTopic(topic.id)}
           >
             <span style={{
               fontFamily: 'Roboto',
@@ -87,7 +115,7 @@ export default function TopicPicker({ onConfirm }) {
               fontSize: 18,
               lineHeight: '100%',
               letterSpacing: 0,
-              color: openTopic === topic ? '#fff' : '#4D4D4D',
+              color: openTopicId === topic.id ? '#fff' : '#4D4D4D',
               marginLeft: 16,
               width: 348,
               textAlign: 'left',
@@ -97,13 +125,13 @@ export default function TopicPicker({ onConfirm }) {
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-            }}>{topic}</span>
+            }}>{topic.name}</span>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{marginRight: 16}} xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9L12 15L18 9" stroke={openTopic === topic ? '#fff' : '#BDBDBD'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M6 9L12 15L18 9" stroke={openTopicId === topic.id ? '#fff' : '#BDBDBD'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
 
-          {openTopic === topic && (
+          {openTopicId === topic.id && (
             <div
               style={{
                 width: 'calc(100vw - 32px)',
@@ -121,11 +149,11 @@ export default function TopicPicker({ onConfirm }) {
                 overflow: 'hidden',
               }}
             >
-              {subTopicMap[topic].map((sub, idx) => (
+              {(subTopicMap[topic.id] || []).map((sub, idx) => (
                 <>
                   <div
-                    key={sub}
-                    onClick={e => { e.stopPropagation(); setSelectedSub(sub); }}
+                    key={sub.id}
+                    onClick={e => { e.stopPropagation(); setSelectedSub({ id: sub.id, name: sub.name }); }}
                     style={{
                       display: 'flex',
                       flexDirection: 'row',
@@ -141,8 +169,8 @@ export default function TopicPicker({ onConfirm }) {
                       fontSize: 18,
                       lineHeight: '21px',
                       cursor: 'pointer',
-                      border: selectedSub === sub ? '1px solid #448FFF' : '1px solid transparent',
-                      boxShadow: selectedSub === sub ? '0px 0px 4px #448FFF' : 'none',
+                      border: (selectedSub?.id === sub.id) ? '1px solid #448FFF' : '1px solid transparent',
+                      boxShadow: (selectedSub?.id === sub.id) ? '0px 0px 4px #448FFF' : 'none',
                       borderRadius: 8,
                       boxSizing: 'border-box',
                       margin: selectedSub === sub ? '0 0 0 0' : '0',
@@ -165,9 +193,9 @@ export default function TopicPicker({ onConfirm }) {
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                    }}>{sub}</span>
+                    }}>{sub.name}</span>
                   </div>
-                  {idx !== subTopicMap[topic].length - 1 && (
+                  {idx !== (subTopicMap[topic.id] || []).length - 1 && (
                     <div style={{ width: '100%', height: 0, border: '1px solid #F5F5F5' }} />
                   )}
                 </>
@@ -178,8 +206,8 @@ export default function TopicPicker({ onConfirm }) {
       ))}
 
       <button
-        onClick={() => onConfirm(selectedTopic, selectedSub)}
-        disabled={!selectedSub}
+        onClick={() => onConfirm(selectedTopic?.name, selectedSub?.name, selectedTopic?.id, selectedSub?.id)}
+        disabled={!selectedSub || !selectedTopic}
         style={{
           position: "fixed",
           left: "50%",
@@ -188,7 +216,7 @@ export default function TopicPicker({ onConfirm }) {
           width: 'calc(100vw - 32px)',
           maxWidth: 380,
           height: "60px",
-          background: selectedSub
+          background: (selectedSub && selectedTopic)
             ? "linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%)"
             : "#CACACA",
           color: "#fff",
@@ -201,7 +229,7 @@ export default function TopicPicker({ onConfirm }) {
           zIndex: 120,
         }}
       >
-        확인
+        {loading ? '로딩 중...' : '확인'}
       </button>
     </div>
   );

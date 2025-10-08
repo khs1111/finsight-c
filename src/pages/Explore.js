@@ -13,8 +13,10 @@ import { useNavVisibility } from "../components/navigation/NavVisibilityContext"
 
 export default function Explore() {
   const [step, setStep] = useState(1);
-  const [mainTopic, setMainTopic] = useState(null);
-  const [subTopic, setSubTopic] = useState(null);
+  const [mainTopic, setMainTopic] = useState(null);      // name
+  const [subTopic, setSubTopic] = useState(null);        // name
+  const [mainTopicId, setMainTopicId] = useState(null);  // id
+  const [subTopicId, setSubTopicId] = useState(null);    // id
   const [level, setLevel] = useState(null); // 난이도 상태 추가
   const [current, setQid] = useState(0);
   const [questions, setQuestions] = useState([]);
@@ -64,9 +66,11 @@ export default function Explore() {
   if (step === 1) {
     content = (
       <TopicPicker
-        onConfirm={(t, sub) => {
-          setMainTopic(t);
-          setSubTopic(sub);
+        onConfirm={(tName, subName, tId, sId) => {
+          setMainTopic(tName);
+          setSubTopic(subName);
+          setMainTopicId(tId);
+          setSubTopicId(sId);
           setStep(2);
         }}
       />
@@ -85,7 +89,7 @@ export default function Explore() {
             // getQuestions API 사용 (더미 데이터 우선)
             console.log('🎯 퀴즈 데이터 요청 중...');
             setIsFetchingQuestions(true);
-            const result = await apiGetQuestions({ topicId: mainTopic, subTopic: subTopic, levelId: lv });
+            const result = await apiGetQuestions({ topicId: mainTopic || mainTopicId, subTopic: subTopic || subTopicId, levelId: lv });
             if (result && result.questions && result.questions.length > 0) {
               console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
               setQuestions(result.questions);
@@ -116,8 +120,8 @@ export default function Explore() {
         total={questions.length}
         done={current - 1}
         selectedLevel={level}
-        initialTopic={mainTopic}
-        initialSubTopic={subTopic}
+  initialTopic={mainTopic}
+  initialSubTopic={subTopic}
         isLoading={isFetchingQuestions}
         onSelectionConfirm={async ({ level: newLevel, topic: newTopic, subTopic: newSub }) => {
           // 부모 상태 업데이트

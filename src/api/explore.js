@@ -137,6 +137,53 @@ export const getSubsector = async (id) => {
   try { return await http(`/subsectors/${id}`); } catch { return null; }
 };
 
+// 보강: 단일 섹터 상세(서브섹터 포함 가능) 조회 시도
+export const getSector = async (id) => {
+  try { return await http(`/sectors/${id}`); } catch { return null; }
+};
+
+// 섹터별 서브섹터 목록 조회: 다양한 백엔드 변형에 대응
+export const getSubsectorsBySectorId = async (sectorId) => {
+  // 1) /sectors/{id} 에 subsectors 포함되어 오는 경우
+  try {
+    const s = await getSector(sectorId);
+    if (Array.isArray(s?.subsectors) && s.subsectors.length) return s.subsectors;
+  } catch (_) {}
+  // 2) /sectors/{id}/subsectors
+  try {
+    const arr = await http(`/sectors/${sectorId}/subsectors`);
+    if (Array.isArray(arr)) return arr;
+  } catch (_) {}
+  // 3) /subsectors?sectorId=
+  try {
+    const arr = await http(`/subsectors?sectorId=${encodeURIComponent(sectorId)}`);
+    if (Array.isArray(arr)) return arr;
+  } catch (_) {}
+  return [];
+};
+
+// 섹터 + 서브섹터 트리를 한 번에 구성
+export const getSectorsWithSubsectors = async () => {
+  const sectors = await getSectors();
+  const list = Array.isArray(sectors) ? sectors : [];
+  const enriched = await Promise.all(list.map(async (sec) => {
+    const id = sec.id ?? sec.sectorId ?? sec.code;
+    let subsectors = Array.isArray(sec.subsectors) ? sec.subsectors : [];
+    if (!subsectors.length && id != null) subsectors = await getSubsectorsBySectorId(id);
+    // 표준화: id/name 필드 보정
+    const normSubs = subsectors.map(ss => ({
+      id: ss.id ?? ss.subsectorId ?? ss.code,
+      name: ss.name ?? ss.title ?? ss.subsectorName ?? ss.label ?? String(ss.id ?? ''),
+    }));
+    return {
+      id: id,
+      name: sec.name ?? sec.title ?? sec.sectorName ?? sec.label ?? String(id ?? ''),
+      subsectors: normSubs,
+    };
+  }));
+  return enriched;
+};
+
 // 3. 레벨별 퀴즈 목록 및 상태 조회
 export const getLevelQuizzes = async (levelId, userId, token) => {
   const uid = withUserId(userId);
