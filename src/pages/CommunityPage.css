@@ -39,7 +39,8 @@
 
 .avatar-wrap { position: relative; display:inline-flex; }
 /* 티어 배지를 프로필 이미지 오른쪽 아래에 살짝 겹치게 배치 */
-.avatar-tier-badge { position:absolute; right:-6px; bottom:-6px; font-size:10px; line-height:12px; padding:2px 6px; border-radius:12px; box-shadow:0 0 0 2px #fff; white-space:nowrap; z-index:2; pointer-events:none; }
+.avatar-tier-badge { position:absolute; right:-6px; bottom:-6px; z-index:3; pointer-events:none; display:inline-flex; align-items:center; justify-content:center; }
+.avatar-tier-badge.is-star { width:16px; height:16px; }
 /* 우측 별도 인라인 티어 라벨은 디자인 변경으로 제거 (보존: 필요시 다시 사용) */
 .feed-card-tier-inline { display:none; }
 .feed-card-author-col { display:flex; flex-direction:column; gap:2px; }

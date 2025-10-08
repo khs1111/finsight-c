@@ -546,10 +546,14 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
   console.log('📚 getQuestions 호출됨 - topicId:', topicId, 'levelId:', levelId);
   const uid = withUserId();
   const lid = coerceLevelId(levelId);
-  // Map topic/subTopic strings to backend subsector/level context if needed (future: pass as query params)
+  // If subTopic is numeric-like, treat it as subsectorId and pass it through when fetching quizzes
+  const subsectorId = (typeof subTopic === 'number' || (typeof subTopic === 'string' && /^\d+$/.test(subTopic))) ? subTopic : undefined;
   try {
     // 1) 레벨별 퀴즈 목록 조회
-    const levelData = await http(`/levels/${lid}/quizzes?userId=${uid}`);
+    const qsParams = new URLSearchParams();
+    if (uid != null) qsParams.set('userId', uid);
+    if (subsectorId != null) qsParams.set('subsectorId', subsectorId);
+    const levelData = await http(`/levels/${lid}/quizzes?${qsParams.toString()}`);
     const quizzes = Array.isArray(levelData?.quizzes) ? levelData.quizzes : (Array.isArray(levelData) ? levelData : []);
     if (!quizzes.length) throw new Error('No quizzes for level');
 
@@ -668,11 +672,18 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
       console.log(`🧩 선택된 퀴즈 ${chosenId} | 기사문항 포함: ${hasAnyImg}`);
     }
 
-    // 기사형 문항은 첫 번째 문제로 나오지 않도록 4번째 위치(인덱스 3)로 이동
+    // 기사형 문항은 첫 번째 문제로 나오지 않도록 4번째(인덱스 3), 스토리텔링은 3번째(인덱스 2)
     let qs = Array.isArray(chosen?.questions) ? chosen.questions : [];
+    const isArticleQ = (q) => q?.type === 'articleImage' || String(q?.type||'').toLowerCase() === 'article' || !!q?.image;
+    const isStoryQ = (q) => {
+      const t = String(q?.type || q?.questionType || '').toLowerCase();
+      if (t.includes('story')) return true;
+      const text = [q?.question, q?.stemMd, q?.teachingExplainerMd].filter(Boolean).join(' ').toLowerCase();
+      return /스토리|story|case|사례/.test(text);
+    };
     const moveArticleToIndex = (arr, targetIdx = 3) => {
       if (!Array.isArray(arr) || arr.length === 0) return arr || [];
-      const idx = arr.findIndex(q => q?.type === 'articleImage' || q?.image);
+      const idx = arr.findIndex(isArticleQ);
       if (idx === -1) return arr;
       const ti = Math.min(targetIdx, Math.max(0, arr.length - 1));
       if (idx === ti) return arr;
@@ -682,10 +693,24 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
       console.log(`🔀 기사형 문항 위치 이동: 원래 인덱스 ${idx} → ${ti} (총 ${arr.length}문항)`);
       return clone;
     };
+    const moveStoryToIndex = (arr, targetIdx = 2) => {
+      if (!Array.isArray(arr) || arr.length === 0) return arr || [];
+      const idx = arr.findIndex(isStoryQ);
+      if (idx === -1) return arr;
+      const ti = Math.min(targetIdx, Math.max(0, arr.length - 1));
+      if (idx === ti) return arr;
+      const clone = arr.slice();
+      const [item] = clone.splice(idx, 1);
+      clone.splice(ti, 0, item);
+      console.log(`🔀 스토리 문항 위치 이동: 원래 인덱스 ${idx} → ${ti} (총 ${arr.length}문항)`);
+      return clone;
+    };
+    // 순서: 먼저 스토리 2번 인덱스로, 그 다음 기사 3번 인덱스로 배치
+    qs = moveStoryToIndex(qs, 2);
     qs = moveArticleToIndex(qs, 3);
 
     // 보강 1) 기사형 문항이 하나도 없으면 가상 문항을 추가하여 4번째에 배치
-    let hasAnyArticle = qs.some(q=>q.type==='articleImage'||q.image);
+  let hasAnyArticle = qs.some(isArticleQ);
     if (!hasAnyArticle) {
       const virtualArticle = {
         id: `virtual-article-${Date.now()}`,
@@ -737,14 +762,25 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
 // 레벨 메타데이터 조회 (설명/목표 등) - 존재하지 않으면 null 반환
 export const getLevelMeta = async (levelId) => {
   const lid = coerceLevelId(levelId);
-  try {
-    // /levels/:id/meta 엔드포인트는 환경에 따라 존재하지 않을 수 있으므로 호출하지 않음
-    // 레벨 기본 정보만 사용하고, 실패 시 빈 객체 반환하여 UI가 기본 사양으로 동작하도록 함
-    const res = await http(`/levels/${lid}`);
-    return res || {};
-  } catch {
-    return {};
+  // 여러 후보 엔드포인트를 시도하고, 공통 스키마로 정규화
+  const tryPaths = [
+    `/levels/${lid}`,
+    `/levels/${lid}/detail`,
+    `/levels/${lid}/meta`,
+    `/levels/${lid}/info`,
+  ];
+  for (const p of tryPaths) {
+    try {
+      const res = await http(p);
+      if (res) {
+        const description = res.description || res.desc || res.summary || null;
+        const learningGoal = res.learningGoal || res.goal || res.objectives || null;
+        const title = res.title || res.name || res.levelTitle || null;
+        return { ...res, description, learningGoal, title };
+      }
+    } catch (_) { /* try next */ }
   }
+  return {};
 };
 // 기존 getKeyPoints 함수 -> 더미 데이터 우선 사용
 export const getKeyPoints = async ({ questionId } = {}) => {

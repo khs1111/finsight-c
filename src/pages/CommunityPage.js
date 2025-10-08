@@ -64,15 +64,7 @@ export default function CommunityPage() {
     return `${d.getMonth() + 1}월 ${d.getDate()}일`;
   };
 
-  const tierToClass = (tier) => {
-    const t = String(tier || '').toLowerCase();
-    if (t.includes('master')) return 'tier-master';
-    if (t.includes('diamond') || t.includes('dia')) return 'tier-diamond';
-    if (t.includes('gold')) return 'tier-gold';
-    if (t.includes('silver')) return 'tier-silver';
-    if (t.includes('bronze')) return 'tier-bronze';
-    return '';
-  };
+  // 티어 텍스트는 오버레이 별 배지의 title/aria-label로만 사용합니다.
 
   // 백엔드 필드 보강: author.tierName / author.rank / author.levelName 등 다양한 키 대응
   const resolveTierText = (author = {}) => {
@@ -175,9 +167,23 @@ export default function CommunityPage() {
                   <div className="feed-card-header">
                     <div className="avatar-wrap">
                       <img src={post.author?.profileImage || '/default-profile.png'} alt="프로필" className="feed-card-profile" />
-                      {/* 티어 배지: 프로필 오른쪽 아래 오버레이 */}
+                      {/* 티어 배지: 프로필 오른쪽 아래 오버레이 (작은 골드 스타) */}
                       {tierText && (
-                        <span className={`avatar-tier-badge feed-card-tier ${tierToClass(tierText)}`}>{tierText}</span>
+                        <span className="avatar-tier-badge is-star" aria-label={`티어 ${tierText}`} title={tierText}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                            <defs>
+                              <linearGradient id="tierGoldGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#FFCD42"/>
+                                <stop offset="35%" stopColor="#FFBC02"/>
+                                <stop offset="100%" stopColor="#B94D00"/>
+                              </linearGradient>
+                              <filter id="tierShadow" x="-50%" y="-50%" width="200%" height="200%">
+                                <feDropShadow dx="0" dy="1" stdDeviation="0.6" floodColor="rgba(0,0,0,0.35)"/>
+                              </filter>
+                            </defs>
+                            <path d="M12 2l2.834 5.744 6.336.92-4.585 4.47 1.082 6.312L12 16.9l-5.667 2.946 1.082-6.312L2.83 8.664l6.336-.92L12 2z" fill="url(#tierGoldGrad)" stroke="#FFFFFF" strokeWidth="1.2" filter="url(#tierShadow)"/>
+                          </svg>
+                        </span>
                       )}
                     </div>
                     <div className="feed-card-author-col">
