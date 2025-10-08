@@ -6,7 +6,7 @@ import {
   dummyTopicStats,
   dummyQuestionsData
 } from '../utils/testData.js';
-import { API_BASE } from './config';
+import { API_BASE, IMAGE_BASE } from './config';
 import { guestLogin } from './auth';
 
 // 백엔드 연결 상태 확인 (정보용)
@@ -78,16 +78,15 @@ const withUserId = (userId) => {
 function coerceLevelId(levelId) {
   if (typeof levelId === 'number') return levelId;
   if (!levelId) return 1;
+  const s = String(levelId).trim();
   const map = {
-    '초급자': 1,
-    '기초': 1,
-    '초보자': 1,
-    '중급자': 2,
-    '중급': 2,
-    '고급자': 3,
-    '고급': 3,
+    '초보자': 1, '초급자': 1, '기초': 1, 'beginner': 1, 'easy': 1,
+    '중급': 2, '중급자': 2, 'intermediate': 2, 'medium': 2,
+    '고급': 3, '고급자': 3, 'advanced': 3, 'hard': 3,
   };
-  return map[String(levelId).trim()] || 1;
+  const n = Number(s);
+  if (Number.isFinite(n) && n >= 1 && n <= 3) return n;
+  return map[s.toLowerCase()] || 1;
 }
 
 // JWT 토큰을 자동으로 헤더에 포함하는 fetch 함수
@@ -199,13 +198,14 @@ function normalizeQuizPayload(raw) {
       const basePath = apiUrl.pathname.replace(/\/$/, ''); // /api 또는 ''
       // 1) 루트 기준 경로("/uploads/x.png")는 origin과 결합 (대부분 정적 리소스 루트)
       if (/^\//.test(s)) {
-        const abs = `${origin}${s}`;
+        const base = IMAGE_BASE || origin;
+        const abs = `${base}${s}`;
         console.log(`🖼️ 이미지 루트경로 보정: '${s}' -> '${abs}'`);
         return abs;
       }
       // 2) ./ 또는 ../ 로 시작하는 경로는 API_BASE 경로를 기준으로 결합
       if (/^(\.\/|\.\.\/)/.test(s)) {
-        const base = `${origin}${basePath ? basePath + '/' : '/'}`;
+        const base = `${(IMAGE_BASE || origin)}${basePath ? basePath + '/' : '/'}`;
         const normalized = s.replace(/^\.\//, '').replace(/^\.\.\//, '');
         const abs = `${base}${normalized}`;
         console.log(`🖼️ 이미지 상대경로 보정(./, ../): '${s}' -> '${abs}'`);
@@ -214,7 +214,7 @@ function normalizeQuizPayload(raw) {
       // 3) 단순 파일명 또는 슬래시 없는 상대경로
       if (looksLikeImageFile) {
         const normalized = s.replace(/^\/+/, '');
-        const abs = `${origin}${basePath ? basePath + '/' : '/'}${normalized}`;
+        const abs = `${(IMAGE_BASE || origin)}${basePath ? basePath + '/' : '/'}${normalized}`;
         console.log(`🖼️ 이미지 파일명 보정: '${s}' -> '${abs}'`);
         return abs;
       }
@@ -499,6 +499,7 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
   console.log('📚 getQuestions 호출됨 - topicId:', topicId, 'levelId:', levelId);
   const uid = withUserId();
   const lid = coerceLevelId(levelId);
+  // Map topic/subTopic strings to backend subsector/level context if needed (future: pass as query params)
   try {
     // 1) 레벨별 퀴즈 목록 조회
     const levelData = await http(`/levels/${lid}/quizzes?userId=${uid}`);
@@ -620,7 +621,7 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
       console.log(`🧩 선택된 퀴즈 ${chosenId} | 기사문항 포함: ${hasAnyImg}`);
     }
 
-    // 기사형 문항을 4번째 위치(인덱스 3)로 이동
+    // 기사형 문항은 첫 번째 문제로 나오지 않도록 4번째 위치(인덱스 3)로 이동
     let qs = Array.isArray(chosen?.questions) ? chosen.questions : [];
     const moveArticleToIndex = (arr, targetIdx = 3) => {
       if (!Array.isArray(arr) || arr.length === 0) return arr || [];

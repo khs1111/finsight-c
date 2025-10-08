@@ -22,6 +22,23 @@ const fromCraNews  = (typeof process !== 'undefined' && process.env?.REACT_APP_N
 const resolvedNews = (fromViteNews || fromNextNews || fromCraNews || '').replace(/\/$/, '');
 export const NEWS_API_BASE = resolvedNews || API_BASE;
 
+// Optional base for serving media/images when backend returns relative paths.
+// Prefer explicit env, otherwise default to the origin of API_BASE (without path like '/api').
+const fromViteImg = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_IMAGE_BASE) || '';
+const fromNextImg = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_IMAGE_BASE) || '';
+const fromCraImg  = (typeof process !== 'undefined' && process.env?.REACT_APP_IMAGE_BASE) || '';
+
+let IMAGE_BASE = (fromViteImg || fromNextImg || fromCraImg || '').replace(/\/$/, '');
+if (!IMAGE_BASE) {
+  try {
+    const apiUrl = new URL(API_BASE, (typeof window !== 'undefined' ? window.location.origin : undefined));
+    IMAGE_BASE = apiUrl.origin; // e.g., https://finsight.o-r.kr
+  } catch (_) {
+    IMAGE_BASE = '';
+  }
+}
+export { IMAGE_BASE };
+
 // Optional feature flag: whether backend provides /profile and /profile/activity endpoints
 // Supports Vite/Next.js/CRA env names; defaults to false
 const fromViteProfile = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_HAS_PROFILE_ENDPOINTS) || '';
