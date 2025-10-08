@@ -297,8 +297,9 @@ function normalizeQuizPayload(raw) {
       image = sanitizeImageUrl(artImg);
     }
   const rawType = q.type ?? q.questionType ?? q.kind;
-  // 기사형 판정은 보수적으로: 명시적 type이 기사이거나, 이미지 URL이 확보된 경우만
-  const isArticleLike = looksArticleType(rawType) || !!image;
+  const hasArticleId = q.articleId != null || q.article_id != null;
+  // 기사형 판정: 명시적 type 기사, 이미지가 있거나, article_id 또는 중첩 기사객체가 있는 경우 모두 인정
+  const isArticleLike = looksArticleType(rawType) || !!image || !!nestedArticle || hasArticleId;
       const mapped = {
       ...q,
       // 질문 본문/지문 매핑 보강
@@ -336,6 +337,8 @@ function normalizeQuizPayload(raw) {
   // 기사형으로 보이는 경우(백엔드 type이 ARTICLE 또는 이미지가 있는 경우) UI 타입을 articleImage로 통일
   // 이미지가 없어도 placeholder + 폴백 이미지를 통해 동일한 렌더링을 보장
   type: isArticleLike ? 'articleImage' : (rawType ?? undefined),
+      // articleId를 표준화해 보관
+      articleId: q.articleId ?? q.article_id ?? undefined,
       options: (q.options || []).map((o, i) => ({
         ...o,
         id: o.id ?? o.optionId ?? o.valueId ?? o.value ?? (i + 1),
@@ -727,15 +730,18 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
     const chosen = chosenEntry?.norm;
     const chosenId = chosenEntry?.id || prioritizedId;
     if (chosen) {
-      const hasAnyImg = Array.isArray(chosen.questions) && chosen.questions.some(q => !!q.image);
-      console.log(`🧩 선택된 퀴즈 ${chosenId} | 기사문항 포함: ${hasAnyImg}`);
+      const hasAnyArticleQ = Array.isArray(chosen.questions) && chosen.questions.some((q) => {
+        const t = String(q?.type||'').toLowerCase();
+        return t === 'articleimage' || t === 'article' || q?.articleId != null || q?.article_id != null;
+      });
+      console.log(`🧩 선택된 퀴즈 ${chosenId} | 기사문항 포함: ${hasAnyArticleQ}`);
     }
 
     // 기사형 문항은 첫 번째 문제로 나오지 않도록 4번째(인덱스 3), 스토리텔링은 3번째(인덱스 2)
     let qs = Array.isArray(chosen?.questions) ? chosen.questions : [];
     const isArticleQ = (q) => {
       const t = String(q?.type||'').toLowerCase();
-      return (t === 'articleimage' || t === 'article') && !!q?.image;
+      return (t === 'articleimage' || t === 'article') || (q?.articleId != null || q?.article_id != null);
     };
     const isStoryQ = (q) => {
       const t = String(q?.type || q?.questionType || '').toLowerCase();
@@ -822,28 +828,8 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
 };
 
 // 레벨 메타데이터 조회 (설명/목표 등) - 존재하지 않으면 null 반환
-export const getLevelMeta = async (levelId) => {
-  const lid = coerceLevelId(levelId);
-  // 여러 후보 엔드포인트를 시도하고, 공통 스키마로 정규화
-  const tryPaths = [
-    `/levels/${lid}`,
-    `/levels/${lid}/detail`,
-    `/levels/${lid}/meta`,
-    `/levels/${lid}/info`,
-  ];
-  for (const p of tryPaths) {
-    try {
-      const res = await http(p);
-      if (res) {
-        const description = res.description || res.desc || res.summary || null;
-        const learningGoal = res.learningGoal || res.goal || res.objectives || null;
-        const title = res.title || res.name || res.levelTitle || null;
-        return { ...res, description, learningGoal, title };
-      }
-    } catch (_) { /* try next */ }
-  }
-  return {};
-};
+// 현재 스펙에는 별도 Level 메타 조회 엔드포인트가 없으므로, 호출을 제거합니다.
+export const getLevelMeta = async (_levelId) => ({})
 // 기존 getKeyPoints 함수 -> 더미 데이터 우선 사용
 export const getKeyPoints = async ({ questionId } = {}) => {
   console.log('🔑 getKeyPoints 호출됨 - questionId:', questionId);
