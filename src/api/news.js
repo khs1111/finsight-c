@@ -1,6 +1,5 @@
 // src/api/news.js
-// Prefer environment variable but default to deployed news backend to avoid undefined base in prod
-const API_BASE = (process.env.REACT_APP_NEWS_API_BASE || 'https://finsight-server.store').replace(/\/$/, '');
+const API_BASE = process.env.REACT_APP_NEWS_API_BASE;
 
 /**
  * HTTP 요청 헬퍼 함수
@@ -8,27 +7,16 @@ const API_BASE = (process.env.REACT_APP_NEWS_API_BASE || 'https://finsight-serve
 
 async function apiRequest(endpoint, options = {}) {
   try {
-    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${API_BASE}${path}`;
+    const url = `${API_BASE}${endpoint}`;
     console.log('API 요청:', url); // 디버깅용
     
-    const method = (options.method || 'GET').toUpperCase();
-    const headers = { ...(options.headers || {}) };
-    const fetchInit = { ...options, method, headers };
-    // Avoid preflight for simple GET/HEAD by not setting Content-Type or body
-    if (method === 'GET' || method === 'HEAD') {
-      delete fetchInit.body;
-      // Do not force Content-Type for simple requests
-      if ('Content-Type' in headers) delete headers['Content-Type'];
-    } else {
-      // For JSON bodies, set header if body is provided and not already a string
-      if (fetchInit.body && typeof fetchInit.body !== 'string') {
-        headers['Content-Type'] = headers['Content-Type'] || 'application/json';
-        fetchInit.body = JSON.stringify(fetchInit.body);
-      }
-    }
-
-    const response = await fetch(url, fetchInit);
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    });
 
     if (!response.ok) {
       const errorText = await response.text();

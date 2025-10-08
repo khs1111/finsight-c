@@ -228,9 +228,17 @@ function parseBoolLoose(v) {
 
 function normalizeQuizPayload(raw) {
   if (!raw) return raw;
-  // 미리 기사 맵 구성: raw.articles 배열로 내려오는 경우 id->article 매핑
-  const articlesMap = Array.isArray(raw?.articles)
-    ? raw.articles.reduce((acc, a) => { const id = a?.id ?? a?.articleId ?? a?.article_id; if (id != null) acc[String(id)] = a; return acc; }, {})
+  // 백엔드 응답 변형 대응: data.questions 등 다양한 래핑을 허용
+  const articlesArray = Array.isArray(raw?.articles)
+    ? raw.articles
+    : (Array.isArray(raw?.data?.articles) ? raw.data.articles : (Array.isArray(raw?.result?.articles) ? raw.result.articles : []));
+  const questionsArray = Array.isArray(raw?.questions)
+    ? raw.questions
+    : (Array.isArray(raw?.data?.questions) ? raw.data.questions : (Array.isArray(raw?.result?.questions) ? raw.result.questions : []));
+
+  // 미리 기사 맵 구성: id->article 매핑
+  const articlesMap = Array.isArray(articlesArray)
+    ? articlesArray.reduce((acc, a) => { const id = a?.id ?? a?.articleId ?? a?.article_id; if (id != null) acc[String(id)] = a; return acc; }, {})
     : {};
   // 이미지 URL 유효성 검사 및 보정: 숫자/불린 등은 무시하고,
   // 파일명/상대경로만 온 경우 API origin 기준 절대 URL로 변환하여 기사문제 표시를 지원
@@ -265,7 +273,9 @@ function normalizeQuizPayload(raw) {
       // 3) 단순 파일명 또는 슬래시 없는 상대경로
       if (looksLikeImageFile) {
         const normalized = s.replace(/^\/+/, '');
-        const abs = `${(IMAGE_BASE || origin)}${basePath ? basePath + '/' : '/'}${normalized}`;
+        // 이미지 베이스(명시된 경우 우선) 또는 오리진에 바로 결합 (API 경로는 붙이지 않음)
+        const base = (IMAGE_BASE || origin).replace(/\/$/, '');
+        const abs = `${base}/${normalized}`;
         console.log(`🖼️ 이미지 파일명 보정: '${s}' -> '${abs}'`);
         return abs;
       }
@@ -282,9 +292,18 @@ function normalizeQuizPayload(raw) {
     return s === 'article' || s === 'articleimage' || s === 'news' || s === 'article_img' || s === 'article-img';
   };
 
-  const questions = (raw.questions || []).map((q) => {
+  const questions = (questionsArray || []).map((q) => {
     // 이미지 후보 키들(백엔드 다양성 대응): 가장 먼저 매칭되는 값을 사용
-    const nestedArticle = q.article || q.news || null;
+    const nestedArticle = (() => {
+      // 다양한 키, 대소문자, 중첩 위치 대응
+      const cands = [
+        q.article, q.Article, q.news, q.News,
+        q.articleObj, q.articleObject,
+        q.context?.article, q.payload?.article,
+        Array.isArray(q.articles) ? q.articles[0] : undefined
+      ];
+      return cands.find(v => v && typeof v === 'object') || null;
+    })();
     const img = (
       q.image ?? q.imageUrl ?? q.imageURL ?? q.imgUrl ?? q.img_url ??
       q.imagePath ?? q.image_path ?? q.mediaUrl ?? q.media_url ??
@@ -297,7 +316,7 @@ function normalizeQuizPayload(raw) {
     // nested article 이미지 보강
     let image = sanitizeImageUrl(img);
     if (!image && nestedArticle) {
-      const artImg = nestedArticle.image_url || nestedArticle.imageUrl || nestedArticle.image_path || nestedArticle.imagePath;
+      const artImg = nestedArticle.image_url || nestedArticle.imageUrl || nestedArticle.image_path || nestedArticle.imagePath || nestedArticle.img || nestedArticle.thumbnail;
       image = sanitizeImageUrl(artImg);
     }
     // raw.articles에서 보강
@@ -305,7 +324,7 @@ function normalizeQuizPayload(raw) {
       const aId = q.articleId ?? q.article_id;
       if (aId != null && articlesMap && articlesMap[String(aId)]) {
         const art = articlesMap[String(aId)];
-        const artImg = art?.image_url || art?.imageUrl || art?.image_path || art?.imagePath;
+        const artImg = art?.image_url || art?.imageUrl || art?.image_path || art?.imagePath || art?.img || art?.thumbnail;
         image = sanitizeImageUrl(artImg);
       }
     }
@@ -332,7 +351,7 @@ function normalizeQuizPayload(raw) {
         q.articleBodyMd ?? q.article_body_md ?? q.articleBody ?? q.article_body ??
         q.articleMd ?? q.article_md ?? q.article ?? q.contentMd ?? q.content_md ?? q.content ??
         q.contextMd ?? q.context_md ?? q.context ?? q.passageMd ?? q.passage_md ?? q.passage ??
-        nestedArticle?.body_md ?? nestedArticle?.bodyMd ?? nestedArticle?.body ??
+        nestedArticle?.body_md ?? nestedArticle?.bodyMd ?? nestedArticle?.body ?? nestedArticle?.content ??
         (articlesMap[String(q.articleId ?? q.article_id)]?.body_md || articlesMap[String(q.articleId ?? q.article_id)]?.bodyMd || articlesMap[String(q.articleId ?? q.article_id)]?.body) ?? null
       ),
       // 학습/핵심포인트/힌트 정규화
@@ -437,7 +456,9 @@ function normalizeQuizPayload(raw) {
     // 진단 로그: 기사형 감지 여부
     try {
       if (mapped?.type === 'articleImage') {
-        console.log(`📰 [ARTICLE DETECTED] id=${mapped?.id ?? q?.id}, type=${rawType}, image=${!!image}, articleId=${mapped?.articleId ?? q?.article_id}`);
+        const t = mapped?.articleTitleMd || '';
+        const imgFlag = !!(mapped?.image);
+        console.log(`📰 [ARTICLE DETECTED] id=${mapped?.id ?? q?.id}, type=${rawType}, image=${imgFlag}, articleId=${mapped?.articleId ?? q?.article_id}, title='${String(t).slice(0,30)}'`);
       } else {
         console.log(`⚠️ [NOT ARTICLE] id=${mapped?.id ?? q?.id}, type=${rawType}`);
       }

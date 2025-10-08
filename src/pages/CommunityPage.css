@@ -29,17 +29,34 @@
   position: relative;
 }
 
+.avatar-wrap {
+  position: relative;
+  display: inline-block;
+  width: 40px; /* 프로필 크기에 맞게 조정 */
+  height: 40px;
+}
+
 .feed-card-profile {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
   background: #eee;
 }
 
-.avatar-wrap { position: relative; display:inline-flex; }
 /* 티어 배지를 프로필 이미지 오른쪽 아래에 살짝 겹치게 배치 */
-.avatar-tier-badge { position:absolute; right:-6px; bottom:-6px; z-index:3; pointer-events:none; display:inline-flex; align-items:center; justify-content:center; }
+.avatar-tier-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 16px;
+  height: 16px;
+  z-index: 2;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .avatar-tier-badge.is-star { width:16px; height:16px; }
 /* 우측 별도 인라인 티어 라벨은 디자인 변경으로 제거 (보존: 필요시 다시 사용) */
 .feed-card-tier-inline { display:none; }
