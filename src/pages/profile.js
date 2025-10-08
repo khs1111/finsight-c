@@ -133,15 +133,15 @@ function Calendar() {
 
   const cells = useMemo(() => buildMonthDays(viewYear, viewMonth), [viewYear, viewMonth]);
   // Find the last in-current-month cell and compute the end index of that row (to keep placeholders in final row)
-  const { lastInCurrentIdx, lastRowEndIdx } = useMemo(() => {
+  const lastRowEndIdx = useMemo(() => {
     let lastIdx = -1;
     for (let i = cells.length - 1; i >= 0; i--) {
       if (cells[i] && cells[i].inCurrent) { lastIdx = i; break; }
     }
     // If nothing found, keep all cells to avoid layout break
-    if (lastIdx < 0) return { lastInCurrentIdx: -1, lastRowEndIdx: cells.length - 1 };
+    if (lastIdx < 0) return cells.length - 1;
     const rowEnd = Math.min(cells.length - 1, (Math.ceil((lastIdx + 1) / 7) * 7) - 1);
-    return { lastInCurrentIdx: lastIdx, lastRowEndIdx: rowEnd };
+    return rowEnd;
   }, [cells]);
   const headers = ['일', '월', '화', '수', '목', '금', '토'];
   const todayKey = `${todayDate.getFullYear()}-${z(todayDate.getMonth() + 1)}-${z(todayDate.getDate())}`;

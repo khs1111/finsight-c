@@ -301,7 +301,7 @@ export default function QuizQuestion({ current,
     } else {
       setImgSrc(null);
     }
-  }, [current, imgCandidates, question?.type]);
+  }, [current, imgCandidates, question?.type, isArticleType]);
 
   // 학습하기가 열릴 때 백엔드에서 받은 퀴즈 데이터의 키포인트를 사용
   useEffect(() => {
