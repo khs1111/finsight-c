@@ -89,7 +89,12 @@ export default function Explore() {
             // getQuestions API 사용 (더미 데이터 우선)
             console.log('🎯 퀴즈 데이터 요청 중...');
             setIsFetchingQuestions(true);
-            const result = await apiGetQuestions({ topicId: mainTopic || mainTopicId, subTopic: subTopic || subTopicId, levelId: lv });
+            const result = await apiGetQuestions({ 
+              topicId: (mainTopicId != null ? mainTopicId : mainTopic),
+              subTopic: (subTopicId != null ? subTopicId : subTopic),
+              subTopicId: subTopicId,
+              levelId: lv 
+            });
             if (result && result.questions && result.questions.length > 0) {
               console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
               setQuestions(result.questions);

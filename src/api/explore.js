@@ -296,9 +296,9 @@ function normalizeQuizPayload(raw) {
       const artImg = nestedArticle.image_url || nestedArticle.imageUrl || nestedArticle.image_path || nestedArticle.imagePath;
       image = sanitizeImageUrl(artImg);
     }
-    const rawType = q.type ?? q.questionType ?? q.kind;
-    const hasArticleId = q.articleId != null || q.article_id != null;
-    const isArticleLike = looksArticleType(rawType) || !!image || !!nestedArticle || hasArticleId;
+  const rawType = q.type ?? q.questionType ?? q.kind;
+  // 기사형 판정은 보수적으로: 명시적 type이 기사이거나, 이미지 URL이 확보된 경우만
+  const isArticleLike = looksArticleType(rawType) || !!image;
       const mapped = {
       ...q,
       // 질문 본문/지문 매핑 보강
@@ -425,16 +425,36 @@ export const submitAnswer = async ({ quizId, userId, answers, token }) => {
     // 빈 객체를 반환하면 상위 로직이 옵션의 isCorrect로 로컬 판정합니다.
     return {};
   }
-  try {
-    return await http('/quizzes/submit-answer', {
-      method: 'POST',
-      body: JSON.stringify({ quizId, userId: withUserId(userId), answers }),
-      token
-    }, token);
-  } catch {
-    // 백엔드 실패 시 임의 채점을 하지 않고, 프론트가 로컬 정답(옵션의 isCorrect)으로 판정하도록 최소 정보만 반환
-    return { selectedOptionId: answers?.[0]?.selectedOptionId };
+  const payload = { quizId, userId: withUserId(userId), answers };
+  const paths = [
+    '/quizzes/submit-answer',
+    '/quiz/submit',
+    '/quiz/answers',
+  ];
+  // 일부 백엔드가 단일 답안 스키마를 기대하는 경우를 대비
+  const single = answers && answers[0] ? {
+    quizId,
+    userId: withUserId(userId),
+    questionId: answers[0].questionId,
+    selectedOptionId: answers[0].selectedOptionId,
+  } : null;
+  const bodies = [payload, single].filter(Boolean);
+  for (const p of paths) {
+    for (const b of bodies) {
+      try {
+        return await http(p, {
+          method: 'POST',
+          body: JSON.stringify(b),
+          token,
+        }, token);
+      } catch (e) {
+        // 400류는 다음 변형으로 시도 계속
+        continue;
+      }
+    }
   }
+  // 백엔드 실패 시 임의 채점을 하지 않고, 프론트가 로컬 정답(옵션의 isCorrect)으로 판정하도록 최소 정보만 반환
+  return { selectedOptionId: answers?.[0]?.selectedOptionId };
 };
 
 // 7. 퀴즈 결과 조회
@@ -551,12 +571,12 @@ export const login = async (username, password) => {
 // ========================================
 
 // 기존 getQuestions 함수 -> 더미 데이터 우선 사용
-export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
+export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = {}) => {
   console.log('📚 getQuestions 호출됨 - topicId:', topicId, 'levelId:', levelId);
   const uid = withUserId();
   const lid = coerceLevelId(levelId);
   // If subTopic is numeric-like, treat it as subsectorId and pass it through when fetching quizzes
-  const subsectorId = (typeof subTopic === 'number' || (typeof subTopic === 'string' && /^\d+$/.test(subTopic))) ? subTopic : undefined;
+  const subsectorId = (subTopicId != null) ? subTopicId : ((typeof subTopic === 'number' || (typeof subTopic === 'string' && /^\d+$/.test(subTopic))) ? subTopic : undefined);
   try {
     // 1) 레벨별 퀴즈 목록 조회
     const qsParams = new URLSearchParams();
@@ -585,6 +605,35 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
         try {
           const rawQ = await http(`/quizzes/${id}`);
           const norm = normalizeQuizPayload(rawQ);
+          // 기사 enrichment: 각 문항의 article_id가 있다면 기사 상세를 받아 이미지/제목/본문을 보강
+          if (Array.isArray(norm?.questions)) {
+            await Promise.all(norm.questions.map(async (q, idx) => {
+              const aId = q.articleId ?? q.article_id;
+              if (!aId) return;
+              try {
+                const art = await http(`/articles/${aId}`);
+                const artImg = art?.image_url || art?.imageUrl || art?.image_path || art?.imagePath;
+                const image = artImg ? ( () => {
+                  const s = String(artImg).trim();
+                  if (/^(https?:\/\/|data:|blob:)/i.test(s)) return s;
+                  try {
+                    const apiUrl = new URL(API_BASE, (typeof window !== 'undefined' ? window.location.origin : undefined));
+                    const origin = apiUrl.origin;
+                    const basePath = apiUrl.pathname.replace(/\/$/, '');
+                    const normalized = s.replace(/^\/+/, '');
+                    return `${(IMAGE_BASE || origin)}${basePath ? basePath + '/' : '/'}${normalized}`;
+                  } catch { return null; }
+                })() : null;
+                norm.questions[idx] = {
+                  ...q,
+                  type: (String(q?.type||'').toLowerCase().includes('article') || image) ? 'articleImage' : q.type,
+                  image: q.image || image || null,
+                  articleTitleMd: q.articleTitleMd || art?.title || null,
+                  articleBodyMd: q.articleBodyMd || art?.body_md || art?.bodyMd || art?.body || null,
+                };
+              } catch (_) { /* skip per-item failure */ }
+            }));
+          }
           return { id, norm };
         } catch (_) { return { id, norm: null }; }
       })
@@ -592,7 +641,7 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
 
     // 선호도 함수들
     const hasArticle = (norm) => Array.isArray(norm?.questions) && norm.questions.some(
-      (q) => q.type === 'articleImage' || !!q.image
+      (q) => (String(q?.type||'').toLowerCase() === 'articleimage' || String(q?.type||'').toLowerCase() === 'article') && !!q?.image
     );
 
     // 주제/세부주제 관련 키워드 매칭 가중치
@@ -683,7 +732,10 @@ export const getQuestions = async ({ topicId, subTopic, levelId } = {}) => {
 
     // 기사형 문항은 첫 번째 문제로 나오지 않도록 4번째(인덱스 3), 스토리텔링은 3번째(인덱스 2)
     let qs = Array.isArray(chosen?.questions) ? chosen.questions : [];
-    const isArticleQ = (q) => q?.type === 'articleImage' || String(q?.type||'').toLowerCase() === 'article' || !!q?.image;
+    const isArticleQ = (q) => {
+      const t = String(q?.type||'').toLowerCase();
+      return (t === 'articleimage' || t === 'article') && !!q?.image;
+    };
     const isStoryQ = (q) => {
       const t = String(q?.type || q?.questionType || '').toLowerCase();
       if (t.includes('story')) return true;

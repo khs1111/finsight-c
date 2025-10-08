@@ -101,15 +101,37 @@ export default function QuizQuestion({ current,
         // ⚠️ 백엔드에서 키포인트가 없을 경우 기본 메시지
         mainContent = "서버에서 학습 내용을 불러오는 중입니다...";
       }
+      // 🔤 특수 마커 처리
+      // - '/n' 문자열은 줄바꿈으로 변환
+      // - 마크다운 유사 굵게(**텍스트**)와 헤더(##, ###)는 시각적으로만 반영하고 마커는 숨김
+      const normalizeMarkers = (text) => {
+        if (!text || typeof text !== 'string') return '';
+        let t = text;
+        // '/n' -> 실제 개행
+        t = t.replace(/\s*\/n\s*/g, '\n');
+        // 윈도우 개행 정규화
+        t = t.replace(/\r\n?/g, '\n');
+        return t;
+      };
+      const stripMdMarkers = (line) => {
+        // 헤더 마커 제거 후 라벨링은 렌더 단계에서 처리
+        return line
+          .replace(/^\s*#{2,3}\s*/, '')
+          .replace(/\*\*(.*?)\*\*/g, '$1');
+      };
       
       // 📝 전체 텍스트 합치기 (헤더 + 메인 콘텐츠)
-      const fullText = headerText + mainContent;
+      const fullText = headerText + normalizeMarkers(mainContent);
       
       // 🔄 줄바꿈별로 분리하여 각 줄을 개별 처리
       const lines = fullText.split('\n');
       
       return lines.map((line, index) => {
-        const trimmed = line?.trim() || "";
+        const raw = line ?? '';
+        const trimmed = raw.trim();
+        const isH3 = /^\s*###\s*/.test(raw);
+        const isH2 = /^\s*##\s*/.test(raw) && !isH3;
+        const hasBold = /\*\*(.*?)\*\*/.test(raw);
         
         // 📏 빈 줄 처리 - 적절한 간격 제공
         if (!trimmed) {
@@ -139,7 +161,7 @@ export default function QuizQuestion({ current,
               paddingLeft: '8px',
               color: '#FFFFFF'
             }}>
-              {trimmed}
+              {stripMdMarkers(trimmed)}
             </div>
           );
         }
@@ -153,7 +175,7 @@ export default function QuizQuestion({ current,
               lineHeight: '1.5',
               color: '#E6F0FF'
             }}>
-              {trimmed}
+              {stripMdMarkers(trimmed)}
             </div>
           );
         }
@@ -168,11 +190,44 @@ export default function QuizQuestion({ current,
               color: '#B3D9FF',
               lineHeight: '1.4'
             }}>
-              {trimmed}
+              {stripMdMarkers(trimmed)}
             </div>
           );
         }
         
+        // ###, ## 헤더는 굵게/큰 글씨로 강조 (마커는 숨김)
+        if (isH3 || isH2) {
+          return (
+            <div key={`hdr-${index}`} style={{
+              fontWeight: 'bold',
+              fontSize: isH3 ? '17px' : '16px',
+              marginTop: '8px',
+              marginBottom: '12px',
+              color: '#FFFFFF'
+            }}>
+              {stripMdMarkers(raw)}
+            </div>
+          );
+        }
+
+        // **굵게** 마커는 제거하고 굵게 표시
+        if (hasBold) {
+          const parts = raw.split(/(\*\*.*?\*\*)/g);
+          return (
+            <div key={`bold-${index}`} style={{ 
+              marginBottom: '8px',
+              lineHeight: '1.5',
+              color: '#FFFFFF'
+            }}>
+              {parts.map((p, i) => {
+                const m = /^\*\*(.*?)\*\*$/.exec(p);
+                if (m) return <strong key={i}>{m[1]}</strong>;
+                return <span key={i}>{p}</span>;
+              })}
+            </div>
+          );
+        }
+
         // 일반 텍스트
         return (
           <div key={`text-${index}`} style={{ 
@@ -180,7 +235,7 @@ export default function QuizQuestion({ current,
             lineHeight: '1.5',
             color: '#FFFFFF'
           }}>
-            {trimmed}
+            {stripMdMarkers(trimmed)}
           </div>
         );
       });
