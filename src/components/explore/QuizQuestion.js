@@ -53,6 +53,8 @@ export default function QuizQuestion({ current,
   const question = questionList[current];
   // 기사형 판별(호환): 백엔드에서 'ARTICLE' 등으로 내려오거나 정규화된 'articleImage' 모두 지원
   const isArticleType = String(question?.type || '').toLowerCase() === 'articleimage' || String(question?.type || '').toLowerCase() === 'article';
+  // 스토리형 판별: 정규화된 'story' 또는 스토리 본문/제목 존재 시
+  const isStoryType = String(question?.type || '').toLowerCase() === 'story' || !!(question?.storyTitleMd || question?.storyBodyMd);
   
   // ✅ 정답 인덱스 계산 (백엔드에서 받은 isCorrect 필드 기반)
   const correctOption = question?.options?.find(option => option.isCorrect);
@@ -606,6 +608,18 @@ export default function QuizQuestion({ current,
         <h2 className="quiz-question-title">
           {question?.stemMd || question?.question || "문제를 불러오는 중입니다..."}
         </h2>
+
+        {/* 스토리형 지문: 제목/본문 렌더링 (있을 때만) */}
+        {isStoryType && (question?.storyTitleMd || question?.storyBodyMd) && (
+          <div className="quiz-question-article-text-block" style={{ background:'#F6FAFF', border:'1px solid #E3F0FF', borderRadius:12, padding:16, marginTop:8 }}>
+            {question?.storyTitleMd && (
+              <div className="quiz-question-article-title" style={{ color:'#1C3C78' }}>{question.storyTitleMd}</div>
+            )}
+            {question?.storyBodyMd && (
+              <div className="quiz-question-article-body" style={{ whiteSpace:'pre-wrap' }}>{question.storyBodyMd}</div>
+            )}
+          </div>
+        )}
 
         {/* 기사형 지문: 제목/본문 렌더링 (있을 때만) */}
         {isArticleType && (question?.articleTitleMd || question?.articleBodyMd) && (

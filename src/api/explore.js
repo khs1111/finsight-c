@@ -283,6 +283,12 @@ function normalizeQuizPayload(raw) {
     const s = String(t).trim().toLowerCase();
     return s === 'article' || s === 'articleimage' || s === 'news' || s === 'article_img' || s === 'article-img';
   };
+  // 스토리형 판별 보조 함수
+  const looksStoryType = (t) => {
+    if (!t) return false;
+    const s = String(t).trim().toLowerCase();
+    return s.includes('story') || s.includes('case') || s.includes('scenario');
+  };
 
   const questions = (questionsArray || []).map((q) => {
     // 이미지 후보 키들(백엔드 다양성 대응): 가장 먼저 매칭되는 값을 사용
@@ -324,6 +330,17 @@ function normalizeQuizPayload(raw) {
   const hasArticleId = q.articleId != null || q.article_id != null;
   // 기사형 판정: 명시적 type 기사, 이미지가 있거나, article_id 또는 중첩 기사객체가 있는 경우 모두 인정
   const isArticleLike = looksArticleType(rawType) || !!image || !!nestedArticle || hasArticleId;
+  // 스토리형 판정: 명시적 type 또는 스토리 관련 필드가 있는 경우
+  const storyTitleCand = (
+    q.storyTitleMd ?? q.story_title_md ?? q.storyTitle ?? q.story_title ??
+    q.caseTitle ?? q.case_title ?? q.scenarioTitle ?? q.scenario_title ?? null
+  );
+  const storyBodyCand = (
+    q.storyBodyMd ?? q.story_body_md ?? q.story ?? q.storyMd ??
+    q.caseBody ?? q.case_body ?? q.scenarioBody ?? q.scenario_body ??
+    q.scenarioMd ?? q.scenario_md ?? q.contextStory ?? q.context_story ?? null
+  );
+  const isStoryLike = looksStoryType(rawType) || !!(storyTitleCand || storyBodyCand);
       const mapped = {
       ...q,
       // 질문 본문/지문 매핑 보강
@@ -332,6 +349,13 @@ function normalizeQuizPayload(raw) {
       ),
       stemMd: (
         q.stemMd ?? q.stem ?? q.questionText ?? q.prompt ?? q.text ?? q.question ?? ''
+      ),
+      // 스토리형 본문/제목 매핑 (백엔드 다양한 키 대응)
+      storyTitleMd: (
+        storyTitleCand ?? null
+      ),
+      storyBodyMd: (
+        storyBodyCand ?? null
       ),
       // 기사형 본문/제목 매핑 (백엔드 다양한 키 대응)
       articleTitleMd: (
@@ -364,6 +388,7 @@ function normalizeQuizPayload(raw) {
   type: (() => {
     const rawLower = String(rawType || '').trim().toLowerCase();
     if (isArticleLike) return 'articleImage';
+    if (isStoryLike) return 'story';
     // 백엔드가 ARTICLE만 주는 경우 대비
     if (rawLower === 'article') return 'articleImage';
     return rawType ?? undefined;
