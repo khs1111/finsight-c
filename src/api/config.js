@@ -4,7 +4,7 @@ const fromNext = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API
 const fromCra  = (typeof process !== 'undefined' && process.env?.REACT_APP_API_BASE) || '';
 
 const PROD_DEFAULT = 'https://finsight.o-r.kr/api';
-const DEV_DEFAULT  = 'http://localhost:8081/api';
+const DEV_DEFAULT  = 'http://localhost:8080/api';
 
 // Detect local environment (best-effort)
 const isLocal = typeof window !== 'undefined'

@@ -9,9 +9,11 @@ let authInitialized = false;
 // 백엔드 연결 상태 체크 함수
 async function checkBackendConnection() {
   // 모든 건강 체크 엔드포인트는 백엔드 표준 prefix /api 사용
+  const baseHasApiSuffix = /\/api\/?$/.test(API_BASE);
+  const apiPrefix = baseHasApiSuffix ? '' : '/api';
   const candidates = [
-    '/api/health',
-    '/api/actuator/health',
+    `${apiPrefix}/health`,
+    `${apiPrefix}/actuator/health`,
   ];
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 2500);
@@ -315,15 +317,17 @@ function normalizeQuizPayload(raw) {
 export const getQuestions = async ({ levelId }) => {
   if (!levelId) return { questions: [], totalCount: 0, quizId: null };
   try {
+    // levelId 문자열(예: '초급','beginner')도 지원
+    const lid = coerceLevelId(levelId);
     // 1) 레벨의 퀴즈 목록 조회
-    const meta = await http(`/api/levels/${levelId}/quizzes`);
+    const meta = await http(`/levels/${lid}/quizzes`);
     const quizList = Array.isArray(meta?.quizzes) ? meta.quizzes : (Array.isArray(meta) ? meta : []);
     if (!quizList.length) return { questions: [], totalCount: 0, quizId: null };
     // 첫 번째 퀴즈 ID 선택 (필요시 우선순위 로직 향후 확장 가능)
     const quizId = quizList[0].id || quizList[0].quizId;
     if (!quizId) return { questions: [], totalCount: 0, quizId: null };
     // 2) 퀴즈 상세 조회
-    const detail = await http(`/api/quizzes/${quizId}`);
+  const detail = await http(`/quizzes/${quizId}`);
     const norm = normalizeQuizPayload(detail) || { questions: [] };
     const questions = Array.isArray(norm.questions) ? norm.questions : [];
     return { questions, totalCount: questions.length, quizId };
@@ -339,7 +343,7 @@ export const getQuestions = async ({ levelId }) => {
 export const getLevelsBySubsector = async (subsectorId) => {
   if (!subsectorId) return [];
   try {
-    const detail = await http(`/api/subsectors/${subsectorId}`);
+    const detail = await http(`/subsectors/${subsectorId}`);
     const raw = Array.isArray(detail?.levels) ? detail.levels : [];
     // 표준화: UI에서 사용하는 key/title/desc/goal 필드 추가
     return raw.map(l => ({
@@ -354,7 +358,7 @@ export const getLevelsBySubsector = async (subsectorId) => {
 
 // 답안 제출 (사양: POST /api/quizzes/submit-answer)
 export const submitAnswer = async ({ quizId, questionId, selectedOptionId }) => {
-  return await http('/api/quizzes/submit-answer', {
+  return await http('/quizzes/submit-answer', {
     method: 'POST',
     body: JSON.stringify({ quizId, questionId, selectedOptionId }),
   });
@@ -362,7 +366,7 @@ export const submitAnswer = async ({ quizId, questionId, selectedOptionId }) => 
 
 // 퀴즈 완료 (사양: POST /api/quizzes/{id}/complete)
 export const completeQuiz = async (quizId) => {
-  return await http(`/api/quizzes/${quizId}/complete`, { method: 'POST' });
+  return await http(`/quizzes/${quizId}/complete`, { method: 'POST' });
 };
 
 // 폴백 함수들 (하위 호환성) - 더미 데이터 사용
