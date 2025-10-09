@@ -395,11 +395,9 @@ function normalizeQuizPayload(raw) {
   // 이미지가 없어도 placeholder + 폴백 이미지를 통해 동일한 렌더링을 보장
   type: (() => {
     const rawLower = String(rawType || '').trim().toLowerCase();
-    if (isArticleLike) return 'articleImage';
+    if (isArticleLike) return 'article';
     if (isStoryLike) return 'story';
-    // 백엔드가 ARTICLE만 주는 경우 대비
-    if (rawLower === 'article') return 'articleImage';
-    return rawType ?? undefined;
+    return rawLower || undefined;
   })(),
       // articleId를 표준화해 보관
       articleId: q.articleId ?? q.article_id ?? articleIdFromNested ?? undefined,
@@ -797,8 +795,14 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
       console.log(`🧩 선택된 퀴즈 ${chosenId} | 주제 매칭 점수=${chosenEntry?.score||0}`);
     }
 
-    const qs = Array.isArray(chosen?.questions) ? chosen.questions : [];
-    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항; 주제 매칭 점수=${chosenEntry?.score||0})`);
+    let qs = Array.isArray(chosen?.questions) ? chosen.questions.slice() : [];
+    // 정렬: sort_order | sortOrder | sequence | id
+    qs.sort((a,b)=>{
+      const av = a?.sort_order ?? a?.sortOrder ?? a?.sequence ?? a?.id ?? 0;
+      const bv = b?.sort_order ?? b?.sortOrder ?? b?.sequence ?? b?.id ?? 0;
+      return av - bv;
+    });
+    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항; 정렬됨; 주제 매칭 점수=${chosenEntry?.score||0})`);
     return { questions: qs, totalCount: qs.length, quizId: chosenId };
   } catch (error) {
     console.log('❌ 백엔드 로드 실패 (getQuestions):', error.message);
@@ -841,7 +845,8 @@ export const postAttempt = ({ quizId, questionId, selectedOptionId, userId, toke
   submitAnswer({
     quizId,
     userId: withUserId(userId),
-    answers: [{ questionId, selectedOptionId }],
+    questionId,
+    selectedOptionId,
     token,
   });
 
