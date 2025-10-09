@@ -206,34 +206,17 @@ export const getLevelProgress = async (levelId, userId, token) => {
 // 5. 퀴즈 상세 조회
 export const getQuiz = async (quizId) => {
   try {
-    const raw = await http(`/quizzes/${quizId}`);
-    return normalizeQuizPayload(raw);
-  } catch {
-    // 더미 데이터 사용 제거: 실패 시 null 반환
-    return null;
-  }
+    const raw = await http(`/quizzes/${quizId}`); return normalizeQuizPayload(raw);
+  } catch { return null; }
 };
 
 // 서버 응답 키를 UI에서 쓰는 형태로 정규화 (questionText/optionText → question/text)
 function parseBoolLoose(v) {
-  if (typeof v === 'boolean') return v;
-  if (typeof v === 'number') return v !== 0;
-  if (v == null) return false;
-  const s = String(v).trim().toLowerCase();
-  if (['true','1','y','yes','t','ok','correct'].includes(s)) return true;
-  if (['false','0','n','no','f','x','wrong'].includes(s)) return false;
-  return false;
+  if (typeof v === 'boolean') return v; if (typeof v === 'number') return v !== 0; if (v == null) return false; const s = String(v).trim().toLowerCase(); if (['true','1','y','yes','t','ok','correct'].includes(s)) return true; if (['false','0','n','no','f','x','wrong'].includes(s)) return false; return false;
 }
 
 function normalizeQuizPayload(raw) {
-  if (!raw) return raw;
-  // 백엔드 응답 변형 대응: data.questions 등 다양한 래핑을 허용
-  const articlesArray = Array.isArray(raw?.articles)
-    ? raw.articles
-    : (Array.isArray(raw?.data?.articles) ? raw.data.articles : (Array.isArray(raw?.result?.articles) ? raw.result.articles : []));
-  const questionsArray = Array.isArray(raw?.questions)
-    ? raw.questions
-    : (Array.isArray(raw?.data?.questions) ? raw.data.questions : (Array.isArray(raw?.result?.questions) ? raw.result.questions : []));
+  if (!raw) return null; const qs = Array.isArray(raw.questions) ? raw.questions : []; const articles = Array.isArray(raw.articles) ? raw.articles : []; const aMap = articles.reduce((m, a) => { if (a?.id != null) m[a.id] = a; return m; }, {}); return { id: raw.id, questions: qs.map((q, i) => { const art = q.articleId ? aMap[q.articleId] : (q.article_id ? aMap[q.article_id] : undefined); return { id: q.id ?? i + 1, type: (q.type && String(q.type).toLowerCase() === 'article') ? 'articleImage' : q.type, question: q.stemMd || q.stem_md || q.stem || q.question || '', stemMd: q.stemMd || q.stem_md || q.stem || q.question || '', articleId: q.articleId || q.article_id || null, articleTitleMd: art?.title || null, articleBodyMd: art?.body_md || art?.body || null, image: art?.image_url || art?.imageUrl || null, hintMd: q.hintMd || q.hint_md || q.hint || null, teachingExplainerMd: q.answer_explanation_md || q.teachingExplainerMd || null, solvingKeypointsMd: q.solvingKeypointsMd || q.solving_keypoints_md || null, storyTitleMd: q.storyTitleMd || null, storyBodyMd: q.storyBodyMd || null, options: Array.isArray(q.options) ? q.options.map((o, oi) => ({ id: o.id || o.optionId || (oi + 1), text: o.content_md || o.contentMd || o.content || o.text || o.label || '', isCorrect: !!(o.isCorrect || o.is_correct) })) : [] }; }) };
 
   // 미리 기사 맵 구성: id->article 매핑
   const articlesMap = Array.isArray(articlesArray)
@@ -629,101 +612,30 @@ export const login = async (username, password) => {
 
 // 기존 getQuestions 함수 -> 더미 데이터 우선 사용
 // Always fetch 4 questions per topic/subtopic/level, matching backend contract
-export const getQuestions = async ({ levelId, subTopicId, subTopic, topicId, topic, userId, token } = {}) => {
+export const getQuestions = async ({ levelId, subsectorId, subSectorId, subTopicId, userId } = {}) => {
   const uid = withUserId(userId);
   const lid = coerceLevelId(levelId);
-  const diag = (msg, extra) => { try { console.log(`🧪 getQuestions: ${msg}`, extra || ''); } catch (_) {} };
+  const ssId = subsectorId ?? subSectorId ?? subTopicId;
   try {
-    const paramsBase = new URLSearchParams();
-    if (uid != null) paramsBase.set('userId', uid);
-
-    // Resolve sector (topic) id if a name string was passed instead of numeric
-    let sectorId = topicId;
-    const topicName = topic || (typeof topicId === 'string' ? topicId : undefined);
-    if (!sectorId && typeof topicName === 'string') {
-      const sectors = await getSectorsWithSubsectors();
-      const foundSector = sectors.find(s => s.name === topicName || String(s.id) === String(topicName));
-      if (foundSector) sectorId = foundSector.id;
-      diag('sectorId resolved from name', { topicName, sectorId });
+    const params = new URLSearchParams();
+    if (uid != null) params.set('userId', uid);
+    if (ssId != null) params.set('subsectorId', ssId);
+    const listResp = await http(`/levels/${lid}/quizzes?${params.toString()}`);
+    const quizList = Array.isArray(listResp?.quizzes) ? listResp.quizzes : (Array.isArray(listResp) ? listResp : []);
+    if (!quizList.length) return { questions: [], totalCount: 0 };
+    const collected = [];
+    let quizIdUsed = null;
+    for (const qz of quizList) {
+      if (collected.length >= 4) break;
+      const qid = qz.id || qz.quizId; if (!qid) continue;
+      const detail = await getQuiz(qid);
+      const qs = detail?.questions || [];
+      for (const q of qs) { if (collected.length < 4) collected.push(q); }
+      if (collected.length && !quizIdUsed) quizIdUsed = qid;
     }
-
-    // Resolve subsector id
-    let subsector = subTopicId;
-    if (!subsector && typeof subTopic === 'string') {
-      const sectors = await getSectorsWithSubsectors();
-      for (const sector of sectors) {
-        const found = (sector.subsectors || []).find(ss => ss.name === subTopic || String(ss.id) === String(subTopic));
-        if (found) { subsector = found.id; diag('subsector resolved from name', { subTopic, subsector }); break; }
-      }
-    }
-
-    // Build attempt order: with subsector first, then fallback without subsector
-    const attempts = [];
-    attempts.push({ sectorId, subsector });
-    if (subsector != null) attempts.push({ sectorId, subsector: undefined }); // fallback drop subsector
-    if (sectorId == null) attempts.push({ sectorId: undefined, subsector }); // fallback drop sector if unresolved
-
-    for (let i = 0; i < attempts.length; i++) {
-      const { sectorId: sId, subsector: ssId } = attempts[i];
-      const params = new URLSearchParams(paramsBase.toString());
-      if (sId != null) params.set('sectorId', sId);
-      if (ssId != null) params.set('subsectorId', ssId);
-      diag('fetch quiz list attempt', { attempt: i + 1, sectorId: sId, subsectorId: ssId });
-      let quizList = [];
-      try {
-        const listResp = await http(`/levels/${lid}/quizzes?${params.toString()}`);
-        quizList = Array.isArray(listResp?.quizzes) ? listResp.quizzes : (Array.isArray(listResp) ? listResp : []);
-      } catch (errList) {
-        diag('quiz list fetch error', errList?.message);
-        continue; // try next pattern
-      }
-      if (!quizList.length) { diag('empty quiz list', { attempt: i + 1 }); continue; }
-
-      // Prioritize NOT_STARTED > IN_PROGRESS > first
-      let prioritized = quizList.find(q => q.status === 'NOT_STARTED') || quizList.find(q => q.status === 'IN_PROGRESS') || quizList[0];
-      let quizId = prioritized?.id ?? prioritized?.quizId ?? quizList[0]?.id;
-      if (!quizId) { diag('no quizId in attempt', { attempt: i + 1 }); continue; }
-      diag('fetch quiz detail', { attempt: i + 1, quizId });
-
-      let qs = [];
-      try {
-        const raw = await http(`/quizzes/${quizId}`);
-        const norm = normalizeQuizPayload(raw) || {};
-        qs = Array.isArray(norm.questions) ? norm.questions : [];
-      } catch (errDetail) {
-        diag('quiz detail fetch error', errDetail?.message);
-        continue; // try next attempt
-      }
-
-      if (qs.length < 4) {
-        // Try alternative quizzes in same list
-        for (const qz of quizList) {
-          if (qz.id !== quizId) {
-            try {
-              const altRaw = await http(`/quizzes/${qz.id}`);
-              const altNorm = normalizeQuizPayload(altRaw) || {};
-              const altQs = Array.isArray(altNorm.questions) ? altNorm.questions : [];
-              if (altQs.length >= 4) { quizId = qz.id; qs = altQs; break; }
-            } catch (_) { /* try next */ }
-          }
-        }
-      }
-
-      if (qs.length >= 4) {
-        const selected = qs.slice(0, 4);
-        diag('success', { attempt: i + 1, quizId, questions: selected.length });
-        return { questions: selected, totalCount: selected.length, quizId, sectorId: sId, subsectorId: ssId };
-      } else {
-        diag('attempt had <4 questions', { attempt: i + 1, count: qs.length });
-        // try next attempt
-      }
-    }
-
-    // All attempts failed
-    diag('all attempts failed');
-    return { questions: [], totalCount: 0, error: '문제가 충분하지 않습니다. (all attempts failed)' };
+    return { questions: collected.slice(0,4), totalCount: collected.length, quizId: quizIdUsed };
   } catch (e) {
-    diag('fatal error', e?.message);
+    console.warn('getQuestions error:', e.message);
     return { questions: [], totalCount: 0, error: e.message };
   }
 };
@@ -759,43 +671,7 @@ export const getLevels = async () => {
 
 // UI 편의 래퍼: 단일 문항 답안 제출
 export const postAttempt = ({ quizId, questionId, selectedOptionId, userId, token }) =>
-  submitAnswer({
-    quizId,
-    userId: withUserId(userId),
-    answers: [{ questionId, selectedOptionId }],
-    token,
-  });
-
-export const getProgress = async () => {
-  try {
-    return await http('/progress');
-  } catch (error) {
-    console.log('❌ 백엔드 연결 실패 (getProgress)');
-    return null;
-  }
-};
-
-export const putProgress = async (progressData) => {
-  try {
-    return await http('/progress', {
-      method: 'PUT',
-      body: JSON.stringify(progressData)
-    });
-  } catch (error) {
-    console.log('🎯 백엔드 연결 실패 - 더미 진행률 저장');
-    return { success: true, message: '더미 모드 - 진행률 저장 시뮬레이션' };
-  }
-};
-
-// 뱃지 데이터 조회
-export const getBadges = async () => {
-  try {
-    return await http('/badges');
-  } catch (error) {
-    console.log('❌ 백엔드 연결 실패 (getBadges)');
-    return [];
-  }
-};
+  submitAnswer({ quizId, questionId, selectedOptionId, userId, token });
 
 // 토픽별 통계 조회
 export const getTopicStats = async () => {
