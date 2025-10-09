@@ -496,6 +496,62 @@ function normalizeQuizPayload(raw) {
   return { ...raw, questions };
 }
 
+// =====================================================
+// 추가: ARTICLE/STORY 정규화 및 최종 문제 선택 유틸
+// =====================================================
+const isArticleType = (q) => {
+  const t = (q?.type || '').toString().toUpperCase();
+  return t === 'ARTICLE' || t === 'ARTICLEIMAGE';
+};
+
+
+const normalizeQuestionLight = (server) => {
+  const norm = {
+    id: server?.id ?? server?.questionId ?? server?.question_id ?? null,
+    quizId: server?.quizId ?? server?.quiz_id ?? null,
+    type: (server?.type || '').toString().toUpperCase(),
+    sortOrder: server?.sort_order ?? server?.sortOrder ?? null,
+    stem: server?.stem_md ?? server?.stem ?? server?.question ?? '',
+  };
+  // 선택지: 기존 컴포넌트가 options[].text 사용하므로 text 채움
+  const rawOpts = server?.options ?? [];
+  norm.options = rawOpts.map((o, idx) => ({
+    id: o?.id ?? o?.optionId ?? (idx + 1),
+    text: o?.text ?? o?.content_md ?? o?.content ?? o?.optionText ?? '',
+    isCorrect: !!(o?.isCorrect ?? o?.is_correct),
+    sortOrder: o?.sort_order ?? o?.sortOrder ?? idx,
+  })).sort((a,b)=>(a.sortOrder??a.id??0)-(b.sortOrder??b.id??0));
+
+  if (isArticleType(norm) || isArticleType(server)) {
+    const art = server?.article || {};
+    norm.type = 'ARTICLE';
+    norm.articleId = art?.id ?? server?.articleId ?? server?.article_id ?? null;
+    norm.articleTitleMd = art?.title_md || art?.title || server?.articleTitleMd || '';
+    norm.articleBodyMd = art?.body_md || art?.body || server?.articleBodyMd || '';
+    norm.articleTitle = norm.articleTitleMd;
+    norm.articleBody = norm.articleBodyMd;
+    const imgRaw = art?.image_url || art?.imageUrl || server?.image_url || server?.imageUrl || null;
+    norm.articleImage = imgRaw || null; // sanitize 이전 단계 (이미 상위 정규화에서 처리됨)
+  }
+  return norm;
+};
+
+const buildFinalQuestions = (quizQuestions) => {
+  const qs = (quizQuestions || []).map(normalizeQuestionLight);
+  // 정렬
+  qs.sort((a,b)=>{
+    const av = a.sortOrder ?? a.id ?? 0; const bv = b.sortOrder ?? b.id ?? 0; return av - bv;
+  });
+  // 기사 4번 슬롯 배치
+  const articleIdx = qs.findIndex(isArticleType);
+  if (articleIdx === -1) {
+    return qs.slice(0,3); // 기사 없으면 3문항 제한 (요구사항에 맞춤)
+  }
+  const articleQ = qs[articleIdx];
+  const others = qs.filter((_,i)=>i!==articleIdx);
+  return [...others.slice(0,3), articleQ];
+};
+
 // 6. 답안 제출 (단일 시도 전용)
 // 백엔드 스펙: POST /quizzes/submit-answer  { quizId, userId, questionId, selectedOptionId }
 export const submitAnswer = async ({ quizId, userId, questionId, selectedOptionId, token }) => {
@@ -784,15 +840,9 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
       console.log(`🧩 선택된 퀴즈 ${chosenId} | 주제 매칭 점수=${chosenEntry?.score||0}`);
     }
 
-    let qs = Array.isArray(chosen?.questions) ? chosen.questions.slice() : [];
-    // 정렬: sort_order | sortOrder | sequence | id
-    qs.sort((a,b)=>{
-      const av = a?.sort_order ?? a?.sortOrder ?? a?.sequence ?? a?.id ?? 0;
-      const bv = b?.sort_order ?? b?.sortOrder ?? b?.sequence ?? b?.id ?? 0;
-      return av - bv;
-    });
-    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항; 정렬됨; 주제 매칭 점수=${chosenEntry?.score||0})`);
-    return { questions: qs, totalCount: qs.length, quizId: chosenId };
+    const finalQuestions = buildFinalQuestions(chosen?.questions);
+    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${finalQuestions.length}문항; 정렬됨; 주제 매칭 점수=${chosenEntry?.score||0})`);
+    return { questions: finalQuestions, totalCount: finalQuestions.length, quizId: chosenId };
   } catch (error) {
     console.log('❌ 백엔드 로드 실패 (getQuestions):', error.message);
     // 더미 데이터 사용 제거: 빈 결과 반환
