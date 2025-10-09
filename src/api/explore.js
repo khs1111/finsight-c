@@ -1,5 +1,5 @@
 // src/api/explore.js - 백엔드 API 연동
-import { API_BASE, IMAGE_BASE } from './config';
+import { API_BASE } from './config';
 import { guestLogin } from './auth';
 
 // 백엔드 연결 상태 확인 (정보용)

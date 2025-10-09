@@ -16,8 +16,7 @@ export default function Explore() {
   const [step, setStep] = useState(1);
   const [mainTopic, setMainTopic] = useState(null);      // name
   const [subTopic, setSubTopic] = useState(null);        // name
-  const [mainTopicId, setMainTopicId] = useState(null);  // id
-  const [subTopicId, setSubTopicId] = useState(null);    // id
+  // topic/subtopic numerical IDs no longer needed after refactor
   const [level, setLevel] = useState(null); // 난이도 상태 추가
   const [current, setQid] = useState(0);
   const [questions, setQuestions] = useState([]);
@@ -67,11 +66,9 @@ export default function Explore() {
   if (step === 1) {
     content = (
       <TopicPicker
-        onConfirm={(tName, subName, tId, sId) => {
+        onConfirm={(tName, subName) => {
           setMainTopic(tName);
           setSubTopic(subName);
-          setMainTopicId(tId);
-          setSubTopicId(sId);
           setStep(2);
         }}
       />
