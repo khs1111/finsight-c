@@ -180,13 +180,14 @@ export const getSectorsWithSubsectors = async () => {
 export const getLevelQuizzes = async (levelId, userId, token) => {
   const uid = withUserId(userId);
   const lid = coerceLevelId(levelId);
-    try { 
-    const levelData = await http(`/levels/${lid}/quizzes?userId=${uid}`);
-      const quizzes = Array.isArray(levelData?.quizzes)
-        ? levelData.quizzes
-        : (Array.isArray(levelData) ? levelData : []);
-      return quizzes;
-    } catch { return []; }
+  try {
+    // 명세: GET /levels/{id}/quizzes?userId=xx → { quizzes: [...] } 또는 배열
+    const levelData = await http(`/levels/${lid}/quizzes?userId=${uid}`, {}, token);
+    const quizzes = Array.isArray(levelData?.quizzes)
+      ? levelData.quizzes
+      : (Array.isArray(levelData) ? levelData : []);
+    return quizzes;
+  } catch { return []; }
 };
 
 // 4. 레벨별 진행도 조회
@@ -690,163 +691,38 @@ export const login = async (username, password) => {
 // 🔄 기존 함수들 (호환성 유지)
 // ========================================
 
-// 기존 getQuestions 함수 -> 더미 데이터 우선 사용
-export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = {}) => {
-  console.log('📚 getQuestions 호출됨 - topicId:', topicId, 'levelId:', levelId);
+let inFlightGetQuestions = false;
+let lastGetQuestionsKey = '';
+export const getQuestions = async ({ levelId, subsectorId } = {}) => {
   const uid = withUserId();
   const lid = coerceLevelId(levelId);
-  // If subTopic is numeric-like, treat it as subsectorId and pass it through when fetching quizzes
-  const subsectorId = (subTopicId != null) ? subTopicId : ((typeof subTopic === 'number' || (typeof subTopic === 'string' && /^\d+$/.test(subTopic))) ? subTopic : undefined);
+  const key = `${lid}|${subsectorId||''}|${uid||''}`;
+  if (inFlightGetQuestions && key === lastGetQuestionsKey) {
+    console.log('⏳ getQuestions 진행중 - 중복 호출 차단');
+    return { questions: [], totalCount: 0, inProgress: true };
+  }
+  inFlightGetQuestions = true;
+  lastGetQuestionsKey = key;
   try {
-    // 1) 레벨별 퀴즈 목록 조회
     const qsParams = new URLSearchParams();
     if (uid != null) qsParams.set('userId', uid);
     if (subsectorId != null) qsParams.set('subsectorId', subsectorId);
-    const levelData = await http(`/levels/${lid}/quizzes?${qsParams.toString()}`);
-    const quizzes = Array.isArray(levelData?.quizzes) ? levelData.quizzes : (Array.isArray(levelData) ? levelData : []);
-    if (!quizzes.length) throw new Error('No quizzes for level');
-
-    // 2) 우선순위: NOT_STARTED → IN_PROGRESS → 그 외, 없으면 첫 번째
-    const prioritized =
-      quizzes.find(q => q.status === 'NOT_STARTED') ||
-      quizzes.find(q => q.status === 'IN_PROGRESS') ||
-      quizzes[0];
-    const prioritizedId = prioritized?.id || prioritized?.quizId || quizzes[0]?.id;
-    if (!prioritizedId) throw new Error('No quizId');
-
-    // 3) 기사형 문제(이미지 포함)를 선호: 최대 5개 퀴즈 상세를 병렬 조회하여 이미지 포함 여부 확인
-    const candidateIds = Array.from(new Set([
-      prioritizedId,
-      ...quizzes.map(q => q.id || q.quizId).filter(Boolean)
-    ])).slice(0, 10);
-
-    const details = await Promise.all(
-      candidateIds.map(async (id) => {
-        try {
-          const rawQ = await http(`/quizzes/${id}`);
-          const norm = normalizeQuizPayload(rawQ);
-          // 기사 enrichment: 각 문항의 article_id가 있다면 기사 상세를 받아 이미지/제목/본문을 보강
-          if (Array.isArray(norm?.questions)) {
-            await Promise.all(norm.questions.map(async (q, idx) => {
-              const aId = q.articleId ?? q.article_id;
-              if (!aId) return;
-              try {
-                const art = await http(`/articles/${aId}`);
-                const artImg = art?.image_url || art?.imageUrl || art?.image_path || art?.imagePath || art?.image || art?.img || art?.thumbnail;
-                // Use same rules as sanitizeImageUrl (no API path leakage)
-                const image = artImg ? (() => {
-                  const s = String(artImg).trim();
-                  if (/^(https?:\/\/|data:|blob:)/i.test(s)) return s;
-                  try {
-                    const apiUrl = new URL(API_BASE, (typeof window !== 'undefined' ? window.location.origin : undefined));
-                    const origin = apiUrl.origin;
-                    if (/^\//.test(s)) {
-                      const base = IMAGE_BASE || origin;
-                      return `${base}${s}`;
-                    }
-                    const normalized = s.replace(/^\/+/, '');
-                    const base = (IMAGE_BASE || origin).replace(/\/$/, '');
-                    return `${base}/${normalized}`;
-                  } catch { return null; }
-                })() : null;
-                norm.questions[idx] = {
-                  ...q,
-                  type: (String(q?.type||'').toLowerCase().includes('article') || image) ? 'articleImage' : q.type,
-                  image: q.image || image || null,
-                  articleTitleMd: q.articleTitleMd || art?.title || null,
-                  articleBodyMd: q.articleBodyMd || art?.body_md || art?.bodyMd || art?.body || null,
-                };
-              } catch (_) { /* skip per-item failure */ }
-            }));
-          }
-          return { id, norm };
-        } catch (_) { return { id, norm: null }; }
-      })
-    );
-
-    // 주제/세부주제 관련 키워드 매칭 가중치
-    const getKeywords = (topic, sub) => {
-      const base = String(topic || '').trim();
-      const subBase = String(sub || '').trim();
-      const map = {
-        '은행': ['은행','예금','적금','계좌','인터넷뱅킹','모바일 뱅킹','대출'],
-        '카드': ['카드','신용카드','체크카드','혜택','수수료','한도','신용 점수','신용점수'],
-        '세금/절세': ['세금','절세','영수증','연말정산','소득공제','세액공제'],
-        '투자': ['투자','주식','채권','펀드','거래소']
-      };
-      const subMap = {
-        '예금/적금': ['예금','적금','이자','만기','정기예금','자유적금'],
-        '계좌의 종류와 기능': ['입출금계좌','통장','자유입출금','정기예금','계좌이체'],
-        '인터넷/모바일 뱅킹': ['인터넷뱅킹','모바일뱅킹','공동인증서','토스','카카오뱅크'],
-        '대출의 기초 이해': ['대출','원리금','금리','상환','담보','신용대출'],
-        '카드의 종류': ['신용카드','체크카드','카드','후불','선불'],
-        '카드 수수료 및 혜택 이해': ['수수료','혜택','적립','포인트','캐시백'],
-        '카드 사용 전략': ['할부','한도','연회비','결제일'],
-        '신용 점수와 카드 사용의 관계': ['신용 점수','신용점수','연체','신용등급'],
-        '거래소 사용': ['거래소','매수','매도','호가','체결'],
-        '주식': ['주식','배당','PER','PBR','시가총액'],
-        '채권': ['채권','표면금리','만기수익률','국채','회사채'],
-        '펀드': ['펀드','ETF','인덱스','수수료','환매'],
-        '세금이란': ['세금','납부','국세','지방세'],
-        '영수증과 세금 혜택': ['영수증','공제','현금영수증'],
-        '연말정산': ['연말정산','소득공제','세액공제','환급']
-      };
-      const t = map[base] || (base ? [base] : []);
-      const s = subMap[subBase] || (subBase ? [subBase] : []);
-      return Array.from(new Set([...t, ...s]));
-    };
-
-    // 토픽 이름/ID 보정: 숫자 ID가 들어오면 키워드가 비게 되어 오선택될 수 있으므로
-    // topicName/topic/subTopicName/subTopic 등 문자열 값을 우선 사용
-    const topicStr = [topicId, (typeof topicId === 'object' ? null : undefined)]
-      .filter(v => typeof v === 'string')?.[0] || topicId;
-    const kw = getKeywords(topicStr, subTopic).map(k => String(k).toLowerCase());
-
-    // 퀴즈 메타 텍스트 추출: 제목/설명/토픽명/태그 등을 모두 포함시켜 매칭 정확도 향상
-    const metaTextOfQuiz = (norm) => {
-      if (!norm) return '';
-      const fields = [
-        norm.title, norm.name, norm.quizTitle, norm.subtitle, norm.description,
-        norm.topic, norm.topicName, norm.category, norm.categoryName,
-        norm.subTopic, norm.subtopic, norm.subTopicName, norm.sectorName, norm.subsectorName,
-      ];
-      const tags = Array.isArray(norm.tags) ? norm.tags : (Array.isArray(norm.keywords) ? norm.keywords : []);
-      return [...fields.filter(Boolean), ...tags].join(' ');
-    };
-
-    const textOfQuiz = (norm) => {
-      if (!norm?.questions) return '';
-      const qText = norm.questions.map(q => [q.question, q.stemMd, q.teachingExplainerMd, q.solvingKeypointsMd, ...(q.options||[]).map(o=>o.text)]
-        .flat().filter(Boolean).join(' ')).join(' ');
-      return `${metaTextOfQuiz(norm)} ${qText}`;
-    };
-    const scoreOf = (norm) => {
-      if (!kw.length) return 0;
-      const hay = textOfQuiz(norm).toLowerCase();
-      return kw.reduce((s,k)=> s + (hay.includes(k) ? 1 : 0), 0);
-    };
-
-    // 1순위: 주제 매칭 점수 우선 (기사형 여부와 무관) — 백엔드가 퀴즈 내부에서 3/4번 유형을 보장
-    const withScores = details.map(d => ({ ...d, score: scoreOf(d.norm) }));
-    const primaryEntry = withScores.find(d => d.id === prioritizedId && d.norm);
-    // 우선 선택: 주제 매칭 점수가 양수인 것 중 최고점, 없으면 우선순위 퀴즈 유지
-    const positive = withScores.filter(d => d.norm && d.score > 0);
-    const bestByTopic = positive.sort((a,b) => (b.score - a.score))[0];
-    const chosenEntry = bestByTopic || primaryEntry || withScores.find(d => d.norm) || null;
-
-    const chosen = chosenEntry?.norm;
-    const chosenId = chosenEntry?.id || prioritizedId;
-    if (chosen) {
-      console.log(`🧩 선택된 퀴즈 ${chosenId} | 주제 매칭 점수=${chosenEntry?.score||0}`);
-    }
-
-    const finalQuestions = buildFinalQuestions(chosen?.questions);
-    console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${finalQuestions.length}문항; 정렬됨; 주제 매칭 점수=${chosenEntry?.score||0})`);
-    return { questions: finalQuestions, totalCount: finalQuestions.length, quizId: chosenId };
-  } catch (error) {
-    console.log('❌ 백엔드 로드 실패 (getQuestions):', error.message);
-    // 더미 데이터 사용 제거: 빈 결과 반환
+    const resp = await http(`/levels/${lid}/quizzes?${qsParams.toString()}`);
+    const list = Array.isArray(resp?.quizzes) ? resp.quizzes : (Array.isArray(resp) ? resp : []);
+    if (!list.length) throw new Error('No quizzes');
+    const prioritized = list.find(q=>q.status==='NOT_STARTED') || list.find(q=>q.status==='IN_PROGRESS') || list[0];
+    const quizId = prioritized?.id ?? prioritized?.quizId ?? list[0]?.id;
+    if (!quizId) throw new Error('No quizId');
+    const quizDetailRaw = await http(`/quizzes/${quizId}`);
+    const quizDetail = normalizeQuizPayload(quizDetailRaw);
+    const finalQuestions = buildFinalQuestions(quizDetail?.questions);
+    console.log(`✅ 레벨 ${lid} 퀴즈 ${quizId} 로드 (${finalQuestions.length}문항)`);
+    return { questions: finalQuestions, totalCount: finalQuestions.length, quizId };
+  } catch (e) {
+    console.warn('❌ getQuestions 실패:', e.message);
     return { questions: [], totalCount: 0 };
+  } finally {
+    inFlightGetQuestions = false;
   }
 };
 
