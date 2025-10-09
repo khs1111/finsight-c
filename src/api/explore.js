@@ -97,13 +97,23 @@ async function http(path, opts = {}, token) {
   await ensureAuth();
   // 토큰 우선순위: opts.token > 파라미터 token > localStorage
   const jwt = opts.token || token || localStorage.getItem('accessToken');
+  // /api prefix 자동 보정: API_BASE가 이미 /api 로 끝나면 중복 추가 금지
+  // path 자체가 /api 로 시작하면 그대로 사용
+  let finalPath = path;
+  if (!/^\/api\//.test(path)) {
+    // path가 /api/ 로 시작하지 않음
+    const baseHasApi = /\/api\/?$/.test(API_BASE);
+    if (!baseHasApi) {
+      finalPath = `/api${path.startsWith('/') ? path : '/' + path}`;
+    }
+  }
   const headers = {
     Accept: "application/json",
     "Content-Type": "application/json",
     ...(opts.headers || {}),
   };
   if (jwt) headers["Authorization"] = `Bearer ${jwt}`;
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${API_BASE}${finalPath}`, {
     headers,
     credentials: "include",
     ...opts,
