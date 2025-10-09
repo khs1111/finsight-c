@@ -281,6 +281,37 @@ export const login = async (username, password) => {
 
 // 기존 getQuestions 함수 -> 더미 데이터 우선 사용
 // Always fetch 4 questions per topic/subtopic/level, matching backend contract
+// 최소 정규화: 백엔드 응답을 UI에서 기대하는 필드로 얇게 변환
+function normalizeQuizPayload(raw) {
+  if (!raw) return { questions: [] };
+  const qs = Array.isArray(raw.questions) ? raw.questions : [];
+  const articles = Array.isArray(raw.articles) ? raw.articles : [];
+  const aMap = articles.reduce((m,a)=>{ if(a?.id!=null) m[a.id]=a; return m;}, {});
+  return {
+    id: raw.id,
+    questions: qs.map((q,i)=>{
+      const art = q.articleId ? aMap[q.articleId] : (q.article_id ? aMap[q.article_id] : undefined);
+      return {
+        id: q.id ?? i+1,
+        type: (q.type && String(q.type).toLowerCase()==='article') ? 'articleImage' : q.type,
+        question: q.stem_md || q.stemMd || q.stem || q.question || '',
+        stemMd: q.stem_md || q.stemMd || q.stem || q.question || '',
+        articleId: q.articleId || q.article_id || null,
+        articleTitleMd: art?.title || null,
+        articleBodyMd: art?.body_md || art?.body || null,
+        image: art?.image_url || art?.imageUrl || null,
+        hintMd: q.hint_md || q.hintMd || q.hint || null,
+        teachingExplainerMd: q.answer_explanation_md || q.teachingExplainerMd || null,
+        solvingKeypointsMd: q.solving_keypoints_md || q.solvingKeypointsMd || null,
+        options: Array.isArray(q.options) ? q.options.map((o,oi)=>({
+          id: o.id || o.optionId || (oi+1),
+          text: o.content_md || o.contentMd || o.content || o.text || o.label || '',
+          isCorrect: !!(o.isCorrect || o.is_correct)
+        })) : []
+      };
+    })
+  };
+}
 export const getQuestions = async ({ levelId }) => {
   if (!levelId) return { questions: [], totalCount: 0, quizId: null };
   try {
