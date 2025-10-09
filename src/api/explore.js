@@ -116,7 +116,12 @@ async function http(path, opts = {}, token) {
     credentials: 'include',
     ...opts,
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  if (!res.ok) {
+    let bodyText = '';
+    try { bodyText = await res.text(); } catch (_) {}
+    const msg = bodyText ? `${res.statusText} ${bodyText}` : res.statusText;
+    throw new Error(`HTTP ${res.status}: ${msg}`);
+  }
   return res.json();
 }
 
@@ -314,20 +319,21 @@ function normalizeQuizPayload(raw) {
     })
   };
 }
-export const getQuestions = async ({ levelId }) => {
+export const getQuestions = async ({ levelId, userId }) => {
   if (!levelId) return { questions: [], totalCount: 0, quizId: null };
   try {
     // levelId 문자열(예: '초급','beginner')도 지원
     const lid = coerceLevelId(levelId);
-    // 1) 레벨의 퀴즈 목록 조회
-    const meta = await http(`/levels/${lid}/quizzes`);
+    const uid = withUserId(userId);
+    // 1) 레벨의 퀴즈 목록 조회 (백엔드가 userId 요구할 수 있어 포함)
+    const meta = await http(`/levels/${lid}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
     const quizList = Array.isArray(meta?.quizzes) ? meta.quizzes : (Array.isArray(meta) ? meta : []);
     if (!quizList.length) return { questions: [], totalCount: 0, quizId: null };
     // 첫 번째 퀴즈 ID 선택 (필요시 우선순위 로직 향후 확장 가능)
     const quizId = quizList[0].id || quizList[0].quizId;
     if (!quizId) return { questions: [], totalCount: 0, quizId: null };
     // 2) 퀴즈 상세 조회
-  const detail = await http(`/quizzes/${quizId}`);
+    const detail = await http(`/quizzes/${quizId}${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
     const norm = normalizeQuizPayload(detail) || { questions: [] };
     const questions = Array.isArray(norm.questions) ? norm.questions : [];
     return { questions, totalCount: questions.length, quizId };
@@ -343,17 +349,56 @@ export const getQuestions = async ({ levelId }) => {
 export const getLevelsBySubsector = async (subsectorId) => {
   if (!subsectorId) return [];
   try {
-    const detail = await http(`/subsectors/${subsectorId}`);
-    const raw = Array.isArray(detail?.levels) ? detail.levels : [];
-    // 표준화: UI에서 사용하는 key/title/desc/goal 필드 추가
-    return raw.map(l => ({
-      ...l,
-      key: l.id ?? l.levelId ?? l.name ?? l.title,
-      title: l.name || l.title || `레벨 ${l.id ?? l.levelId ?? ''}`,
-      desc: l.description || l.desc || l.summary || '',
-      goal: l.learning_goal || l.learningGoal || l.goal || '',
-    }));
-  } catch { return []; }
+    // 1) /subsectors/{id} 상세에서 levels 혹은 변형 키 탐색
+    let raw = [];
+    try {
+      const detail = await http(`/subsectors/${subsectorId}`);
+      const candidateKeys = ['levels','levelList','levelDtos','levelResponses'];
+      for (const k of candidateKeys) {
+        if (Array.isArray(detail?.[k]) && detail[k].length) { raw = detail[k]; break; }
+      }
+    } catch (e) { /* ignore single attempt */ }
+
+    // 2) /subsectors/{id}/levels
+    if (!raw.length) {
+      try {
+        const arr = await http(`/subsectors/${subsectorId}/levels`);
+        if (Array.isArray(arr) && arr.length) raw = arr;
+      } catch (_) {}
+    }
+    // 3) /levels?subsectorId=ID
+    if (!raw.length) {
+      try {
+        const arr = await http(`/levels?subsectorId=${encodeURIComponent(subsectorId)}`);
+        if (Array.isArray(arr) && arr.length) raw = arr;
+      } catch (_) {}
+    }
+    // 4) /levels/search?subsectorId=ID (백엔드 검색 스타일 대비)
+    if (!raw.length) {
+      try {
+        const arr = await http(`/levels/search?subsectorId=${encodeURIComponent(subsectorId)}`);
+        if (Array.isArray(arr) && arr.length) raw = arr;
+      } catch (_) {}
+    }
+    if (!raw.length) {
+      console.warn('[getLevelsBySubsector] 레벨 데이터를 찾지 못했습니다. subsectorId=', subsectorId);
+      return [];
+    }
+    return raw.map(l => {
+      const id = l.id ?? l.levelId ?? l.level_number ?? l.levelNumber;
+      return {
+        ...l,
+        id,
+        key: id,
+        title: l.title || l.name || `레벨 ${id}`,
+        desc: l.description || l.desc || l.summary || '',
+        goal: l.learning_goal || l.learningGoal || l.goal || '',
+      };
+    });
+  } catch (e) {
+    console.warn('[getLevelsBySubsector] 실패:', e.message);
+    return [];
+  }
 };
 
 // 답안 제출 (사양: POST /api/quizzes/submit-answer)

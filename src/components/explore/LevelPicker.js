@@ -101,7 +101,7 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
         const list = await getLevelsBySubsector(subsectorId);
         const mapped = Array.isArray(list)
           ? list.map(l => ({
-              key: String(l.key ?? l.id ?? l.levelId ?? ''),
+              key: l.id ?? l.key ?? l.levelId ?? l.level_number ?? l.levelNumber,
               title: l.title ?? l.name ?? `레벨 ${l.id ?? l.levelId ?? ''}`,
               desc: l.desc ?? l.description ?? '',
               goal: l.goal ?? l.learning_goal ?? l.learningGoal ?? '',
@@ -218,7 +218,7 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
 
       {/* 확인 버튼 */}
       <button
-        onClick={() => onConfirm(selectedLevel)}
+  onClick={() => onConfirm(Number.isFinite(Number(selectedLevel)) ? Number(selectedLevel) : selectedLevel)}
         disabled={!selectedLevel}
         style={{
           position: "fixed",
