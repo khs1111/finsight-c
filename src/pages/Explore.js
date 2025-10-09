@@ -7,7 +7,6 @@ import QuizQuestion from "../components/explore/QuizQuestion";
 import CompletionScreen from "../components/explore/CompletionScreen";
 
 import {getQuestions as apiGetQuestions, postAttempt } from "../api/explore";
-import { createWrongNote } from "../api/community";
 import { addWrongNoteImmediate } from "../components/study/useWrongNoteStore";
 import CategoryNav from "../components/news/CategoryNav";
 import { useNavVisibility } from "../components/navigation/NavVisibilityContext";
@@ -343,18 +342,7 @@ export default function Explore() {
                   category: question?.category || subTopic || mainTopic || '기타',
                   meta: { quizId: quizId ?? undefined, questionId: question.id }
                 });
-                // 백엔드 저장 시도
-                const token = localStorage.getItem('accessToken');
-                const userId = localStorage.getItem('userId') || undefined;
-                await createWrongNote({
-                  userId,
-                  quizId: quizId ?? undefined,
-                  questionId: question.id,
-                  selectedOptionId,
-                  correctOptionId: correctOpt?.id ?? undefined,
-                  category: question?.category || undefined,
-                  meta: { topic: mainTopic, subTopic }
-                }, token);
+                // 백엔드가 자동 기록하므로 별도 POST 생략
               } catch (_) { /* ignore */ }
             }
           } catch (e) {

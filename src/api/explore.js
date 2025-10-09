@@ -290,6 +290,13 @@ function normalizeQuizPayload(raw) {
     return s.includes('story') || s.includes('case') || s.includes('scenario');
   };
 
+  const originForImage = (() => {
+    try {
+      const apiUrl = new URL(API_BASE, (typeof window !== 'undefined' ? window.location.origin : undefined));
+      return apiUrl.origin;
+    } catch { return (typeof window !== 'undefined' ? window.location.origin : ''); }
+  })();
+
   const questions = (questionsArray || []).map((q) => {
     // 이미지 후보 키들(백엔드 다양성 대응): 가장 먼저 매칭되는 값을 사용
     const nestedArticle = (() => {
@@ -341,6 +348,7 @@ function normalizeQuizPayload(raw) {
     q.scenarioMd ?? q.scenario_md ?? q.contextStory ?? q.context_story ?? null
   );
   const isStoryLike = looksStoryType(rawType) || !!(storyTitleCand || storyBodyCand);
+      const articleIdFromNested = nestedArticle?.id ?? nestedArticle?.articleId ?? nestedArticle?.article_id;
       const mapped = {
       ...q,
       // 질문 본문/지문 매핑 보강
@@ -394,7 +402,22 @@ function normalizeQuizPayload(raw) {
     return rawType ?? undefined;
   })(),
       // articleId를 표준화해 보관
-      articleId: q.articleId ?? q.article_id ?? undefined,
+      articleId: q.articleId ?? q.article_id ?? articleIdFromNested ?? undefined,
+      articleTitle: (
+        q.articleTitle || q.article_title || nestedArticle?.title || undefined
+      ),
+      articleBody: (
+        q.articleBody || q.article_body || nestedArticle?.body_md || nestedArticle?.body || undefined
+      ),
+      articleImage: (() => {
+        const rawImg = (
+          q.articleImage || q.article_image || nestedArticle?.image_url || nestedArticle?.imageUrl || nestedArticle?.image_path || nestedArticle?.imagePath || null
+        );
+        if (!rawImg) return undefined;
+        if (/^(https?:\/\/|data:|blob:)/i.test(rawImg)) return rawImg;
+        const cleaned = rawImg.startsWith('/') ? rawImg : '/' + rawImg.replace(/^\/+/, '');
+        return (IMAGE_BASE || originForImage) + cleaned;
+      })(),
       options: (q.options || []).map((o, i) => ({
         ...o,
         id: o.id ?? o.optionId ?? o.valueId ?? o.value ?? (i + 1),
@@ -486,72 +509,29 @@ function normalizeQuizPayload(raw) {
   return { ...raw, questions };
 }
 
-// 6. 답안 제출
-// 답안 제출 (백엔드 명세: quizId, userId, answers 배열, JWT 토큰)
-export const submitAnswer = async ({ quizId, userId, answers, token, articleId }) => {
-  // 퀴즈 ID가 없거나 비정상인 경우 백엔드 호출을 생략하고 로컬 판정 경로로 위임
+// 6. 답안 제출 (단일 시도 전용)
+// 백엔드 스펙: POST /quizzes/submit-answer  { quizId, userId, questionId, selectedOptionId }
+export const submitAnswer = async ({ quizId, userId, questionId, selectedOptionId, token }) => {
   const nQuizId = Number(quizId);
-  if (!Number.isFinite(nQuizId)) {
-    // 빈 객체를 반환하면 상위 로직이 옵션의 isCorrect로 로컬 판정합니다.
-    return {};
-  }
-  // 입력 유효성 검사: questionId/selectedOptionId 없는 경우 백엔드 호출 생략 (로컬 판정)
-  const first = Array.isArray(answers) && answers[0] ? answers[0] : null;
-  const hasQuestionId = first && (first.questionId != null && String(first.questionId).trim() !== '');
-  const hasSelectedOption = first && (first.selectedOptionId != null && String(first.selectedOptionId).trim() !== '');
-  if (!hasQuestionId || !hasSelectedOption) {
-    console.warn('⚠️ submitAnswer: questionId 또는 selectedOptionId 누락으로 로컬 판정으로 폴백합니다.', { hasQuestionId, hasSelectedOption });
-    return {};
-  }
-
-  const payload = { quizId: nQuizId, userId: withUserId(userId), answers, articleId };
-  const single = {
+  if (!Number.isFinite(nQuizId)) return {};
+  if (questionId == null || selectedOptionId == null) return {};
+  const body = {
     quizId: nQuizId,
     userId: withUserId(userId),
-    questionId: first.questionId,
-    selectedOptionId: first.selectedOptionId,
-    articleId,
+    questionId,
+    selectedOptionId,
   };
-  // 일부 백엔드가 다른 키명을 사용하는 경우 대비한 단일-답안 변형 바디들
-  const singleVariants = [
-    single,
-    { ...single, optionId: single.selectedOptionId },
-    { ...single, answerId: single.selectedOptionId },
-  ];
-
-  // 다양한 엔드포인트 변형 지원
-  const paths = [
-    '/quizzes/submit-answer', // 스펙 우선
-    '/quiz/submit',
-    '/quiz/answers',
-    `/quizzes/${nQuizId}/answers`,
-    `/quizzes/${nQuizId}/submit`,
-    `/quizzes/${nQuizId}/attempt`,
-    '/answers/submit',
-    '/answers',
-    '/attempts',
-  ];
-
-  const bodies = [payload, ...singleVariants];
-  for (const p of paths) {
-    for (const b of bodies) {
-      try {
-        // 진단 로그: 엔드포인트/바디 키만 출력 (민감정보 제외)
-        console.log(`📤 submitAnswer → POST ${p} | keys=[${Object.keys(b).join(', ')}]`);
-        const res = await http(p, {
-          method: 'POST',
-          body: JSON.stringify(b),
-          token,
-        }, token);
-        return res;
-      } catch (e) {
-        // 4xx/5xx는 다음 변형으로 시도 계속
-        continue;
-      }
-    }
+  console.log('📤 submitAnswer → POST /quizzes/submit-answer | keys=[' + Object.keys(body).join(', ') + ']');
+  try {
+    return await http('/quizzes/submit-answer', {
+      method: 'POST',
+      body: JSON.stringify(body),
+      token,
+    }, token);
+  } catch (e) {
+    console.warn('❌ submitAnswer 실패:', e.message);
+    return {};
   }
-  // 백엔드 실패 시 임의 채점을 하지 않고, 프론트가 로컬 정답(옵션의 isCorrect)으로 판정하도록 최소 정보만 반환
-  return { selectedOptionId: answers?.[0]?.selectedOptionId };
 };
 
 // 7. 퀴즈 결과 조회
@@ -817,69 +797,7 @@ export const getQuestions = async ({ topicId, subTopic, subTopicId, levelId } = 
       console.log(`🧩 선택된 퀴즈 ${chosenId} | 주제 매칭 점수=${chosenEntry?.score||0}`);
     }
 
-    // 기사형 문항은 첫 번째 문제로 나오지 않도록 4번째(인덱스 3), 스토리텔링은 3번째(인덱스 2)
-    let qs = Array.isArray(chosen?.questions) ? chosen.questions : [];
-    const isArticleQ = (q) => {
-      const t = String(q?.type||'').toLowerCase();
-      return (t === 'articleimage' || t === 'article') || (q?.articleId != null || q?.article_id != null);
-    };
-    const isStoryQ = (q) => {
-      const t = String(q?.type || q?.questionType || '').toLowerCase();
-      if (t.includes('story')) return true;
-      const text = [q?.question, q?.stemMd, q?.teachingExplainerMd].filter(Boolean).join(' ').toLowerCase();
-      return /스토리|story|case|사례/.test(text);
-    };
-    const moveArticleToIndex = (arr, targetIdx = 3) => {
-      if (!Array.isArray(arr) || arr.length === 0) return arr || [];
-      const idx = arr.findIndex(isArticleQ);
-      if (idx === -1) return arr;
-      const ti = Math.min(targetIdx, Math.max(0, arr.length - 1));
-      if (idx === ti) return arr;
-      const clone = arr.slice();
-      const [item] = clone.splice(idx, 1);
-      clone.splice(ti, 0, item);
-      console.log(`🔀 기사형 문항 위치 이동: 원래 인덱스 ${idx} → ${ti} (총 ${arr.length}문항)`);
-      return clone;
-    };
-    const moveStoryToIndex = (arr, targetIdx = 2) => {
-      if (!Array.isArray(arr) || arr.length === 0) return arr || [];
-      const idx = arr.findIndex(isStoryQ);
-      if (idx === -1) return arr;
-      const ti = Math.min(targetIdx, Math.max(0, arr.length - 1));
-      if (idx === ti) return arr;
-      const clone = arr.slice();
-      const [item] = clone.splice(idx, 1);
-      clone.splice(ti, 0, item);
-      console.log(`🔀 스토리 문항 위치 이동: 원래 인덱스 ${idx} → ${ti} (총 ${arr.length}문항)`);
-      return clone;
-    };
-    // 순서: 먼저 스토리 2번 인덱스로, 그 다음 기사 3번 인덱스로 배치
-    qs = moveStoryToIndex(qs, 2);
-    qs = moveArticleToIndex(qs, 3);
-    try {
-      const storyIdx = qs.findIndex(q => isStoryQ(q));
-      const articleIdx = qs.findIndex(q => isArticleQ(q));
-      console.log(`✅ 문항 배치 확인: STORY@${storyIdx} | ARTICLE@${articleIdx} | total=${qs.length}`);
-    } catch (_) {}
-
-    // 보강) 총 문항 수가 4 미만이면 4개가 되도록 가상 문항(단답형)을 덧붙임 (기사형/스토리형은 생성하지 않음)
-    while (qs.length < 4) {
-      const filler = {
-        id: `virtual-filler-${qs.length}-${Date.now()}`,
-        type: undefined,
-        image: null,
-        stemMd: '학습 효과 점검용 보강 문항입니다.',
-        question: '가장 적절한 선택지를 고르세요.',
-        options: [
-          { id: 1, text: '보기 1', isCorrect: true },
-          { id: 2, text: '보기 2', isCorrect: false },
-          { id: 3, text: '보기 3', isCorrect: false },
-          { id: 4, text: '보기 4', isCorrect: false },
-        ],
-      };
-      qs.push(filler);
-    }
-
+    const qs = Array.isArray(chosen?.questions) ? chosen.questions : [];
     console.log(`✅ 레벨 ${levelId} → 퀴즈 ${chosenId} 로드됨 (${qs.length}문항; 주제 매칭 점수=${chosenEntry?.score||0})`);
     return { questions: qs, totalCount: qs.length, quizId: chosenId };
   } catch (error) {
