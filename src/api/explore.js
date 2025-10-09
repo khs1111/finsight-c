@@ -340,7 +340,15 @@ export const getLevelsBySubsector = async (subsectorId) => {
   if (!subsectorId) return [];
   try {
     const detail = await http(`/api/subsectors/${subsectorId}`);
-    return Array.isArray(detail?.levels) ? detail.levels : [];
+    const raw = Array.isArray(detail?.levels) ? detail.levels : [];
+    // 표준화: UI에서 사용하는 key/title/desc/goal 필드 추가
+    return raw.map(l => ({
+      ...l,
+      key: l.id ?? l.levelId ?? l.name ?? l.title,
+      title: l.name || l.title || `레벨 ${l.id ?? l.levelId ?? ''}`,
+      desc: l.description || l.desc || l.summary || '',
+      goal: l.learning_goal || l.learningGoal || l.goal || '',
+    }));
   } catch { return []; }
 };
 

@@ -9,7 +9,7 @@
  * - 진행도 관리 및 네비게이션
  * 
  * 🔗 백엔드 연동:
- * - getQuiz(): 퀴즈 데이터 조회
+ * - getQuestions(): 레벨 기반 퀴즈(문항 목록) 조회 (levels/{levelId}/quizzes -> quizzes/{quizId})
  * - submitAnswer(): 답안 제출 및 채점
  */
 import React, { useState, useRef, useEffect } from "react";
