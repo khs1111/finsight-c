@@ -300,12 +300,13 @@ function normalizeQuizPayload(raw) {
       const art = q.articleId ? aMap[q.articleId] : (q.article_id ? aMap[q.article_id] : undefined);
       return {
         id: q.id ?? i+1,
-        type: (q.type && String(q.type).toLowerCase()==='article') ? 'articleImage' : q.type,
+        // 기사형을 필터링하지 않고 그대로 포함 (ARTICLE 그대로 유지)
+        type: q.type || (art ? 'ARTICLE' : undefined),
         question: q.stem_md || q.stemMd || q.stem || q.question || '',
         stemMd: q.stem_md || q.stemMd || q.stem || q.question || '',
         articleId: q.articleId || q.article_id || null,
-        articleTitleMd: art?.title || null,
-        articleBodyMd: art?.body_md || art?.body || null,
+        articleTitleMd: art?.title_md || art?.titleMd || art?.title || null,
+        articleBodyMd: art?.body_md || art?.bodyMd || art?.body || null,
         image: art?.image_url || art?.imageUrl || null,
         hintMd: q.hint_md || q.hintMd || q.hint || null,
         teachingExplainerMd: q.answer_explanation_md || q.teachingExplainerMd || null,

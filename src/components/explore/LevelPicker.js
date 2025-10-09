@@ -218,7 +218,11 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
 
       {/* 확인 버튼 */}
       <button
-  onClick={() => onConfirm(Number.isFinite(Number(selectedLevel)) ? Number(selectedLevel) : selectedLevel)}
+  onClick={() => {
+    const levelId = Number.isFinite(Number(selectedLevel)) ? Number(selectedLevel) : selectedLevel;
+    const display = (levels.find(l => String(l.key) === String(selectedLevel))?.title) || String(levelId);
+    onConfirm({ levelId, levelName: display });
+  }}
         disabled={!selectedLevel}
         style={{
           position: "fixed",

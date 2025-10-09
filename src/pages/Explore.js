@@ -14,10 +14,15 @@ import { useNavVisibility } from "../components/navigation/NavVisibilityContext"
 
 export default function Explore() {
   const [step, setStep] = useState(1);
-  const [mainTopic, setMainTopic] = useState(null);      // name
-  const [subTopic, setSubTopic] = useState(null);        // name
-  // topic/subtopic numerical IDs no longer needed after refactor
-  const [level, setLevel] = useState(null); // 난이도 상태 추가
+  // topic/subtopic both id and name for reliable API + display
+  const [mainTopic, setMainTopic] = useState(null);       // name
+  // eslint-disable-next-line no-unused-vars
+  const [mainTopicId, setMainTopicId] = useState(null);   // id
+  const [subTopic, setSubTopic] = useState(null);         // name
+  // eslint-disable-next-line no-unused-vars
+  const [subTopicId, setSubTopicId] = useState(null);     // id
+  const [level, setLevel] = useState(null);               // level id (number preferred)
+  const [levelName, setLevelName] = useState(null);       // display name
   const [current, setQid] = useState(0);
   const [questions, setQuestions] = useState([]);
   const [quizId, setQuizId] = useState(null);
@@ -66,9 +71,12 @@ export default function Explore() {
   if (step === 1) {
     content = (
       <TopicPicker
-        onConfirm={(tName, subName) => {
-          setMainTopic(tName);
-          setSubTopic(subName);
+        onConfirm={(payload) => {
+          // payload: { topicId, topicName, subTopicId, subTopicName }
+          setMainTopic(payload?.topicName || null);
+          setMainTopicId(payload?.topicId || null);
+          setSubTopic(payload?.subTopicName || null);
+          setSubTopicId(payload?.subTopicId || null);
           setStep(2);
         }}
       />
@@ -81,13 +89,14 @@ export default function Explore() {
       <LevelPicker
         mainTopic={mainTopic}
         subTopic={subTopic}
-        onConfirm={async (lv) => {
-          setLevel(lv);
+        onConfirm={async ({ levelId, levelName: lvName }) => {
+          setLevel(levelId);
+          setLevelName(lvName || null);
           try {
             console.log('🎯 퀴즈 데이터 요청 중...');
             setIsFetchingQuestions(true);
             // 이름과 ID를 모두 전달하여 getQuestions가 내부에서 필요한 해석 수행
-            const result = await apiGetQuestions({ levelId: lv });
+            const result = await apiGetQuestions({ levelId });
             if (result && Array.isArray(result.questions) && result.questions.length) {
               console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
               setQuestions(result.questions);
@@ -116,14 +125,16 @@ export default function Explore() {
       <ExploreMain
         total={questions.length}
         done={current - 1}
-        selectedLevel={level}
-  initialTopic={mainTopic}
-  initialSubTopic={subTopic}
+        selectedLevel={levelName || level}
+        initialTopic={mainTopic}
+        initialSubTopic={subTopic}
         isLoading={isFetchingQuestions}
         onSelectionConfirm={async ({ level: newLevel, topic: newTopic, subTopic: newSub }) => {
+          // Here newLevel may be a label; accept numeric ids too
           setLevel(newLevel);
-            setMainTopic(newTopic);
-            setSubTopic(newSub);
+          setLevelName(typeof newLevel === 'number' ? null : newLevel);
+          setMainTopic(newTopic);
+          setSubTopic(newSub);
           try {
             setIsFetchingQuestions(true);
             const result = await apiGetQuestions({ levelId: newLevel });
