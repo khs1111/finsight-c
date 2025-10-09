@@ -6,8 +6,9 @@ import { API_BASE } from './config';
 export async function guestLogin(baseOverride) {
   try {
     const base = baseOverride || API_BASE;
-
-    const res = await fetch(`${base}/auth/guest`, {
+    // /api prefix 자동 보정
+    const url = /\/api\/?$/.test(base) ? `${base.replace(/\/$/,'')}/auth/guest` : `${base.replace(/\/$/,'')}/api/auth/guest`;
+    const res = await fetch(url, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Accept': 'application/json' }
@@ -18,7 +19,6 @@ export async function guestLogin(baseOverride) {
     if (data?.userId != null) localStorage.setItem('userId', String(data.userId));
     return true;
   } catch (e) {
-    // 폴백: 더미 토큰 저장으로 흐름 유지
     const dummy = 'guest_' + Date.now();
     localStorage.setItem('accessToken', dummy);
     if (!localStorage.getItem('userId')) localStorage.setItem('userId', '64');

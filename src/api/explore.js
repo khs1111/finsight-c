@@ -93,29 +93,26 @@ async function ensureAuth() {
 }
 
 async function http(path, opts = {}, token) {
-  // 필요 시 게스트 로그인 수행 후 토큰 확보
+  // 게스트 로그인 토큰 확보 (최초 1회)
   await ensureAuth();
-  // 토큰 우선순위: opts.token > 파라미터 token > localStorage
   const jwt = opts.token || token || localStorage.getItem('accessToken');
-  // /api prefix 자동 보정: API_BASE가 이미 /api 로 끝나면 중복 추가 금지
-  // path 자체가 /api 로 시작하면 그대로 사용
+  // /api prefix 자동 보정: 호출자가 /api/ 생략해도 안전하게 붙여줌
   let finalPath = path;
   if (!/^\/api\//.test(path)) {
-    // path가 /api/ 로 시작하지 않음
-    const baseHasApi = /\/api\/?$/.test(API_BASE);
-    if (!baseHasApi) {
+    const baseHasApiSuffix = /\/api\/?$/.test(API_BASE);
+    if (!baseHasApiSuffix) {
       finalPath = `/api${path.startsWith('/') ? path : '/' + path}`;
     }
   }
   const headers = {
-    Accept: "application/json",
-    "Content-Type": "application/json",
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
     ...(opts.headers || {}),
   };
-  if (jwt) headers["Authorization"] = `Bearer ${jwt}`;
+  if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
   const res = await fetch(`${API_BASE}${finalPath}`, {
     headers,
-    credentials: "include",
+    credentials: 'include',
     ...opts,
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -190,14 +187,13 @@ export const getSectorsWithSubsectors = async () => {
 export const getLevelQuizzes = async (levelId, userId, token) => {
   const uid = withUserId(userId);
   const lid = coerceLevelId(levelId);
-  try {
-    // 명세: GET /levels/{id}/quizzes?userId=xx → { quizzes: [...] } 또는 배열
-    const levelData = await http(`/levels/${lid}/quizzes?userId=${uid}`, {}, token);
-    const quizzes = Array.isArray(levelData?.quizzes)
-      ? levelData.quizzes
-      : (Array.isArray(levelData) ? levelData : []);
-    return quizzes;
-  } catch { return []; }
+    try { 
+    const levelData = await http(`/levels/${lid}/quizzes?userId=${uid}`);
+      const quizzes = Array.isArray(levelData?.quizzes)
+        ? levelData.quizzes
+        : (Array.isArray(levelData) ? levelData : []);
+      return quizzes;
+    } catch { return []; }
 };
 
 // 4. 레벨별 진행도 조회
@@ -301,7 +297,6 @@ function normalizeQuizPayload(raw) {
     return s.includes('story') || s.includes('case') || s.includes('scenario');
   };
 
-
   const questions = (questionsArray || []).map((q) => {
     // 이미지 후보 키들(백엔드 다양성 대응): 가장 먼저 매칭되는 값을 사용
     const nestedArticle = (() => {
@@ -341,7 +336,7 @@ function normalizeQuizPayload(raw) {
   const rawType = q.type ?? q.questionType ?? q.kind;
   const hasArticleId = q.articleId != null || q.article_id != null;
   // 기사형 판정: 명시적 type 기사, 이미지가 있거나, article_id 또는 중첩 기사객체가 있는 경우 모두 인정
-  const isArticleLike = looksArticleType(rawType) || !!nestedArticle || hasArticleId;
+  const isArticleLike = looksArticleType(rawType) || !!image || !!nestedArticle || hasArticleId;
   // 스토리형 판정: 명시적 type 또는 스토리 관련 필드가 있는 경우
   const storyTitleCand = (
     q.storyTitleMd ?? q.story_title_md ?? q.storyTitle ?? q.story_title ??
@@ -353,23 +348,6 @@ function normalizeQuizPayload(raw) {
     q.scenarioMd ?? q.scenario_md ?? q.contextStory ?? q.context_story ?? null
   );
   const isStoryLike = looksStoryType(rawType) || !!(storyTitleCand || storyBodyCand);
-  const articleIdFromNested = nestedArticle?.id ?? nestedArticle?.articleId ?? nestedArticle?.article_id;
-      const aFromMap = (() => {
-        const key = q.articleId ?? q.article_id ?? articleIdFromNested;
-        if (key == null) return null;
-        return articlesMap[String(key)] || null;
-      })();
-      const articleSource = aFromMap || nestedArticle || {};
-      const articleTitleNorm = (
-        articleSource?.title_md || articleSource?.titleMd || articleSource?.title || null
-      );
-      const articleBodyNorm = (
-        articleSource?.body_md || articleSource?.bodyMd || articleSource?.body || articleSource?.content || null
-      );
-      const articleImageRaw = (
-        articleSource?.image_url || articleSource?.imageUrl || articleSource?.image_path || articleSource?.imagePath || null
-      );
-      const articleImageAbs = articleImageRaw ? sanitizeImageUrl(articleImageRaw) : null;
       const mapped = {
       ...q,
       // 질문 본문/지문 매핑 보강
@@ -388,11 +366,16 @@ function normalizeQuizPayload(raw) {
       ),
       // 기사형 본문/제목 매핑 (백엔드 다양한 키 대응)
       articleTitleMd: (
-        q.articleTitleMd ?? q.article_title_md ?? articleTitleNorm
+        q.articleTitleMd ?? q.article_title_md ?? q.articleTitle ?? q.article_title ??
+        q.newsTitle ?? q.news_title ?? q.contextTitle ?? q.context_title ??
+        nestedArticle?.title ?? (articlesMap[String(q.articleId ?? q.article_id)]?.title) ?? null
       ),
       articleBodyMd: (
         q.articleBodyMd ?? q.article_body_md ?? q.articleBody ?? q.article_body ??
-        q.articleMd ?? q.article_md ?? articleBodyNorm
+        q.articleMd ?? q.article_md ?? q.article ?? q.contentMd ?? q.content_md ?? q.content ??
+        q.contextMd ?? q.context_md ?? q.context ?? q.passageMd ?? q.passage_md ?? q.passage ??
+        nestedArticle?.body_md ?? nestedArticle?.bodyMd ?? nestedArticle?.body ?? nestedArticle?.content ??
+        (articlesMap[String(q.articleId ?? q.article_id)]?.body_md || articlesMap[String(q.articleId ?? q.article_id)]?.bodyMd || articlesMap[String(q.articleId ?? q.article_id)]?.body) ?? null
       ),
       // 학습/핵심포인트/힌트 정규화
       solvingKeypointsMd: (
@@ -409,13 +392,16 @@ function normalizeQuizPayload(raw) {
   image,
   // 기사형으로 보이는 경우(백엔드 type이 ARTICLE 또는 이미지가 있는 경우) UI 타입을 articleImage로 통일
   // 이미지가 없어도 placeholder + 폴백 이미지를 통해 동일한 렌더링을 보장
-  type: (rawType ? String(rawType).toUpperCase() : (isArticleLike ? 'ARTICLE' : (isStoryLike ? 'STORY' : 'CONCEPT'))),
-      layout: isArticleLike ? 'article' : 'default',
-      // articleId 표준화
-      articleId: q.articleId ?? q.article_id ?? articleIdFromNested ?? undefined,
-      articleTitle: (q.articleTitle || q.article_title || articleTitleNorm || undefined),
-      articleBody: (q.articleBody || q.article_body || articleBodyNorm || undefined),
-      articleImage: (q.articleImage || q.article_image || articleImageAbs || undefined),
+  type: (() => {
+    const rawLower = String(rawType || '').trim().toLowerCase();
+    if (isArticleLike) return 'articleImage';
+    if (isStoryLike) return 'story';
+    // 백엔드가 ARTICLE만 주는 경우 대비
+    if (rawLower === 'article') return 'articleImage';
+    return rawType ?? undefined;
+  })(),
+      // articleId를 표준화해 보관
+      articleId: q.articleId ?? q.article_id ?? undefined,
       options: (q.options || []).map((o, i) => ({
         ...o,
         id: o.id ?? o.optionId ?? o.valueId ?? o.value ?? (i + 1),
@@ -493,12 +479,12 @@ function normalizeQuizPayload(raw) {
 
     // 진단 로그: 기사형 감지 여부
     try {
-      if (mapped?.type === 'ARTICLE') {
+      if (mapped?.type === 'articleImage') {
         const t = mapped?.articleTitleMd || '';
         const imgFlag = !!(mapped?.image);
         console.log(`📰 [ARTICLE DETECTED] id=${mapped?.id ?? q?.id}, type=${rawType}, image=${imgFlag}, articleId=${mapped?.articleId ?? q?.article_id}, title='${String(t).slice(0,30)}'`);
       } else {
-        console.log(`ℹ️ [TYPE] id=${mapped?.id ?? q?.id}, type=${mapped?.type}`);
+        console.log(`⚠️ [NOT ARTICLE] id=${mapped?.id ?? q?.id}, type=${rawType}`);
       }
     } catch (_) { /* noop log */ }
 
@@ -507,84 +493,24 @@ function normalizeQuizPayload(raw) {
   return { ...raw, questions };
 }
 
-// =====================================================
-// 추가: ARTICLE/STORY 정규화 및 최종 문제 선택 유틸
-// =====================================================
-const isArticleType = (q) => {
-  const t = (q?.type || '').toString().toUpperCase();
-  return t === 'ARTICLE' || t === 'ARTICLEIMAGE';
-};
-
-
-const normalizeQuestionLight = (server) => {
-  const norm = {
-    id: server?.id ?? server?.questionId ?? server?.question_id ?? null,
-    quizId: server?.quizId ?? server?.quiz_id ?? null,
-    type: (server?.type || '').toString().toUpperCase(),
-    sortOrder: server?.sort_order ?? server?.sortOrder ?? null,
-    stem: server?.stem_md ?? server?.stem ?? server?.question ?? '',
-  };
-  // 선택지: 기존 컴포넌트가 options[].text 사용하므로 text 채움
-  const rawOpts = server?.options ?? [];
-  norm.options = rawOpts.map((o, idx) => ({
-    id: o?.id ?? o?.optionId ?? (idx + 1),
-    text: o?.text ?? o?.content_md ?? o?.content ?? o?.optionText ?? '',
-    isCorrect: !!(o?.isCorrect ?? o?.is_correct),
-    sortOrder: o?.sort_order ?? o?.sortOrder ?? idx,
-  })).sort((a,b)=>(a.sortOrder??a.id??0)-(b.sortOrder??b.id??0));
-
-  if (isArticleType(norm) || isArticleType(server)) {
-    const art = server?.article || {};
-    norm.type = 'ARTICLE';
-    norm.articleId = art?.id ?? server?.articleId ?? server?.article_id ?? null;
-    norm.articleTitleMd = art?.title_md || art?.title || server?.articleTitleMd || '';
-    norm.articleBodyMd = art?.body_md || art?.body || server?.articleBodyMd || '';
-    norm.articleTitle = norm.articleTitleMd;
-    norm.articleBody = norm.articleBodyMd;
-    const imgRaw = art?.image_url || art?.imageUrl || server?.image_url || server?.imageUrl || null;
-    norm.articleImage = imgRaw || null; // sanitize 이전 단계 (이미 상위 정규화에서 처리됨)
-  }
-  return norm;
-};
-
-const buildFinalQuestions = (quizQuestions) => {
-  const qs = (quizQuestions || []).map(normalizeQuestionLight);
-  // 정렬
-  qs.sort((a,b)=>{
-    const av = a.sortOrder ?? a.id ?? 0; const bv = b.sortOrder ?? b.id ?? 0; return av - bv;
-  });
-  // 기사 4번 슬롯 배치
-  const articleIdx = qs.findIndex(isArticleType);
-  if (articleIdx === -1) {
-    return qs.slice(0,3); // 기사 없으면 3문항 제한 (요구사항에 맞춤)
-  }
-  const articleQ = qs[articleIdx];
-  const others = qs.filter((_,i)=>i!==articleIdx);
-  return [...others.slice(0,3), articleQ];
-};
-
-// 6. 답안 제출 (단일 시도 전용)
-// 백엔드 스펙: POST /quizzes/submit-answer  { quizId, userId, questionId, selectedOptionId }
-export const submitAnswer = async ({ quizId, userId, questionId, selectedOptionId, token }) => {
+// 6. 답안 제출
+// 답안 제출 (백엔드 명세: quizId, userId, answers 배열, JWT 토큰)
+export const submitAnswer = async ({ quizId, userId, answers, token, articleId }) => {
   const nQuizId = Number(quizId);
   if (!Number.isFinite(nQuizId)) return {};
-  if (questionId == null || selectedOptionId == null) return {};
-  const body = {
-    quizId: nQuizId,
-    userId: withUserId(userId),
-    questionId,
-    selectedOptionId,
-  };
-  console.log('📤 submitAnswer → POST /quizzes/submit-answer | keys=[' + Object.keys(body).join(', ') + ']');
+  const first = Array.isArray(answers) && answers[0] ? answers[0] : null;
+  if (!first?.questionId || !first?.selectedOptionId) return {};
+  const payload = { quizId: nQuizId, userId: withUserId(userId), answers, articleId };
   try {
+    console.log('📤 submitAnswer → POST /quizzes/submit-answer');
     return await http('/quizzes/submit-answer', {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
       token,
     }, token);
   } catch (e) {
-    console.warn('❌ submitAnswer 실패:', e.message);
-    return {};
+    console.warn('❌ submitAnswer 실패, 로컬 판정 폴백:', e.message);
+    return { selectedOptionId: first.selectedOptionId };
   }
 };
 
@@ -701,38 +627,29 @@ export const login = async (username, password) => {
 // 🔄 기존 함수들 (호환성 유지)
 // ========================================
 
-let inFlightGetQuestions = false;
-let lastGetQuestionsKey = '';
-export const getQuestions = async ({ levelId, subsectorId } = {}) => {
+// 기존 getQuestions 함수 -> 더미 데이터 우선 사용
+export const getQuestions = async ({ levelId, subTopicId, subTopic } = {}) => {
   const uid = withUserId();
   const lid = coerceLevelId(levelId);
-  const key = `${lid}|${subsectorId||''}|${uid||''}`;
-  if (inFlightGetQuestions && key === lastGetQuestionsKey) {
-    console.log('⏳ getQuestions 진행중 - 중복 호출 차단');
-    return { questions: [], totalCount: 0, inProgress: true };
-  }
-  inFlightGetQuestions = true;
-  lastGetQuestionsKey = key;
   try {
-    const qsParams = new URLSearchParams();
-    if (uid != null) qsParams.set('userId', uid);
-    if (subsectorId != null) qsParams.set('subsectorId', subsectorId);
-    const resp = await http(`/levels/${lid}/quizzes?${qsParams.toString()}`);
-    const list = Array.isArray(resp?.quizzes) ? resp.quizzes : (Array.isArray(resp) ? resp : []);
-    if (!list.length) throw new Error('No quizzes');
-    const prioritized = list.find(q=>q.status==='NOT_STARTED') || list.find(q=>q.status==='IN_PROGRESS') || list[0];
-    const quizId = prioritized?.id ?? prioritized?.quizId ?? list[0]?.id;
+    const params = new URLSearchParams();
+    if (uid != null) params.set('userId', uid);
+    const subsector = subTopicId ?? (typeof subTopic === 'number' ? subTopic : undefined);
+    if (subsector != null) params.set('subsectorId', subsector);
+    const listResp = await http(`/levels/${lid}/quizzes?${params.toString()}`);
+    const quizList = Array.isArray(listResp?.quizzes) ? listResp.quizzes : (Array.isArray(listResp) ? listResp : []);
+    if (!quizList.length) throw new Error('No quizzes for level');
+    const prioritized = quizList.find(q => q.status === 'NOT_STARTED') || quizList.find(q => q.status === 'IN_PROGRESS') || quizList[0];
+    const quizId = prioritized?.id ?? prioritized?.quizId ?? quizList[0]?.id;
     if (!quizId) throw new Error('No quizId');
-    const quizDetailRaw = await http(`/quizzes/${quizId}`);
-    const quizDetail = normalizeQuizPayload(quizDetailRaw);
-    const finalQuestions = buildFinalQuestions(quizDetail?.questions);
-    console.log(`✅ 레벨 ${lid} 퀴즈 ${quizId} 로드 (${finalQuestions.length}문항)`);
-    return { questions: finalQuestions, totalCount: finalQuestions.length, quizId };
+    const raw = await http(`/quizzes/${quizId}`);
+    const norm = normalizeQuizPayload(raw) || {};
+    const qs = Array.isArray(norm.questions) ? norm.questions : [];
+    console.log(`✅ 레벨 ${lid} 퀴즈 ${quizId} 로드 (${qs.length}문항)`);
+    return { questions: qs, totalCount: qs.length, quizId };
   } catch (e) {
     console.warn('❌ getQuestions 실패:', e.message);
     return { questions: [], totalCount: 0 };
-  } finally {
-    inFlightGetQuestions = false;
   }
 };
 
@@ -770,8 +687,7 @@ export const postAttempt = ({ quizId, questionId, selectedOptionId, userId, toke
   submitAnswer({
     quizId,
     userId: withUserId(userId),
-    questionId,
-    selectedOptionId,
+    answers: [{ questionId, selectedOptionId }],
     token,
   });
 

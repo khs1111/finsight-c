@@ -605,9 +605,21 @@ export default function QuizQuestion({ current,
  />
       {/* 문제 */}
       <div className="quiz-question-header">
-        <h2 className="quiz-question-title">
-          {question?.stemMd || question?.question || "문제를 불러오는 중입니다..."}
-        </h2>
+        {(() => {
+          const titleText = (
+            question?.stemMd ||
+            question?.question ||
+            question?.prompt ||
+            question?.title ||
+            question?.text ||
+            '문제를 불러오는 중입니다...'
+          );
+          return (
+            <h2 className="quiz-question-title">
+              {titleText}
+            </h2>
+          );
+        })()}
 
         {/* 스토리형 지문: 제목/본문 렌더링 (있을 때만) */}
         {isStoryType && (question?.storyTitleMd || question?.storyBodyMd) && (
