@@ -85,33 +85,34 @@ export default function Explore() {
         mainTopic={mainTopic}
         subTopic={subTopic}
         onConfirm={async (lv) => {
-          setLevel(lv); // 선택한 레벨 저장
+          setLevel(lv);
           try {
-            // getQuestions API 사용 (더미 데이터 제거)
             console.log('🎯 퀴즈 데이터 요청 중...');
             setIsFetchingQuestions(true);
+            // 이름과 ID를 모두 전달하여 getQuestions가 내부에서 필요한 해석 수행
             const result = await apiGetQuestions({ 
-              topicId: (mainTopicId != null ? mainTopicId : mainTopic),
-              subTopic: (subTopicId != null ? subTopicId : subTopic),
-              subTopicId: subTopicId,
+              topicId: mainTopicId, // numeric (가능하면)
+              topic: mainTopic,     // name fallback
+              subTopicId: subTopicId, 
+              subTopic: subTopic,   // name fallback
               levelId: lv 
             });
-            if (result && result.questions && result.questions.length > 0) {
+            if (result && Array.isArray(result.questions) && result.questions.length) {
               console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
               setQuestions(result.questions);
               setQuizId(result.quizId || null);
+              setQid(0);
+              setStep(3);
             } else {
-              console.warn('⚠️ 퀴즈 데이터가 비어 있습니다.');
-              setQuestions([]);
-              setQuizId(null);
+              console.warn('⚠️ 퀴즈 데이터가 비어있거나 오류:', result?.error);
+              alert(result?.error || '문제를 불러오지 못했습니다. 다른 조합을 선택해 주세요.');
             }
           } catch (err) {
-            console.error("❌ 문제 불러오기 실패:", err);
-            setQuestions([]);
-            setQuizId(null);
-          } finally { setIsFetchingQuestions(false); }
-          setQid(0);
-          setStep(3);
+            console.error('❌ 문제 불러오기 실패:', err);
+            alert('문제를 불러오는 중 오류가 발생했습니다. 다시 시도해 주세요.');
+          } finally {
+            setIsFetchingQuestions(false);
+          }
         }}
         onBack={() => setStep(1)}
       />
@@ -129,25 +130,31 @@ export default function Explore() {
   initialSubTopic={subTopic}
         isLoading={isFetchingQuestions}
         onSelectionConfirm={async ({ level: newLevel, topic: newTopic, subTopic: newSub }) => {
-          // 부모 상태 업데이트
           setLevel(newLevel);
-          setMainTopic(newTopic);
-          setSubTopic(newSub);
-          // 질문 재조회
+            setMainTopic(newTopic);
+            setSubTopic(newSub);
           try {
             setIsFetchingQuestions(true);
-            const result = await apiGetQuestions({ topicId: newTopic, subTopic: newSub, levelId: newLevel });
-            if (result && Array.isArray(result.questions)) {
+            const result = await apiGetQuestions({ 
+              topicId: mainTopicId,
+              topic: newTopic,
+              subTopicId: subTopicId,
+              subTopic: newSub,
+              levelId: newLevel 
+            });
+            if (result && Array.isArray(result.questions) && result.questions.length) {
               setQuestions(result.questions);
               setQuizId(result.quizId || null);
+              setQid(0);
+              setResults([]);
+            } else {
+              console.warn('질문 재조회 실패/빈 결과:', result?.error);
+              alert(result?.error || '문제가 없습니다. 다른 조합을 선택해 주세요.');
             }
           } catch (e) {
             console.warn('질문 재조회 실패:', e);
-            setQuizId(null);
+            alert('문제 재조회 실패. 다시 시도해주세요.');
           } finally { setIsFetchingQuestions(false); }
-          // 진행도/현재 인덱스 초기화
-          setQid(0);
-          setResults([]);
         }}
         onStart={() => setStep(4)}
       />

@@ -629,62 +629,101 @@ export const login = async (username, password) => {
 
 // 기존 getQuestions 함수 -> 더미 데이터 우선 사용
 // Always fetch 4 questions per topic/subtopic/level, matching backend contract
-export const getQuestions = async ({ levelId, subTopicId, subTopic, topicId, userId, token } = {}) => {
+export const getQuestions = async ({ levelId, subTopicId, subTopic, topicId, topic, userId, token } = {}) => {
   const uid = withUserId(userId);
   const lid = coerceLevelId(levelId);
+  const diag = (msg, extra) => { try { console.log(`🧪 getQuestions: ${msg}`, extra || ''); } catch (_) {} };
   try {
-    const params = new URLSearchParams();
-    if (uid != null) params.set('userId', uid);
-    // Try to resolve subsectorId from subTopicId or subTopic (name)
+    const paramsBase = new URLSearchParams();
+    if (uid != null) paramsBase.set('userId', uid);
+
+    // Resolve sector (topic) id if a name string was passed instead of numeric
+    let sectorId = topicId;
+    const topicName = topic || (typeof topicId === 'string' ? topicId : undefined);
+    if (!sectorId && typeof topicName === 'string') {
+      const sectors = await getSectorsWithSubsectors();
+      const foundSector = sectors.find(s => s.name === topicName || String(s.id) === String(topicName));
+      if (foundSector) sectorId = foundSector.id;
+      diag('sectorId resolved from name', { topicName, sectorId });
+    }
+
+    // Resolve subsector id
     let subsector = subTopicId;
     if (!subsector && typeof subTopic === 'string') {
-      // Try to resolve subsectorId by name (from sectors API)
       const sectors = await getSectorsWithSubsectors();
       for (const sector of sectors) {
-        const found = (sector.subsectors || []).find(ss => ss.name === subTopic);
-        if (found) { subsector = found.id; break; }
+        const found = (sector.subsectors || []).find(ss => ss.name === subTopic || String(ss.id) === String(subTopic));
+        if (found) { subsector = found.id; diag('subsector resolved from name', { subTopic, subsector }); break; }
       }
     }
-    if (subsector != null) params.set('subsectorId', subsector);
-    // Optionally add topicId if provided
-    if (topicId != null) params.set('sectorId', topicId);
-    // Fetch quizzes for this level/subsector
-    const listResp = await http(`/levels/${lid}/quizzes?${params.toString()}`);
-    const quizList = Array.isArray(listResp?.quizzes) ? listResp.quizzes : (Array.isArray(listResp) ? listResp : []);
-    if (!quizList.length) throw new Error('No quizzes for level/subsector');
-    // Find a quiz with enough questions (>=4), prefer NOT_STARTED or IN_PROGRESS
-    let prioritized = quizList.find(q => q.status === 'NOT_STARTED') || quizList.find(q => q.status === 'IN_PROGRESS') || quizList[0];
-    let quizId = prioritized?.id ?? prioritized?.quizId ?? quizList[0]?.id;
-    if (!quizId) throw new Error('No quizId');
-    const raw = await http(`/quizzes/${quizId}`);
-    const norm = normalizeQuizPayload(raw) || {};
-    let qs = Array.isArray(norm.questions) ? norm.questions : [];
-    // If not enough questions, try to find another quiz with >=4 questions
-    if (qs.length < 4) {
-      for (const qz of quizList) {
-        if (qz.id !== quizId) {
-          const altRaw = await http(`/quizzes/${qz.id}`);
-          const altNorm = normalizeQuizPayload(altRaw) || {};
-          const altQs = Array.isArray(altNorm.questions) ? altNorm.questions : [];
-          if (altQs.length >= 4) {
-            quizId = qz.id;
-            qs = altQs;
-            break;
+
+    // Build attempt order: with subsector first, then fallback without subsector
+    const attempts = [];
+    attempts.push({ sectorId, subsector });
+    if (subsector != null) attempts.push({ sectorId, subsector: undefined }); // fallback drop subsector
+    if (sectorId == null) attempts.push({ sectorId: undefined, subsector }); // fallback drop sector if unresolved
+
+    for (let i = 0; i < attempts.length; i++) {
+      const { sectorId: sId, subsector: ssId } = attempts[i];
+      const params = new URLSearchParams(paramsBase.toString());
+      if (sId != null) params.set('sectorId', sId);
+      if (ssId != null) params.set('subsectorId', ssId);
+      diag('fetch quiz list attempt', { attempt: i + 1, sectorId: sId, subsectorId: ssId });
+      let quizList = [];
+      try {
+        const listResp = await http(`/levels/${lid}/quizzes?${params.toString()}`);
+        quizList = Array.isArray(listResp?.quizzes) ? listResp.quizzes : (Array.isArray(listResp) ? listResp : []);
+      } catch (errList) {
+        diag('quiz list fetch error', errList?.message);
+        continue; // try next pattern
+      }
+      if (!quizList.length) { diag('empty quiz list', { attempt: i + 1 }); continue; }
+
+      // Prioritize NOT_STARTED > IN_PROGRESS > first
+      let prioritized = quizList.find(q => q.status === 'NOT_STARTED') || quizList.find(q => q.status === 'IN_PROGRESS') || quizList[0];
+      let quizId = prioritized?.id ?? prioritized?.quizId ?? quizList[0]?.id;
+      if (!quizId) { diag('no quizId in attempt', { attempt: i + 1 }); continue; }
+      diag('fetch quiz detail', { attempt: i + 1, quizId });
+
+      let qs = [];
+      try {
+        const raw = await http(`/quizzes/${quizId}`);
+        const norm = normalizeQuizPayload(raw) || {};
+        qs = Array.isArray(norm.questions) ? norm.questions : [];
+      } catch (errDetail) {
+        diag('quiz detail fetch error', errDetail?.message);
+        continue; // try next attempt
+      }
+
+      if (qs.length < 4) {
+        // Try alternative quizzes in same list
+        for (const qz of quizList) {
+          if (qz.id !== quizId) {
+            try {
+              const altRaw = await http(`/quizzes/${qz.id}`);
+              const altNorm = normalizeQuizPayload(altRaw) || {};
+              const altQs = Array.isArray(altNorm.questions) ? altNorm.questions : [];
+              if (altQs.length >= 4) { quizId = qz.id; qs = altQs; break; }
+            } catch (_) { /* try next */ }
           }
         }
       }
+
+      if (qs.length >= 4) {
+        const selected = qs.slice(0, 4);
+        diag('success', { attempt: i + 1, quizId, questions: selected.length });
+        return { questions: selected, totalCount: selected.length, quizId, sectorId: sId, subsectorId: ssId };
+      } else {
+        diag('attempt had <4 questions', { attempt: i + 1, count: qs.length });
+        // try next attempt
+      }
     }
-    // If still not enough, error
-    if (qs.length < 4) {
-      console.warn(`❌ 4문제 미만 (${qs.length}) 반환됨: 레벨 ${lid}, subsector ${subsector}`);
-      return { questions: [], totalCount: 0, error: '문제가 충분하지 않습니다.' };
-    }
-    // Only return first 4 questions (if more)
-    const selected = qs.slice(0, 4);
-    console.log(`✅ 레벨 ${lid} 퀴즈 ${quizId} 로드 (${selected.length}문항)`);
-    return { questions: selected, totalCount: selected.length, quizId };
+
+    // All attempts failed
+    diag('all attempts failed');
+    return { questions: [], totalCount: 0, error: '문제가 충분하지 않습니다. (all attempts failed)' };
   } catch (e) {
-    console.warn('❌ getQuestions 실패:', e.message);
+    diag('fatal error', e?.message);
     return { questions: [], totalCount: 0, error: e.message };
   }
 };
