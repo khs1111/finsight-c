@@ -1,6 +1,6 @@
 //초 중 고 레벨 선택
 import { useLayoutEffect, useRef, useState, useEffect } from "react";
-import { getLevelsBySubsector } from "../../api/explore";
+import { getLevelsBySubsector, getSectorsWithSubsectors } from "../../api/explore";
 import "./LevelPicker.css";
 
 // props: mainTopic (대분류), subTopic (선택된 소분류)
@@ -11,6 +11,7 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
   const [spacerH, setSpacerH] = useState(156); // 기본 여유 공간(버튼/네비 고려)
 
   const [levels, setLevels] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useLayoutEffect(() => {
     function measure() {
@@ -42,25 +43,84 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
     };
   }, [selectedLevel]);
 
-  // 서브섹터 기반 레벨 목록 가져오기
+  // 서브섹터 기반 레벨 목록 가져오기 (subTopic이 이름 문자열이어도 동작)
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+    const resolveSubsectorId = async () => {
+      // 1) 객체 형태로 id 포함된 경우
+      if (subTopic && typeof subTopic === 'object') {
+        const sid = subTopic.id ?? subTopic.subsectorId ?? subTopic.code;
+        if (sid != null) return sid;
+      }
+      // 2) 숫자 또는 숫자형 문자열인 경우
+      if (subTopic != null) {
+        const n = Number(subTopic);
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+      // 3) 이름 문자열인 경우: 섹터/서브섹터 트리에서 탐색
       try {
-        // subTopic 이 ID라고 가정 (필요시 변환 로직 추가 가능)
-        const list = await getLevelsBySubsector(subTopic);
-        // 기대 필드: id, name/title, description, learningGoal
-        const mapped = Array.isArray(list) ? list.map(l => ({
-          key: l.id ?? l.levelId ?? l.name ?? l.title,
-          title: l.name || l.title || `레벨 ${l.id}`,
-          desc: l.description || l.desc || '',
-          goal: l.learning_goal || l.learningGoal || l.goal || '',
-        })) : [];
-        setLevels(mapped);
-      } catch {
-        setLevels([]);
+        const tree = await getSectorsWithSubsectors();
+        const name = (subTopic || '').toString().trim().toLowerCase();
+        if (!name) return null;
+        // mainTopic이 제공되면 해당 섹터 안에서 우선 탐색
+        let candidates = Array.isArray(tree) ? tree : [];
+        if (mainTopic) {
+          const mt = mainTopic.toString().trim().toLowerCase();
+          const sect = candidates.find(s => (s.name || '').toString().trim().toLowerCase() === mt);
+          if (sect) candidates = [sect];
+        }
+        for (const sec of candidates) {
+          for (const ss of (sec.subsectors || [])) {
+            const nm = (ss.name || '').toString().trim().toLowerCase();
+            if (nm === name) return ss.id;
+          }
+        }
+        // 완전 일치가 없으면 포함 매칭으로 한 번 더 시도
+        for (const sec of (Array.isArray(tree) ? tree : [])) {
+          for (const ss of (sec.subsectors || [])) {
+            const nm = (ss.name || '').toString().trim().toLowerCase();
+            if (nm.includes(name)) return ss.id;
+          }
+        }
+      } catch (_) { /* ignore */ }
+      return null;
+    };
+
+    (async () => {
+      setLoading(true);
+      try {
+        if (!subTopic) {
+          if (!cancelled) { setLevels([]); setSelectedLevel(null); }
+          return;
+        }
+        const subsectorId = await resolveSubsectorId();
+        if (!subsectorId) {
+          if (!cancelled) { setLevels([]); setSelectedLevel(null); }
+          return;
+        }
+        const list = await getLevelsBySubsector(subsectorId);
+        const mapped = Array.isArray(list)
+          ? list.map(l => ({
+              key: String(l.key ?? l.id ?? l.levelId ?? ''),
+              title: l.title ?? l.name ?? `레벨 ${l.id ?? l.levelId ?? ''}`,
+              desc: l.desc ?? l.description ?? '',
+              goal: l.goal ?? l.learning_goal ?? l.learningGoal ?? '',
+            }))
+          : [];
+        if (!cancelled) {
+          setLevels(mapped);
+          if (!selectedLevel && mapped.length) setSelectedLevel(mapped[0].key);
+        }
+      } catch (e) {
+        console.warn('레벨 목록 로딩 실패:', e);
+        if (!cancelled) { setLevels([]); setSelectedLevel(null); }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [subTopic]);
+
+    return () => { cancelled = true; };
+  }, [subTopic, mainTopic, selectedLevel]);
 
   const getDescForLevel = (lvKey) => levels.find(l => l.key === lvKey)?.desc || '';
   const getGoalForLevel = (lvKey) => levels.find(l => l.key === lvKey)?.goal || '';
@@ -118,7 +178,13 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
 
       {/* 레벨 카드 리스트 */}
       <div className="level-picker-list">
-        {levels.map((lv) => (
+        {loading && (
+          <div className="level-picker-card" style={{ opacity: 0.6 }}>레벨 데이터를 불러오는 중...</div>
+        )}
+        {!loading && levels.length === 0 && (
+          <div className="level-picker-card" style={{ opacity: 0.8 }}>표시할 레벨이 없습니다.</div>
+        )}
+        {!loading && levels.map((lv) => (
           <div
             key={lv.key}
             className={
