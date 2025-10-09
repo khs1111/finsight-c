@@ -290,12 +290,6 @@ function normalizeQuizPayload(raw) {
     return s.includes('story') || s.includes('case') || s.includes('scenario');
   };
 
-  const originForImage = (() => {
-    try {
-      const apiUrl = new URL(API_BASE, (typeof window !== 'undefined' ? window.location.origin : undefined));
-      return apiUrl.origin;
-    } catch { return (typeof window !== 'undefined' ? window.location.origin : ''); }
-  })();
 
   const questions = (questionsArray || []).map((q) => {
     // 이미지 후보 키들(백엔드 다양성 대응): 가장 먼저 매칭되는 값을 사용
@@ -336,7 +330,7 @@ function normalizeQuizPayload(raw) {
   const rawType = q.type ?? q.questionType ?? q.kind;
   const hasArticleId = q.articleId != null || q.article_id != null;
   // 기사형 판정: 명시적 type 기사, 이미지가 있거나, article_id 또는 중첩 기사객체가 있는 경우 모두 인정
-  const isArticleLike = looksArticleType(rawType) || !!image || !!nestedArticle || hasArticleId;
+  const isArticleLike = looksArticleType(rawType) || !!nestedArticle || hasArticleId;
   // 스토리형 판정: 명시적 type 또는 스토리 관련 필드가 있는 경우
   const storyTitleCand = (
     q.storyTitleMd ?? q.story_title_md ?? q.storyTitle ?? q.story_title ??
@@ -348,7 +342,23 @@ function normalizeQuizPayload(raw) {
     q.scenarioMd ?? q.scenario_md ?? q.contextStory ?? q.context_story ?? null
   );
   const isStoryLike = looksStoryType(rawType) || !!(storyTitleCand || storyBodyCand);
-      const articleIdFromNested = nestedArticle?.id ?? nestedArticle?.articleId ?? nestedArticle?.article_id;
+  const articleIdFromNested = nestedArticle?.id ?? nestedArticle?.articleId ?? nestedArticle?.article_id;
+      const aFromMap = (() => {
+        const key = q.articleId ?? q.article_id ?? articleIdFromNested;
+        if (key == null) return null;
+        return articlesMap[String(key)] || null;
+      })();
+      const articleSource = aFromMap || nestedArticle || {};
+      const articleTitleNorm = (
+        articleSource?.title_md || articleSource?.titleMd || articleSource?.title || null
+      );
+      const articleBodyNorm = (
+        articleSource?.body_md || articleSource?.bodyMd || articleSource?.body || articleSource?.content || null
+      );
+      const articleImageRaw = (
+        articleSource?.image_url || articleSource?.imageUrl || articleSource?.image_path || articleSource?.imagePath || null
+      );
+      const articleImageAbs = articleImageRaw ? sanitizeImageUrl(articleImageRaw) : null;
       const mapped = {
       ...q,
       // 질문 본문/지문 매핑 보강
@@ -367,16 +377,11 @@ function normalizeQuizPayload(raw) {
       ),
       // 기사형 본문/제목 매핑 (백엔드 다양한 키 대응)
       articleTitleMd: (
-        q.articleTitleMd ?? q.article_title_md ?? q.articleTitle ?? q.article_title ??
-        q.newsTitle ?? q.news_title ?? q.contextTitle ?? q.context_title ??
-        nestedArticle?.title ?? (articlesMap[String(q.articleId ?? q.article_id)]?.title) ?? null
+        q.articleTitleMd ?? q.article_title_md ?? articleTitleNorm
       ),
       articleBodyMd: (
         q.articleBodyMd ?? q.article_body_md ?? q.articleBody ?? q.article_body ??
-        q.articleMd ?? q.article_md ?? q.article ?? q.contentMd ?? q.content_md ?? q.content ??
-        q.contextMd ?? q.context_md ?? q.context ?? q.passageMd ?? q.passage_md ?? q.passage ??
-        nestedArticle?.body_md ?? nestedArticle?.bodyMd ?? nestedArticle?.body ?? nestedArticle?.content ??
-        (articlesMap[String(q.articleId ?? q.article_id)]?.body_md || articlesMap[String(q.articleId ?? q.article_id)]?.bodyMd || articlesMap[String(q.articleId ?? q.article_id)]?.body) ?? null
+        q.articleMd ?? q.article_md ?? articleBodyNorm
       ),
       // 학습/핵심포인트/힌트 정규화
       solvingKeypointsMd: (
@@ -393,29 +398,13 @@ function normalizeQuizPayload(raw) {
   image,
   // 기사형으로 보이는 경우(백엔드 type이 ARTICLE 또는 이미지가 있는 경우) UI 타입을 articleImage로 통일
   // 이미지가 없어도 placeholder + 폴백 이미지를 통해 동일한 렌더링을 보장
-  type: (() => {
-    const rawLower = String(rawType || '').trim().toLowerCase();
-    if (isArticleLike) return 'article';
-    if (isStoryLike) return 'story';
-    return rawLower || undefined;
-  })(),
-      // articleId를 표준화해 보관
+  type: (rawType ? String(rawType).toUpperCase() : (isArticleLike ? 'ARTICLE' : (isStoryLike ? 'STORY' : 'CONCEPT'))),
+      layout: isArticleLike ? 'article' : 'default',
+      // articleId 표준화
       articleId: q.articleId ?? q.article_id ?? articleIdFromNested ?? undefined,
-      articleTitle: (
-        q.articleTitle || q.article_title || nestedArticle?.title || undefined
-      ),
-      articleBody: (
-        q.articleBody || q.article_body || nestedArticle?.body_md || nestedArticle?.body || undefined
-      ),
-      articleImage: (() => {
-        const rawImg = (
-          q.articleImage || q.article_image || nestedArticle?.image_url || nestedArticle?.imageUrl || nestedArticle?.image_path || nestedArticle?.imagePath || null
-        );
-        if (!rawImg) return undefined;
-        if (/^(https?:\/\/|data:|blob:)/i.test(rawImg)) return rawImg;
-        const cleaned = rawImg.startsWith('/') ? rawImg : '/' + rawImg.replace(/^\/+/, '');
-        return (IMAGE_BASE || originForImage) + cleaned;
-      })(),
+      articleTitle: (q.articleTitle || q.article_title || articleTitleNorm || undefined),
+      articleBody: (q.articleBody || q.article_body || articleBodyNorm || undefined),
+      articleImage: (q.articleImage || q.article_image || articleImageAbs || undefined),
       options: (q.options || []).map((o, i) => ({
         ...o,
         id: o.id ?? o.optionId ?? o.valueId ?? o.value ?? (i + 1),
@@ -493,12 +482,12 @@ function normalizeQuizPayload(raw) {
 
     // 진단 로그: 기사형 감지 여부
     try {
-      if (mapped?.type === 'articleImage') {
+      if (mapped?.type === 'ARTICLE') {
         const t = mapped?.articleTitleMd || '';
         const imgFlag = !!(mapped?.image);
         console.log(`📰 [ARTICLE DETECTED] id=${mapped?.id ?? q?.id}, type=${rawType}, image=${imgFlag}, articleId=${mapped?.articleId ?? q?.article_id}, title='${String(t).slice(0,30)}'`);
       } else {
-        console.log(`⚠️ [NOT ARTICLE] id=${mapped?.id ?? q?.id}, type=${rawType}`);
+        console.log(`ℹ️ [TYPE] id=${mapped?.id ?? q?.id}, type=${mapped?.type}`);
       }
     } catch (_) { /* noop log */ }
 
