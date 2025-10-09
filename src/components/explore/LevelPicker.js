@@ -101,6 +101,8 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
         const list = await getLevelsBySubsector(subsectorId);
         const mapped = Array.isArray(list)
           ? list.map(l => ({
+              // id와 key 모두 보존: key는 렌더링/선택, id는 API 호출에 사용
+              id: l.id ?? l.levelId ?? l.level_id ?? l.level_number ?? l.levelNumber,
               key: l.id ?? l.key ?? l.levelId ?? l.level_number ?? l.levelNumber,
               title: l.title ?? l.name ?? `레벨 ${l.id ?? l.levelId ?? ''}`,
               desc: l.desc ?? l.description ?? '',
@@ -120,7 +122,8 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
     })();
 
     return () => { cancelled = true; };
-  }, [subTopic, mainTopic, selectedLevel]);
+  // 의존성: 레벨 목록은 subTopic/mainTopic 변화에만 재호출
+  }, [subTopic, mainTopic]); 
 
   const getDescForLevel = (lvKey) => levels.find(l => l.key === lvKey)?.desc || '';
   const getGoalForLevel = (lvKey) => levels.find(l => l.key === lvKey)?.goal || '';
@@ -219,9 +222,14 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
       {/* 확인 버튼 */}
       <button
   onClick={() => {
-    const levelId = Number.isFinite(Number(selectedLevel)) ? Number(selectedLevel) : selectedLevel;
-    const display = (levels.find(l => String(l.key) === String(selectedLevel))?.title) || String(levelId);
-    onConfirm({ levelId, levelName: display });
+    if (!selectedLevel) return;
+    const sel = levels.find(l => String(l.key) === String(selectedLevel));
+    if (!sel) return;
+    onConfirm({
+      levelId: Number(sel.id ?? sel.key), // 숫자 ID 보장
+      levelName: sel.title,
+      learningGoal: sel.goal,
+    });
   }}
         disabled={!selectedLevel}
         style={{

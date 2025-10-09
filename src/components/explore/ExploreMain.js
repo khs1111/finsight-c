@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import FloatingQuizCTA from './FloatingQuizCTA';
 import useProgress from '../useProgress';
-import { getQuestions } from '../../api/explore';
+import { getQuestions as apiGetQuestions, getSectorsWithSubsectors } from '../../api/explore';
 import antCharacter from '../../assets/explore/stepant.png';
 import './ExploreMain.css';
 
@@ -18,6 +18,12 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
   const [selectedTopic, setSelectedTopic] = useState(initialTopic || '은행');
   const [selectedSubTopic, setSelectedSubTopic] = useState(initialSubTopic || '예금/적금');
   const [totalQuestions, setTotalQuestions] = useState(0); // 서버에서 받아온 총 질문 수
+  // 문제 리스트 로컬 저장
+  const [questions, setQuestions] = useState([]);
+  // 비동기 호출 로딩 상태
+  const [fetching, setFetching] = useState(false);
+  // 선택된 ID 모음 (이 값이 확정되면 문제 호출)
+  const [selection, setSelection] = useState({ topicId: null, subTopicId: null, levelId: null });
   // propSelectedLevel이 바뀌면 selectedLevel도 동기화
   useEffect(() => {
     if (propSelectedLevel) setSelectedLevel(propSelectedLevel);
@@ -72,54 +78,87 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     }
   }, [startOfWeek, todayKey]);
 
-// 서버에서 질문 수 가져오기
-useEffect(() => {
-  const fetchQuestions = async () => {
+  // 레벨 라벨 → 숫자 ID 매핑 (README 기준 1/2/3)
+  const mapLevelLabelToId = (label) => {
+    const k = String(label || '').toLowerCase();
+    if (/초보|초급|beginner|easy|입문|기초/.test(k)) return 1;
+    if (/중급|중|intermediate|medium/.test(k)) return 2;
+    if (/고급|고|advanced|hard/.test(k)) return 3;
+    const n = Number(label);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  // 주제/서브주제 이름 → ID 해석
+  const resolveIdsFromNames = async (topicName, subTopicName) => {
     try {
-      const response = await getQuestions({ 
-        topicId: selectedTopic, 
-        subTopic: selectedSubTopic,
-        levelId: selectedLevel
-      });
-      if (response?.error) {
-        console.warn('문제 로드 오류:', response.error);
-        setTotalQuestions(4); // 에러 시에도 UI는 4개 기준으로 표시
-        return;
-      }
-      if (response && Array.isArray(response.questions)) {
-        setTotalQuestions(response.questions.slice(0,4).length);
-      } else if (response && typeof response.totalCount === 'number') {
-        setTotalQuestions(Math.min(4, response.totalCount));
-      } else {
-        setTotalQuestions(4);
-      }
-    } catch (error) {
-      console.error('Failed to fetch questions count:', error);
-      setTotalQuestions(4);
+      const tree = await getSectorsWithSubsectors();
+      const t = (tree || []).find(s => (s.name || '').trim() === String(topicName || '').trim());
+      const topicId = t?.id ?? null;
+      const subTopicId = (t?.subsectors || []).find(ss => (ss.name || '').trim() === String(subTopicName || '').trim())?.id ?? null;
+      return { topicId, subTopicId };
+    } catch {
+      return { topicId: null, subTopicId: null };
     }
   };
-  fetchQuestions();
-}, [selectedLevel, selectedTopic, selectedSubTopic]);
 
-// 진행 상황: 서버에서 받아온 총 질문 수를 전달
-const { total: totalProblems, index: currentIndex, answers } = useProgress(selectedLevel || 'default', totalQuestions);
-const answeredCount = answers.length; // 사용자가 풀면 진행
-// eslint-disable-next-line no-unused-vars
-const correctCount = answers.filter(a => a.correct).length;
-const progressPercent = totalProblems > 0 ? (answeredCount / totalProblems) * 100 : 0; // 진행 퍼센트
+  // 최초 마운트 시 초기값으로 selection(ID들) 확정 → 문제 호출 트리거
+  useEffect(() => {
+    (async () => {
+      const levelId = mapLevelLabelToId(propSelectedLevel || selectedLevel);
+      if (!initialTopic || !initialSubTopic || !levelId) return;
+      const { topicId, subTopicId } = await resolveIdsFromNames(initialTopic, initialSubTopic);
+      if (topicId && subTopicId && levelId) {
+        setSelection({ topicId, subTopicId, levelId });
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-// 진행도 바 위치 기준 (현재 미사용)
-// eslint-disable-next-line no-unused-vars  
-const progressBarTop = 210;
-// eslint-disable-next-line no-unused-vars
-const progressBarLeft = "calc(50% - 355px/2 + 0.5px)";
+  // 선택 확정 후에만 문제 호출 (타이밍 보장)
+  useEffect(() => {
+    const { topicId, subTopicId, levelId } = selection || {};
+    if (!topicId || !subTopicId || !levelId) return;
 
-// 징검다리 단계: 문제 수 기준 (질문이 없을 때 최소 0)
-const totalStages = Math.max(0, totalProblems || 0);
-// active 단계: 현재 푸는 문제 index (모두 끝나면 -1 로 처리)
-const activeStage = currentIndex < totalStages ? currentIndex : -1;
+    let cancelled = false;
+    (async () => {
+      try {
+        setFetching(true);
+        const res = await apiGetQuestions({ topicId, subTopicId, levelId });
+        if (cancelled) return;
+        const qs = Array.isArray(res?.questions) ? res.questions : [];
+        setQuestions(qs);
+        setTotalQuestions(qs.length);
+      } catch (err) {
+        if (!cancelled) console.error('문제 로드 실패:', err);
+        setQuestions([]);
+        setTotalQuestions(0);
+      } finally {
+        if (!cancelled) setFetching(false);
+      }
+    })();
 
-// 각 단계별 원(스테이지) 렌더 함수
+    return () => { cancelled = true; };
+  }, [selection]);
+
+  // 진행 상황: 서버에서 받아온 총 질문 수를 전달
+  const { total: totalProblems, index: currentIndex, answers } = useProgress(selectedLevel || 'default', totalQuestions);
+  const answeredCount = answers.length; // 사용자가 풀면 진행
+  // eslint-disable-next-line no-unused-vars
+  const correctCount = answers.filter(a => a.correct).length;
+  const progressPercent = totalProblems > 0 ? (answeredCount / totalProblems) * 100 : 0; // 진행 퍼센트
+
+  // 진행도 바 위치 기준 (현재 미사용)
+  // eslint-disable-next-line no-unused-vars  
+  const progressBarTop = 210;
+  // eslint-disable-next-line no-unused-vars
+  const progressBarLeft = "calc(50% - 355px/2 + 0.5px)";
+
+  // 징검다리 단계: 문제 수 기준 (질문이 없을 때 최소 0)
+  const totalStages = Math.max(0, totalProblems || 0);
+  // active 단계: 현재 푸는 문제 index (모두 끝나면 -1 로 처리)
+  const activeStage = currentIndex < totalStages ? currentIndex : -1;
+
+  // 각 단계별 원(스테이지) 렌더 함수
 
   // 징검다리 스크롤 ref
   const steppingRef = useRef(null);
@@ -182,13 +221,27 @@ const activeStage = currentIndex < totalStages ? currentIndex : -1;
         onSelectLevel={setSelectedLevel}
         selectedTopic={selectedTopic}
         selectedSubTopic={selectedSubTopic}
-        onConfirm={({ level, topic, subTopic }) => {
+        onConfirm={async ({ level, topic, subTopic }) => {
+          // UI 표시용 문자열 상태 업데이트
           setSelectedLevel(level);
           setSelectedTopic(topic);
           setSelectedSubTopic(subTopic);
-          // 부모(Explore.js)에도 변경 사항을 전달하여 문제를 재조회하도록 요청
+
+          // 이름 → ID 해석 및 숫자 레벨 변환
+          const levelId = mapLevelLabelToId(level);
+          const { topicId, subTopicId } = await resolveIdsFromNames(topic, subTopic);
+
+          // selection 확정 → 위의 useEffect가 문제 호출
+          if (topicId && subTopicId && levelId) {
+            setSelection({ topicId, subTopicId, levelId });
+          } else {
+            console.warn('선택값 해석 실패:', { topic, subTopic, level, topicId, subTopicId, levelId });
+            setSelection({ topicId: null, subTopicId: null, levelId: null });
+          }
+
+          // 부모에도 ID 포함하여 통지(선택)
           if (typeof onSelectionConfirm === 'function') {
-            onSelectionConfirm({ level, topic, subTopic });
+            onSelectionConfirm({ level, topic, subTopic, topicId, subTopicId, levelId });
           }
         }}
       />
@@ -236,8 +289,12 @@ const activeStage = currentIndex < totalStages ? currentIndex : -1;
       </div>
 
   <div className="explore-main-cta-fixed">
-  <FloatingQuizCTA onClick={isLoading ? undefined : onStart} label={isLoading ? '문제 불러오는 중...' : '퀴즈 풀러가기'} disabled={!!isLoading} />
-      </div>
+    <FloatingQuizCTA
+      onClick={isLoading || fetching ? undefined : onStart}
+      label={isLoading || fetching ? '문제 불러오는 중...' : '퀴즈 풀러가기'}
+      disabled={!!(isLoading || fetching)}
+    />
+  </div>
     </div>
   );
 }

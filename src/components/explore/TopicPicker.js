@@ -204,12 +204,14 @@ export default function TopicPicker({ onConfirm }) {
       ))}
 
       <button
-        onClick={() => onConfirm({
-          topicId: selectedTopic?.id,
-          topicName: selectedTopic?.name,
-          subTopicId: selectedSub?.id,
-          subTopicName: selectedSub?.name,
-        })}
+        onClick={() => {
+  onConfirm({
+    topicId: selectedTopic?.id,
+    topicName: selectedTopic?.name,
+    subTopicId: selectedSub?.id,
+    subTopicName: selectedSub?.name
+  });
+}}
         disabled={!selectedSub || !selectedTopic}
         style={{
           position: "fixed",
