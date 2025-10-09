@@ -1,6 +1,6 @@
 // 백엔드 연결 테스트 컴포넌트
 import React, { useState, useEffect } from 'react';
-import { getQuiz, submitAnswer } from '../../api/explore';
+import { getQuestions, submitAnswer } from '../../api/explore';
 
 const BackendTest = () => {
   const [quizData, setQuizData] = useState(null);
@@ -12,20 +12,18 @@ const BackendTest = () => {
 
   const testServerConnection = async () => {
     // 퀴즈 데이터 조회 테스트
-    const result = await getQuiz(1);
-    if (result.success) {
-      setQuizData(result.data);
+    const result = await getQuestions({ levelId: 1 });
+    if (result?.questions) {
+      setQuizData({ title: `Level 1 Quiz`, questions: result.questions, quizId: result.quizId });
     }
   };
 
   const testSubmitAnswer = async () => {
     if (!quizData?.questions?.[0]) return;
-
     const question = quizData.questions[0];
     const firstOption = question.options?.[0];
-    
     if (firstOption) {
-      const result = await submitAnswer(question.id, firstOption.id);
+      const result = await submitAnswer({ quizId: quizData.quizId, questionId: question.id, selectedOptionId: firstOption.id });
       setTestResult(result);
     }
   };

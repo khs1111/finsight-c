@@ -1,7 +1,7 @@
 // src/components/BackendStatusDemo.js - 백엔드 연결 상태 데모 컴포넌트
 import React from 'react';
 import { useBackendStatus, BackendStatusIndicator } from '../hooks/useBackendStatus.js';
-import { getQuiz, submitAnswer, getProgress, getBadges } from '../api/explore.js';
+import { getQuestions, submitAnswer } from '../api/explore.js';
 
 const BackendStatusDemo = () => {
   const { isConnected, isLoading, recheckStatus } = useBackendStatus();
@@ -12,23 +12,28 @@ const BackendStatusDemo = () => {
     try {
       // 퀴즈 데이터 테스트
       console.log('1. 퀴즈 데이터 조회 테스트');
-      const quizResult = await getQuiz(1);
-      console.log('퀴즈 결과:', quizResult);
+  const quizResult = await getQuestions({ levelId: 1 });
+  console.log('퀴즈(레벨1) 결과:', quizResult);
       
       // 답안 제출 테스트
       console.log('2. 답안 제출 테스트');
-      const submitResult = await submitAnswer(1, 1);
-      console.log('제출 결과:', submitResult);
+      if (quizResult.questions?.[0]) {
+        const q = quizResult.questions[0];
+        const opt = q.options?.[0];
+        if (opt) {
+          const submitResult = await submitAnswer({ quizId: quizResult.quizId, questionId: q.id, selectedOptionId: opt.id });
+          console.log('제출 결과:', submitResult);
+        }
+      }
       
       // 진행률 조회 테스트
       console.log('3. 진행률 조회 테스트');
-      const progressResult = await getProgress();
-      console.log('진행률 결과:', progressResult);
+  // 진행률/뱃지 API 호출 제거 또는 TODO (백엔드 스펙 확정 후 추가)
       
       // 뱃지 조회 테스트
       console.log('4. 뱃지 조회 테스트');
-      const badgesResult = await getBadges();
-      console.log('뱃지 결과:', badgesResult);
+  // const badgesResult = await getBadges();
+  // console.log('뱃지 결과:', badgesResult);
       
       console.log('=== API 테스트 완료 ===');
     } catch (error) {
