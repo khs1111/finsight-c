@@ -7,6 +7,7 @@ import QuizQuestion from "../components/explore/QuizQuestion";
 import CompletionScreen from "../components/explore/CompletionScreen";
 
 import {getQuestions as apiGetQuestions, postAttempt } from "../api/explore";
+import { createWrongNote } from "../api/community";
 import { addWrongNoteImmediate } from "../components/study/useWrongNoteStore";
 import CategoryNav from "../components/news/CategoryNav";
 import { useNavVisibility } from "../components/navigation/NavVisibilityContext";
@@ -24,60 +25,6 @@ export default function Explore() {
   const [results, setResults] = useState([]);
   const [isFetchingQuestions, setIsFetchingQuestions] = useState(false);
   const { setHide } = useNavVisibility();
-
-  // 정렬 및 ARTICLE 병합 도우미: 서버 응답의 question 배열을 안전하게 정규화
-  const prepareQuestions = (list) => {
-    const qs = Array.isArray(list) ? list.slice() : [];
-    // 1) ARTICLE 병합: 중첩 article 객체가 있으면 필드 반영 (기존 값 우선 유지)
-    const merged = qs.map((q) => {
-      const pickNestedArticle = () => {
-        const cands = [
-          q?.article,
-          q?.Article,
-          q?.news,
-          q?.News,
-          q?.articleObj,
-          q?.articleObject,
-          q?.context?.article,
-          Array.isArray(q?.articles) ? q.articles[0] : undefined,
-        ];
-        return cands.find((v) => v && typeof v === 'object') || null;
-      };
-      const art = pickNestedArticle();
-      if (!art) return q;
-
-      const next = { ...q };
-      // ID
-      if (next.articleId == null && next.article_id == null) {
-        const aId = art.id ?? art.articleId ?? art.article_id;
-        if (aId != null) next.articleId = aId;
-      }
-      // 제목/본문(MD)
-      if (!next.articleTitleMd && art.title) next.articleTitleMd = art.title;
-      if (!next.articleBodyMd && (art.body_md || art.bodyMd || art.body)) {
-        next.articleBodyMd = art.body_md || art.bodyMd || art.body;
-      }
-      // 이미지 (질문에 이미지가 없을 때만 반영)
-      if (!next.image) {
-        const aImg = art.image_url || art.imageUrl || art.image_path || art.imagePath || art.img || art.thumbnail;
-        if (aImg) next.image = aImg;
-      }
-      // 참고용 일반 필드도 채워줌(컴포넌트 호환성)
-      if (!next.articleTitle && (next.articleTitleMd || art.title)) next.articleTitle = next.articleTitleMd || art.title;
-      if (!next.articleBody && next.articleBodyMd) next.articleBody = next.articleBodyMd;
-      if (!next.articleImage && next.image) next.articleImage = next.image;
-      return next;
-    });
-
-    // 2) sort_order 기반 정렬(있을 때만 적용, 안정적 오름차순)
-    const hasSortOrder = merged.some((q) => q && (q.sort_order != null || q.sortOrder != null));
-    if (!hasSortOrder) return merged;
-    return merged.sort((a, b) => {
-      const av = a?.sort_order ?? a?.sortOrder ?? 0;
-      const bv = b?.sort_order ?? b?.sortOrder ?? 0;
-      return av - bv;
-    });
-  };
 
   // 퀴즈 진행도 저장용: useProgress 훅이 읽는 키와 동일한 스키마로 localStorage에 기록
   const persistProgress = (lvl, question, selectedOptionId, isCorrect, currentIndex) => {
@@ -151,8 +98,7 @@ export default function Explore() {
             });
             if (result && result.questions && result.questions.length > 0) {
               console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
-              // sort_order 정렬 및 ARTICLE 병합 후 반영
-              setQuestions(prepareQuestions(result.questions));
+              setQuestions(result.questions);
               setQuizId(result.quizId || null);
             } else {
               console.warn('⚠️ 퀴즈 데이터가 비어 있습니다.');
@@ -192,8 +138,7 @@ export default function Explore() {
             setIsFetchingQuestions(true);
             const result = await apiGetQuestions({ topicId: newTopic, subTopic: newSub, levelId: newLevel });
             if (result && Array.isArray(result.questions)) {
-              // sort_order 정렬 및 ARTICLE 병합 후 반영
-              setQuestions(prepareQuestions(result.questions));
+              setQuestions(result.questions);
               setQuizId(result.quizId || null);
             }
           } catch (e) {
@@ -342,7 +287,18 @@ export default function Explore() {
                   category: question?.category || subTopic || mainTopic || '기타',
                   meta: { quizId: quizId ?? undefined, questionId: question.id }
                 });
-                // 백엔드가 자동 기록하므로 별도 POST 생략
+                // 백엔드 저장 시도
+                const token = localStorage.getItem('accessToken');
+                const userId = localStorage.getItem('userId') || undefined;
+                await createWrongNote({
+                  userId,
+                  quizId: quizId ?? undefined,
+                  questionId: question.id,
+                  selectedOptionId,
+                  correctOptionId: correctOpt?.id ?? undefined,
+                  category: question?.category || undefined,
+                  meta: { topic: mainTopic, subTopic }
+                }, token);
               } catch (_) { /* ignore */ }
             }
           } catch (e) {

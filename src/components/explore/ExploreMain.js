@@ -81,20 +81,23 @@ useEffect(() => {
         subTopic: selectedSubTopic,
         levelId: selectedLevel
       });
-      
+      if (response?.error) {
+        console.warn('문제 로드 오류:', response.error);
+        setTotalQuestions(4); // 에러 시에도 UI는 4개 기준으로 표시
+        return;
+      }
       if (response && Array.isArray(response.questions)) {
-        setTotalQuestions(response.questions.length);
+        setTotalQuestions(response.questions.slice(0,4).length);
       } else if (response && typeof response.totalCount === 'number') {
-        setTotalQuestions(response.totalCount);
+        setTotalQuestions(Math.min(4, response.totalCount));
       } else {
-        setTotalQuestions(5); // 기본값
+        setTotalQuestions(4);
       }
     } catch (error) {
       console.error('Failed to fetch questions count:', error);
-      setTotalQuestions(5); // 에러 시 기본값
+      setTotalQuestions(4);
     }
   };
-  
   fetchQuestions();
 }, [selectedLevel, selectedTopic, selectedSubTopic]);
 

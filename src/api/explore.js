@@ -628,28 +628,64 @@ export const login = async (username, password) => {
 // ========================================
 
 // 기존 getQuestions 함수 -> 더미 데이터 우선 사용
-export const getQuestions = async ({ levelId, subTopicId, subTopic } = {}) => {
-  const uid = withUserId();
+// Always fetch 4 questions per topic/subtopic/level, matching backend contract
+export const getQuestions = async ({ levelId, subTopicId, subTopic, topicId, userId, token } = {}) => {
+  const uid = withUserId(userId);
   const lid = coerceLevelId(levelId);
   try {
     const params = new URLSearchParams();
     if (uid != null) params.set('userId', uid);
-    const subsector = subTopicId ?? (typeof subTopic === 'number' ? subTopic : undefined);
+    // Try to resolve subsectorId from subTopicId or subTopic (name)
+    let subsector = subTopicId;
+    if (!subsector && typeof subTopic === 'string') {
+      // Try to resolve subsectorId by name (from sectors API)
+      const sectors = await getSectorsWithSubsectors();
+      for (const sector of sectors) {
+        const found = (sector.subsectors || []).find(ss => ss.name === subTopic);
+        if (found) { subsector = found.id; break; }
+      }
+    }
     if (subsector != null) params.set('subsectorId', subsector);
+    // Optionally add topicId if provided
+    if (topicId != null) params.set('sectorId', topicId);
+    // Fetch quizzes for this level/subsector
     const listResp = await http(`/levels/${lid}/quizzes?${params.toString()}`);
     const quizList = Array.isArray(listResp?.quizzes) ? listResp.quizzes : (Array.isArray(listResp) ? listResp : []);
-    if (!quizList.length) throw new Error('No quizzes for level');
-    const prioritized = quizList.find(q => q.status === 'NOT_STARTED') || quizList.find(q => q.status === 'IN_PROGRESS') || quizList[0];
-    const quizId = prioritized?.id ?? prioritized?.quizId ?? quizList[0]?.id;
+    if (!quizList.length) throw new Error('No quizzes for level/subsector');
+    // Find a quiz with enough questions (>=4), prefer NOT_STARTED or IN_PROGRESS
+    let prioritized = quizList.find(q => q.status === 'NOT_STARTED') || quizList.find(q => q.status === 'IN_PROGRESS') || quizList[0];
+    let quizId = prioritized?.id ?? prioritized?.quizId ?? quizList[0]?.id;
     if (!quizId) throw new Error('No quizId');
     const raw = await http(`/quizzes/${quizId}`);
     const norm = normalizeQuizPayload(raw) || {};
-    const qs = Array.isArray(norm.questions) ? norm.questions : [];
-    console.log(`✅ 레벨 ${lid} 퀴즈 ${quizId} 로드 (${qs.length}문항)`);
-    return { questions: qs, totalCount: qs.length, quizId };
+    let qs = Array.isArray(norm.questions) ? norm.questions : [];
+    // If not enough questions, try to find another quiz with >=4 questions
+    if (qs.length < 4) {
+      for (const qz of quizList) {
+        if (qz.id !== quizId) {
+          const altRaw = await http(`/quizzes/${qz.id}`);
+          const altNorm = normalizeQuizPayload(altRaw) || {};
+          const altQs = Array.isArray(altNorm.questions) ? altNorm.questions : [];
+          if (altQs.length >= 4) {
+            quizId = qz.id;
+            qs = altQs;
+            break;
+          }
+        }
+      }
+    }
+    // If still not enough, error
+    if (qs.length < 4) {
+      console.warn(`❌ 4문제 미만 (${qs.length}) 반환됨: 레벨 ${lid}, subsector ${subsector}`);
+      return { questions: [], totalCount: 0, error: '문제가 충분하지 않습니다.' };
+    }
+    // Only return first 4 questions (if more)
+    const selected = qs.slice(0, 4);
+    console.log(`✅ 레벨 ${lid} 퀴즈 ${quizId} 로드 (${selected.length}문항)`);
+    return { questions: selected, totalCount: selected.length, quizId };
   } catch (e) {
     console.warn('❌ getQuestions 실패:', e.message);
-    return { questions: [], totalCount: 0 };
+    return { questions: [], totalCount: 0, error: e.message };
   }
 };
 
