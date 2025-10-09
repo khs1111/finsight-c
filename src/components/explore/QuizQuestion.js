@@ -17,7 +17,7 @@ import "./QuizQuestion.css";
 
 import ProgressHeader from "./ProgressHeader";
 import q4ArticlePng from "../../assets/explore/q4-article.png";
-import { getKeyPoints } from "../../api/explore";
+// getKeyPoints 제거: 문제 객체에 포함된 solvingKeypointsMd / teachingExplainerMd 사용
 
 /**
  * 🎯 QuizQuestion 컴포넌트
@@ -385,30 +385,8 @@ export default function QuizQuestion({ current,
         return;
       }
 
-      // � 로컬에 없으면 백엔드 키포인트 API 시도
-      (async () => {
-        try {
-          const kp = await getKeyPoints({ questionId: q.id });
-          // 응답 스키마 대응: { text, keypoints } 또는 문자열
-          if (kp) {
-            if (typeof kp === 'string') {
-              setLearningText(kp);
-            } else if (kp.text || kp.keypoints) {
-              const parts = [];
-              if (kp.text) parts.push(String(kp.text));
-              if (kp.keypoints) parts.push(String(kp.keypoints));
-              setLearningText(parts.filter(Boolean).join('\n'));
-            } else {
-              setLearningText("이 문제에 대한 학습 내용을 불러오지 못했습니다.");
-            }
-          } else {
-            setLearningText("이 문제에 대한 학습 내용을 불러오지 못했습니다.");
-          }
-        } catch (e) {
-          console.error('키포인트 로드 실패:', e);
-          setLearningText("이 문제에 대한 학습 내용을 불러오지 못했습니다.");
-        }
-      })();
+      // 추가 API 호출을 제거하고 로컬 필드만 사용
+      setLearningText("이 문제에 대한 학습 내용을 불러오지 못했습니다.");
     } catch (e) {
       // 🚨 학습 내용 로드 실패 처리
       console.error('학습 내용 로드 실패:', e);

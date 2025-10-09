@@ -1,6 +1,6 @@
 //초 중 고 레벨 선택
 import { useLayoutEffect, useRef, useState, useEffect } from "react";
-import { getLevelMeta } from "../../api/explore";
+import { getLevelsBySubsector } from "../../api/explore";
 import "./LevelPicker.css";
 
 // props: mainTopic (대분류), subTopic (선택된 소분류)
@@ -10,26 +10,7 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
   const goalRef = useRef(null);
   const [spacerH, setSpacerH] = useState(156); // 기본 여유 공간(버튼/네비 고려)
 
-  const levels = [
-    {
-      key: "초급자",
-      title: "초급자",
-      desc: "예금과 적금, 금리 개념, 차이를 배워요.",
-      goal: "학습 완료 시, 예금과 적금의 차이를 명확히 이해하고, 자신에게 맞는 방식을 선택할 수 있습니다!",
-    },
-    {
-      key: "중급자",
-      title: "중급자",
-      desc: "이자 계산 방식, 고정 vs 변동금리를 배워요.",
-      goal: "학습 완료 시, 이자 계산법과 금리 구조를 이해하고 더 나은 금융상품을 선택할 수 있습니다!",
-    },
-    {
-      key: "고급자",
-      title: "고급자",
-      desc: "예금자 보호, 비과세 상품을 배워요.",
-      goal: "학습 완료 시, 세제 혜택과 예금자 보호 제도를 이해해 금융 리스크를 줄일 수 있습니다!",
-    },
-  ];
+  const [levels, setLevels] = useState([]);
 
   useLayoutEffect(() => {
     function measure() {
@@ -61,31 +42,28 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
     };
   }, [selectedLevel]);
 
-  // 백엔드 메타데이터 상태
-  const [liveMeta, setLiveMeta] = useState(null);
+  // 서브섹터 기반 레벨 목록 가져오기
   useEffect(() => {
-    // 선택된 레벨이 있을 때 해당 레벨 메타데이터 조회 시도
     (async () => {
-      if (!selectedLevel) return setLiveMeta(null);
       try {
-        const meta = await getLevelMeta(selectedLevel);
-        setLiveMeta(meta);
+        // subTopic 이 ID라고 가정 (필요시 변환 로직 추가 가능)
+        const list = await getLevelsBySubsector(subTopic);
+        // 기대 필드: id, name/title, description, learningGoal
+        const mapped = Array.isArray(list) ? list.map(l => ({
+          key: l.id ?? l.levelId ?? l.name ?? l.title,
+          title: l.name || l.title || `레벨 ${l.id}`,
+          desc: l.description || l.desc || '',
+          goal: l.learning_goal || l.learningGoal || l.goal || '',
+        })) : [];
+        setLevels(mapped);
       } catch {
-        setLiveMeta(null);
+        setLevels([]);
       }
     })();
-  }, [selectedLevel]);
+  }, [subTopic]);
 
-  const getDescForLevel = (lvKey) => {
-    const base = levels.find(l => l.key === lvKey)?.desc;
-    const live = liveMeta?.description || liveMeta?.desc;
-    return live || base;
-  };
-  const getGoalForLevel = (lvKey) => {
-    const base = levels.find(l => l.key === lvKey)?.goal;
-    const live = liveMeta?.goal || liveMeta?.objectives || liveMeta?.learningGoal;
-    return live || base;
-  };
+  const getDescForLevel = (lvKey) => levels.find(l => l.key === lvKey)?.desc || '';
+  const getGoalForLevel = (lvKey) => levels.find(l => l.key === lvKey)?.goal || '';
 
   return (
     <div ref={containerRef} className="level-picker-container">

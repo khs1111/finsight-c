@@ -90,13 +90,7 @@ export default function Explore() {
             console.log('🎯 퀴즈 데이터 요청 중...');
             setIsFetchingQuestions(true);
             // 이름과 ID를 모두 전달하여 getQuestions가 내부에서 필요한 해석 수행
-            const result = await apiGetQuestions({ 
-              topicId: mainTopicId, // numeric (가능하면)
-              topic: mainTopic,     // name fallback
-              subTopicId: subTopicId, 
-              subTopic: subTopic,   // name fallback
-              levelId: lv 
-            });
+            const result = await apiGetQuestions({ levelId: lv });
             if (result && Array.isArray(result.questions) && result.questions.length) {
               console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
               setQuestions(result.questions);
@@ -135,13 +129,7 @@ export default function Explore() {
             setSubTopic(newSub);
           try {
             setIsFetchingQuestions(true);
-            const result = await apiGetQuestions({ 
-              topicId: mainTopicId,
-              topic: newTopic,
-              subTopicId: subTopicId,
-              subTopic: newSub,
-              levelId: newLevel 
-            });
+            const result = await apiGetQuestions({ levelId: newLevel });
             if (result && Array.isArray(result.questions) && result.questions.length) {
               setQuestions(result.questions);
               setQuizId(result.quizId || null);
