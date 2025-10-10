@@ -194,6 +194,8 @@ export default function Explore() {
               questionId: question.id,
               articleId: question.articleId || question.article_id || undefined,
               selectedOptionId,
+              userId: localStorage.getItem('userId') || undefined,
+              token: localStorage.getItem('accessToken') || undefined,
             });
 
             // 다양한 서버 응답 스키마 지원: id/index/text/letter

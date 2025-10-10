@@ -423,6 +423,26 @@ async function resolveLevelEntityId({ subTopicId, level }) {
 }
 
 export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => {
+  // levelId가 없으면 subsector의 모든 레벨을 순회해서 ARTICLE/STORY 문제라도 반환
+  if (!levelId && subTopicId) {
+    try {
+      const levels = await getLevelsBySubsector(subTopicId);
+      for (const lvl of levels) {
+        const res = await exports.getQuestions({ topicId, subTopicId, levelId: lvl.id, userId });
+        if (Array.isArray(res.questions) && res.questions.some(q => q.type === 'ARTICLE' || q.type === 'STORY')) {
+          return res;
+        }
+      }
+      // 그래도 없으면 첫 번째 레벨의 문제라도 반환
+      if (levels.length) {
+        const res = await exports.getQuestions({ topicId, subTopicId, levelId: levels[0].id, userId });
+        return res;
+      }
+      return { questions: [], totalCount: 0, quizId: null, error: '해당 소주제에 문제를 찾을 수 없습니다.' };
+    } catch (e) {
+      return { questions: [], totalCount: 0, quizId: null, error: '문제 조회 중 오류: ' + e.message };
+    }
+  }
   if (!levelId) return { questions: [], totalCount: 0, quizId: null, error: '레벨 정보가 올바르지 않습니다. 다른 난이도를 선택해 주세요.' };
   try {
     const uid = withUserId(userId);
