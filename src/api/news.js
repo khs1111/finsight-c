@@ -24,7 +24,16 @@ async function apiRequest(endpoint, options = {}) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    // 204 No Content 처리
+    if (response.status === 204) {
+      console.log('API 응답: No Content (204)');
+      return null;
+    }
+
+    // JSON 본문이 없을 수 있으므로 시도/캐치
+    const text = await response.text();
+    if (!text) return null;
+    const data = JSON.parse(text);
     console.log('API 응답 데이터:', data); // 디버깅용
     return data;
   } catch (error) {
@@ -101,4 +110,31 @@ export const getNewsData = async (category = '오늘의 뉴스', skip = 0, limit
     console.error(`${category} 뉴스 로딩 실패:`, error);
     throw error;
   }
+};
+
+// ---------------- Admin (임시) ----------------
+const ADMIN_KEY = process.env.REACT_APP_ADMIN_KEY;
+
+export const adminSoftDelete = async (articleId, { reason = '', lockHours = 24 } = {}) => {
+  const params = new URLSearchParams();
+  if (reason) params.append('reason', reason);
+  if (lockHours != null) params.append('lock_hours', String(lockHours));
+  return await apiRequest(`/api/articles/admin/${articleId}?${params.toString()}`, {
+    method: 'DELETE',
+    headers: ADMIN_KEY ? { 'X-ADMIN-KEY': ADMIN_KEY } : {},
+  });
+};
+
+export const adminRestore = async (articleId) => {
+  return await apiRequest(`/api/articles/admin/${articleId}/restore`, {
+    method: 'POST',
+    headers: ADMIN_KEY ? { 'X-ADMIN-KEY': ADMIN_KEY } : {},
+  });
+};
+
+export const adminPurge = async (articleId) => {
+  return await apiRequest(`/api/articles/admin/${articleId}/purge`, {
+    method: 'DELETE',
+    headers: ADMIN_KEY ? { 'X-ADMIN-KEY': ADMIN_KEY } : {},
+  });
 };

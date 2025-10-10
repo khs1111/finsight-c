@@ -1,0 +1,48 @@
+.ng-layout { display:flex; gap:20px; background: linear-gradient(180deg,#f3f7fa, #f8fafc); padding:20px; height: calc(100vh - 64px); box-sizing:border-box }
+.ng-sidebar { width:260px; background:#072033; color:#e6f6ff; border-radius:10px; padding:18px; box-shadow:0 6px 18px rgba(7,32,51,0.06); overflow:auto }
+.ng-title { font-weight:800; margin-bottom:14px; font-size:18px }
+.ng-cats { display:flex; flex-direction:column; gap:6px }
+.ng-cat { cursor:pointer; color:#9ad8f0; padding:6px 0; border-radius:6px }
+.ng-cat:hover, .ng-cat.active { color:#fff; font-weight:800 }
+.ng-hint { margin-top:28px; color:rgba(255,255,255,0.2); font-size:13px }
+
+.ng-content { flex:1; display:flex; flex-direction:column; min-width:0 }
+.ng-header { display:flex; align-items:center; justify-content:space-between; padding:8px 4px }
+.ng-header-title { font-weight:800; font-size:18px; color:#0f1724 }
+.ng-admin-msg { color:#0b7a53; font-weight:700 }
+
+.ng-split { display:flex; gap:18px; height: calc(100% - 52px) }
+.ng-detail-panel { flex: 1; min-width: 0 }
+.ng-detail-inner { height:100%; background:#fff; border-radius:10px; padding:20px; box-shadow:0 6px 18px rgba(16,24,40,0.06); overflow:auto }
+.ng-list-panel { width: 420px; background:#fff; border-radius:10px; padding:16px; overflow:auto; box-shadow:0 6px 18px rgba(16,24,40,0.06) }
+
+.ng-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px }
+.ng-card { display:flex; align-items:flex-start; gap:12px; padding:12px; border:1px solid #eef6f9; border-radius:10px; background:#fbfdff }
+.ng-card.selected { border-color:#bfe3f5; box-shadow:0 8px 20px rgba(16,24,40,0.06) }
+.ng-card-main { flex:1; cursor:pointer }
+.ng-card-title { font-weight:700; color:#072033; margin-bottom:4px }
+.ng-card-desc { color:#3b5563; font-size:14px; line-height:1.5 }
+.ng-card-actions { display:flex; align-items:center }
+.ng-delete { background:#b0302a; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:700 }
+.ng-delete:disabled { opacity:0.6; cursor:not-allowed }
+
+.ng-loading { color:#64748b }
+.ng-error { color:#b91c1c }
+.ng-empty { color:#64748b }
+
+.ng-detail-title { margin:0 0 8px; font-size:18px; color:#072033 }
+.ng-detail-meta { display:flex; gap:10px; color:#6b7280; font-size:13px }
+.ng-detail-desc { color:#243b4a; line-height:1.8; font-size:15px }
+.ng-prewrap { white-space: pre-wrap; word-break: break-word }
+.ng-bg-list { list-style: disc; padding-left: 18px; color:#243b4a }
+.ng-bg-label { font-weight:700; margin: 8px 0 4px }
+.ng-bg-content { margin: 0 0 8px }
+.ng-block { margin-top:12px }
+.ng-tags { list-style:none; padding:0; margin:6px 0 0; display:flex; gap:6px; flex-wrap:wrap }
+.ng-tag { background:#e8f7ff; color:#0b5d78; padding:4px 8px; border-radius:6px; font-weight:600; font-size:12px }
+
+/* Keyword full view */
+.ng-kw-list { display:flex; flex-direction:column; gap:12px; margin-top:6px }
+.ng-kw-item { background:#fbfdff; border:1px solid #eef6f9; border-radius:8px; padding:10px }
+.ng-kw-term { font-weight:700; color:#072033; margin-bottom:4px }
+.ng-kw-desc { color:#243b4a; line-height:1.7; font-size:14px }

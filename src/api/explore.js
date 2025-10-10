@@ -67,18 +67,22 @@ const withUserId = (userId) => {
   return userId ?? (Number.isFinite(stored) ? stored : undefined);
 };
 
-// 레벨 키(한글 라벨)를 백엔드에서 기대하는 숫자 ID로 보정
-// 개선: 한글/영문/숫자 혼용 robust 매핑
+// ✅ 레벨 키(한글/영문 라벨 포함) → 백엔드에서 기대하는 숫자 ID로 보정
 function coerceLevelId(levelId) {
-  if (typeof levelId === 'number') return levelId;
-  if (!levelId) return 1;
+  if (typeof levelId === 'number' && Number.isFinite(levelId)) return levelId;
+  if (!levelId) return null;
+
   const s = String(levelId).trim().toLowerCase();
-  // 한글/영문 난이도 이름 매핑
+  if (!s) return null;
+
+  // 한글/영문 난이도 라벨 매핑
   if (/초|입문|beginner|easy/.test(s)) return 1;
   if (/중|intermediate|medium/.test(s)) return 2;
   if (/고|advanced|hard/.test(s)) return 3;
+
   const n = Number(s);
-  if (Number.isFinite(n) && n >= 1 && n <= 3) return n;
+  if (Number.isFinite(n)) return n;
+
   console.warn('⚠️ 알 수 없는 levelId, 기본값 1로 대체됨:', s);
   return 1;
 }
@@ -268,6 +272,46 @@ export const getLevelProgress = async (levelId, userId, token) => {
   }
 };
 
+// 레벨 상세 정보 조회: desc/goal/levelNumber/title 등 보강용
+export const getLevelDetail = async (levelId) => {
+  const id = coerceLevelId(levelId);
+  if (!id) return null;
+  const tryPaths = [
+    `/levels/${id}`,
+    `/levels/${id}/detail`,
+    `/levels/detail/${id}`,
+    `/levels/detail?id=${encodeURIComponent(id)}`,
+  ];
+  for (const p of tryPaths) {
+    try {
+      const res = await http(p);
+      if (res && typeof res === 'object') {
+        const pick = (...keys) => {
+          for (const k of keys) {
+            const v = res?.[k];
+            if (v != null && v !== '') return v;
+          }
+          return undefined;
+        };
+        const entityId = res.id ?? res.levelId ?? id;
+        const levelNo = pick('level_number','levelNumber','level_no','levelNo','number','difficulty','rank');
+        const title = pick('title','name','levelTitle') ?? (levelNo ? `레벨 ${levelNo}` : `레벨 ${entityId}`);
+        const goal = pick('learning_goal','learningGoal','goal','objective','objective_md','objectiveMd','learningGoalMd');
+        const desc = pick('description','desc','summary','overview','description_md','desc_md','summary_md','overview_md','details','details_md');
+        return {
+          id: entityId,
+          title,
+          levelNumber: Number.isFinite(Number(levelNo)) ? Number(levelNo) : undefined,
+          goal: goal ?? '',
+          desc: desc ?? '',
+          raw: res,
+        };
+      }
+    } catch (_) { /* try next */ }
+  }
+  return null;
+};
+
 // (이전 submitAnswer / completeQuiz / progress 관련 구버전 함수 제거됨)
 
 // 회원가입 - 백엔드: POST /api/auth/signup
@@ -417,49 +461,7 @@ function normalizeQuizPayload(raw) {
     }),
   };
 }
-// 내부 헬퍼: subsector 기준으로 라벨/숫자 레벨을 실제 레벨 엔티티 ID로 변환
-async function resolveLevelEntityId({ subTopicId, level }) {
-  try {
-    // 이미 엔티티 ID 형태로 들어온 경우(숫자 > 3 또는 숫자형 문자열 > 3)는 그대로 사용
-    if (typeof level === 'number' && level > 3) return level;
-    if (typeof level === 'string') {
-      const asN = Number(level);
-      if (Number.isFinite(asN) && asN > 3) return asN;
-    }
-    if (!subTopicId) return typeof level === 'number' ? level : toLevelNumber(level);
-    const list = await getLevelsBySubsector(subTopicId);
-    const want = toLevelNumber(level);
-    // 0) 전달된 level 값이 실제 엔티티 id와 정확히 일치하는 경우 우선 반환 (id가 1/2/3인 백엔드 대비)
-    if (typeof level === 'number') {
-      const byExactId = list.find(l => Number(l.id) === Number(level));
-      if (byExactId?.id != null) return byExactId.id;
-    } else if (typeof level === 'string') {
-      const asN = Number(level);
-      if (Number.isFinite(asN)) {
-        const byExactIdStr = list.find(l => Number(l.id) === asN);
-        if (byExactIdStr?.id != null) return byExactIdStr.id;
-      }
-    }
-    // 1) levelNumber 일치
-    const hit = list.find(l => Number(l.levelNumber) === Number(want));
-    if (hit?.id != null) return hit.id;
-    // 2) 제목 키워드 매칭 (초/중/고 혹은 en)
-    const wantKey = want === 1 ? /(초|입문|beginner|easy)/i 
-                  : want === 2 ? /(중|intermediate|medium)/i 
-                  : /(고|advanced|hard)/i;
-    const byKeyword = list.find(l => wantKey.test(String(l.title || l.name || '')));
-    if (byKeyword?.id != null) return byKeyword.id;
-    // 3) levelNumber 순서 fallback
-    if (list.length >= want && list[want - 1]?.id != null) {
-      return list[want - 1].id;
-    }
-    // 최종 실패 시 기본값
-    console.warn('⚠️ resolveLevelEntityId fallback으로 기본 레벨 반환:', want);
-    return list.find(l => l.levelNumber === 1)?.id ?? null;
-  } catch (_) {
-    return null;
-  }
-}
+
 
 export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => {
   // 필수값 체크
@@ -469,14 +471,14 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
   }
   try {
     const uid = withUserId(userId);
-    console.debug('[getQuestions] input', { topicId, subTopicId, levelId, userId });
+    // levelId는 라벨/숫자/PK 모두 지원: resolveLevelEntityId로 robust하게 해석
     const resolvedLevelId = await resolveLevelEntityId({ subTopicId, level: levelId });
     if (!resolvedLevelId) {
-      console.error('[getQuestions] levelId 매핑 실패:', { subTopicId, levelId });
-      return { questions: [], totalCount: 0, quizId: null, error: '레벨 매핑 실패: 올바른 난이도를 선택해 주세요.' };
+      console.error('[getQuestions] levelId 해석 실패:', { subTopicId, levelId });
+      return { questions: [], totalCount: 0, quizId: null, error: '레벨 정보가 올바르지 않습니다.' };
     }
-    console.debug('[getQuestions] resolvedLevelId', resolvedLevelId);
-    // 1) 레벨의 퀴즈 목록
+  console.log('[getQuestions] level 해석', { inputLevel: levelId, subTopicId, resolvedLevelId });
+  // 1) 레벨의 퀴즈 목록
     const meta = await http(`/levels/${resolvedLevelId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
     const quizCandidates = [
       ...(Array.isArray(meta?.quizzes) ? meta.quizzes : []),
@@ -549,62 +551,126 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
 // getLevelMeta / getKeyPoints 제거 → 퀴즈 상세 응답에 포함된 필드 직접 사용
 
 // Subsector -> Levels 목록 조회 (예상 엔드포인트 구조)
+// ✅ levelId 자동 보정 + subsector별 레벨 구조 보강 버전
+// =========================================================
 export const getLevelsBySubsector = async (subsectorId) => {
   if (!subsectorId) return [];
   try {
-    // 1) /subsectors/{id} 상세에서 levels 혹은 변형 키 탐색
     let raw = [];
+
+    // 1️⃣ /subsectors/{id} 상세 내에 levels 배열이 포함된 경우
     try {
       const detail = await http(`/subsectors/${subsectorId}`);
-      const candidateKeys = ['levels','levelList','levelDtos','levelResponses'];
-      for (const k of candidateKeys) {
-        if (Array.isArray(detail?.[k]) && detail[k].length) { raw = detail[k]; break; }
+      const candidateKeys = ['levels', 'levelList', 'levelDtos', 'levelResponses'];
+      for (const key of candidateKeys) {
+        if (Array.isArray(detail?.[key]) && detail[key].length) {
+          raw = detail[key];
+          break;
+        }
       }
-    } catch (e) { /* ignore single attempt */ }
+    } catch (e) {
+      console.warn('[getLevelsBySubsector] 1단계 실패:', e.message);
+    }
 
-    // 2) /subsectors/{id}/levels
+    // 2️⃣ /subsectors/{id}/levels
     if (!raw.length) {
       try {
         const arr = await http(`/subsectors/${subsectorId}/levels`);
         if (Array.isArray(arr) && arr.length) raw = arr;
       } catch (_) {}
     }
-    // 3) /levels?subsectorId=ID
+
+    // 3️⃣ /levels?subsectorId=
     if (!raw.length) {
       try {
         const arr = await http(`/levels?subsectorId=${encodeURIComponent(subsectorId)}`);
         if (Array.isArray(arr) && arr.length) raw = arr;
       } catch (_) {}
     }
-    // 4) /levels/search?subsectorId=ID (백엔드 검색 스타일 대비)
+
+    // 4️⃣ /levels/search?subsectorId=
     if (!raw.length) {
       try {
         const arr = await http(`/levels/search?subsectorId=${encodeURIComponent(subsectorId)}`);
         if (Array.isArray(arr) && arr.length) raw = arr;
       } catch (_) {}
     }
+
     if (!raw.length) {
-      console.warn('[getLevelsBySubsector] 레벨 데이터를 찾지 못했습니다. subsectorId=', subsectorId);
+      console.warn('[getLevelsBySubsector] subsectorId=', subsectorId, '레벨 데이터 없음');
       return [];
     }
-    return raw.map(l => {
-      const entityId = l.id ?? l.levelId; // 실제 엔티티 ID만
-      const levelNo = l.level_number ?? l.levelNumber ?? l.level_no ?? l.levelNo ?? l.number ?? l.difficulty ?? l.difficulty_level ?? l.difficultyLevel ?? l.rank; // 숫자 레벨 후보들
-      const id = entityId ?? levelNo; // id/key는 엔티티 ID 우선, 없으면 임시로 번호 사용
+
+    // ✅ 핵심: 엔티티 PK(id) 고정, levelNumber는 보조 정보
+    const mapped = raw.map((l) => {
+      const entityId = l.id ?? l.levelId ?? l.level_id; // DB PK
+      const levelNo =
+        l.level_number ??
+        l.levelNumber ??
+        l.level_no ??
+        l.levelNo ??
+        l.number ??
+        l.rank ??
+        l.difficulty ??
+        l.difficulty_level ??
+        l.difficultyLevel ??
+        undefined;
+
+      const levelNumber = Number.isFinite(Number(levelNo)) ? Number(levelNo) : undefined;
+      const id = entityId; // id는 항상 엔티티 PK
+
       return {
         ...l,
-        id,
-        key: id,
-        title: l.title || l.name || (levelNo ? `레벨 ${levelNo}` : `레벨 ${id}`),
+        id,               // PK
+        key: id,          // 선택 키도 PK로 고정
+        entityId: id,     // 명시적 보존
+        title: l.title || l.name || (levelNumber ? `레벨 ${levelNumber}` : `레벨 ${id}`),
         desc: l.description || l.desc || l.summary || '',
         goal: l.learning_goal || l.learningGoal || l.goal || '',
-        levelNumber: (Number.isFinite(Number(levelNo)) ? Number(levelNo) : levelNo) ?? undefined,
+        levelNumber,
       };
     });
+
+    console.log(`[getLevelsBySubsector] subsectorId=${subsectorId}`, mapped);
+    return mapped;
   } catch (e) {
     console.warn('[getLevelsBySubsector] 실패:', e.message);
     return [];
   }
+};
+
+// =========================================================
+// 레벨 ID 해석기 (엔티티 PK → levelNumber 자동 변환)
+// =========================================================
+export const resolveLevelEntityId = async ({ subTopicId, level }) => {
+  // 숫자/라벨을 우선 숫자로 정규화 (라벨은 1/2/3으로)
+  const num = coerceLevelId(level);
+  try {
+    const levels = await getLevelsBySubsector(subTopicId);
+    // 1) num이 3보다 큰 경우 → 이미 엔티티 PK일 가능성 → 존재 여부 확인 후 그대로 반환
+    if (Number.isFinite(num) && num > 3) {
+      const foundById = levels.find((l) => Number(l.id) === Number(num) || Number(l.entityId) === Number(num));
+      if (foundById) {
+        return Number(foundById.id ?? foundById.entityId);
+      }
+    }
+    // 2) num이 1/2/3인 경우 → subsector 내 같은 levelNumber의 엔티티를 찾아 PK 반환
+    if ([1, 2, 3].includes(num)) {
+      const foundByNo = levels.find((l) => Number(l.levelNumber) === Number(num));
+      if (foundByNo) {
+        return Number(foundByNo.id ?? foundByNo.entityId);
+      }
+    }
+    // 3) 그 외 케이스: 첫 레벨의 PK로 폴백 (UX 보장)
+    if (levels.length) {
+      console.warn(`[resolveLevelEntityId] 일치하는 레벨 없음, 첫 레벨로 대체: ${levels[0].id}`);
+      return Number(levels[0].id);
+    }
+  } catch (e) {
+    console.warn('[resolveLevelEntityId] 변환 실패:', e.message);
+  }
+  console.warn(`⚠️ [resolveLevelEntityId] 매핑 실패 (${String(level)}), 1로 대체`);
+  return 1;
 };
 
 // 답안 제출 (사양: POST /api/quizzes/submit-answer)

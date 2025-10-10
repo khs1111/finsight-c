@@ -1,6 +1,6 @@
 //초 중 고 레벨 선택
 import { useLayoutEffect, useRef, useState, useEffect } from "react";
-import { getLevelsBySubsector, getSectorsWithSubsectors } from "../../api/explore";
+import { getLevelsBySubsector, getSectorsWithSubsectors, getLevelDetail } from "../../api/explore";
 import "./LevelPicker.css";
 
 // props: mainTopic (대분류), subTopic (선택된 소분류)
@@ -99,15 +99,33 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
           return;
         }
         const list = await getLevelsBySubsector(subsectorId);
+        // 상세가 비어있을 수 있어 보강: 개별 레벨 상세 호출로 desc/goal/title 채움
         const mapped = Array.isArray(list)
-          ? list.map(l => ({
-              // id/key: API가 반환한 엔티티 ID 우선, 없으면 숫자 레벨 번호를 사용
-              id: l.id ?? l.levelId ?? l.level_id ?? l.level_number ?? l.levelNumber,
-              key: l.id ?? l.key ?? l.levelId ?? l.level_number ?? l.levelNumber,
-              title: l.title ?? l.name ?? (l.levelNumber ? `레벨 ${l.levelNumber}` : `레벨 ${l.id ?? ''}`),
-              desc: l.desc ?? l.description ?? '',
-              goal: l.goal ?? l.learning_goal ?? l.learningGoal ?? '',
-              levelNumber: l.levelNumber ?? l.level_number ?? l.number, // 숫자 레벨 명시적으로 보존
+          ? await Promise.all(list.map(async (l) => {
+              const id = l.id ?? l.levelId ?? l.level_id;
+              let title = l.title ?? l.name ?? (l.levelNumber ? `레벨 ${l.levelNumber}` : (id ? `레벨 ${id}` : '레벨'));
+              let desc = l.desc ?? l.description ?? '';
+              let goal = l.goal ?? l.learning_goal ?? l.learningGoal ?? '';
+              let levelNumber = l.levelNumber ?? l.level_number ?? l.number;
+              if ((!desc || !goal) && id) {
+                try {
+                  const detail = await getLevelDetail(id);
+                  if (detail) {
+                    title = detail.title || title;
+                    desc = detail.desc ?? desc;
+                    goal = detail.goal ?? goal;
+                    if (detail.levelNumber != null) levelNumber = detail.levelNumber;
+                  }
+                } catch (_) { /* ignore */ }
+              }
+              return {
+                id: id ?? levelNumber,
+                key: id ?? levelNumber,
+                title,
+                desc,
+                goal,
+                levelNumber,
+              };
             }))
           : [];
         if (!cancelled) {
@@ -233,7 +251,8 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
       ? entityId
       : (Number.isFinite(levelNo) ? levelNo : 1);
     onConfirm({
-      levelId: finalLevelId, // explore.js에서 subsector 문맥으로 실제 id 해석
+      levelId: entityId, // 실제 backend PK
+      levelNumber: Number.isFinite(levelNo) ? levelNo : undefined, // 1/2/3 등 난이도 번호
       levelName: sel.title,
       learningGoal: sel.goal,
     });

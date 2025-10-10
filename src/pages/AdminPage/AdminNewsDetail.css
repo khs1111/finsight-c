@@ -1,0 +1,38 @@
+.admin-newsdetail-wrap {
+  position: relative;
+}
+
+.admin-action-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: env(safe-area-inset-bottom, 0px);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: rgba(27, 27, 27, 0.9);
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.2);
+}
+
+.admin-delete-btn {
+  border: none;
+  background: linear-gradient(104deg, #ff5a5a -6.51%, #b31217 105.13%);
+  color: #fff;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.admin-delete-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.admin-msg {
+  font-size: 13px;
+  color: #e6e6e6;
+}

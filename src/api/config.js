@@ -1,18 +1,17 @@
 // Centralize API base resolution for consistency across modules
+
+// 환경변수(API_BASE) 우선 사용: 로컬에서도 운영 서버로 연결 가능하게
+const fromEnv = (typeof process !== 'undefined' && (process.env.API_BASE || process.env.VITE_API_BASE || process.env.NEXT_PUBLIC_API_BASE || process.env.REACT_APP_API_BASE)) || '';
 const fromVite = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) || '';
 const fromNext = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_BASE) || '';
 const fromCra  = (typeof process !== 'undefined' && process.env?.REACT_APP_API_BASE) || '';
 
 const PROD_DEFAULT = 'https://finsight.o-r.kr/api';
-const DEV_DEFAULT  = 'http://localhost:8080/api';
 
-// Detect local environment (best-effort)
-const isLocal = typeof window !== 'undefined'
-  ? /^(localhost|127\.0\.0\.1)/.test(window.location.hostname)
-  : false;
 
-const resolvedBase = (fromVite || fromNext || fromCra || '').replace(/\/$/, '');
-export const API_BASE = resolvedBase || (isLocal ? DEV_DEFAULT : PROD_DEFAULT);
+// 환경변수/API_BASE 명시값이 있으면 무조건 우선 사용
+const resolvedBase = (fromEnv || fromVite || fromNext || fromCra || '').replace(/\/$/, '');
+export const API_BASE = resolvedBase || PROD_DEFAULT;
 
 // Optional separate base for the News service; falls back to API_BASE if not provided
 const fromViteNews = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_NEWS_API_BASE) || '';

@@ -19,7 +19,9 @@ import Profile from './pages/profile';
 import Newsletter from './pages/Newsletter';
 import BackendStatusDemo from './components/BackendStatusDemo';
 import Login from './pages/Login';
-
+import AdminLetters from './pages/AdminPage/AdminLetters';
+import AdminNewsGuide from './pages/AdminPage/AdminNewsGuide';
+import AdminNewsDetail from './pages/AdminPage/AdminLetters';
 
 function App() {
   const navigate = useNavigate();
@@ -38,6 +40,7 @@ function App() {
   const isProfile = location.pathname.startsWith('/profile');
   const isNewsletter = location.pathname.startsWith('/newsletter');
   const isLogin = location.pathname.startsWith('/login');
+  const isAdmin = location.pathname.startsWith('/admin');
   const hideNewsletterNav = location.pathname.startsWith('/newsletter/subscribe') ||
   
     location.pathname === '/newsletter' ||
@@ -78,6 +81,11 @@ function App() {
           <Route path="/vocab" element={<VocabPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/newsletter/*" element={<Newsletter />} />
+          <Route path="/dev/backend-status" element={<BackendStatusDemo />} />
+          <Route path="/admin/news-letters/*" element={<AdminLetters />} />
+          <Route path="/admin/news-guide" element={<AdminNewsGuide />} />
+          <Route path="/admin/news-guide/:id" element={<AdminNewsGuide />} />
+          <Route path="/admin/news-detail/:id" element={<AdminNewsDetail />} />
           <Route path="/dev/backend-status" element={<BackendStatusDemo />} />
         </Routes>
       </div>

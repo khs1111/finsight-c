@@ -29,7 +29,8 @@ export default function Explore() {
   const [subTopic, setSubTopic] = useState(null);         // 서브주제명
   // eslint-disable-next-line no-unused-vars
   const [subTopicId, setSubTopicId] = useState(null);     // 서브주제ID
-  const [level, setLevel] = useState(null);               // 레벨ID (숫자)
+  const [level, setLevel] = useState(null);               // 레벨ID (실제 PK)
+  const [levelNumber, setLevelNumber] = useState(null);   // 난이도 번호(1/2/3)
   const [levelName, setLevelName] = useState(null);       // 레벨명(표시용)
   // [문제 풀이 진행] - 현재 문제 인덱스, 문제 배열, 퀴즈ID, 정답 결과, 로딩상태
   const [current, setQid] = useState(0);
@@ -100,42 +101,32 @@ export default function Explore() {
       <LevelPicker
         mainTopic={mainTopic}
         subTopic={subTopic}
-        onConfirm={async ({ levelId, levelName: lvName }) => {
-          // [레벨ID 보정] 1,2,3 이외 값이면 1로 강제 (README 명세)
-          let safeLevelId = Number(levelId);
-          if (![1,2,3].includes(safeLevelId)) {
-            console.warn('[LevelPicker] 잘못된 levelId 감지, 1로 보정:', levelId);
-            safeLevelId = 1;
-          }
-          setLevel(safeLevelId);
+        onConfirm={async ({ levelId, levelNumber, levelName: lvName }) => {
+          setLevel(levelId); // 실제 PK 저장
+          setLevelNumber(levelNumber || null);
           setLevelName(lvName || null);
           try {
-            // [API 호출] /api/levels/{levelId}/quizzes → /api/quizzes/{quizId} 순서로만 문제 fetch
-            console.log('🎯 [LevelPicker] 퀴즈 데이터 요청:', { topicId: mainTopicId, subTopicId, levelId: safeLevelId });
+            console.log('🎯 [LevelPicker] 퀴즈 데이터 요청:', { topicId: mainTopicId, subTopicId, levelId });
             setIsFetchingQuestions(true);
             const result = await apiGetQuestions({
               topicId: mainTopicId,
               subTopicId: subTopicId,
-              levelId: safeLevelId
+              levelId: levelId
             });
-            // [API 응답] 문제 배열/에러 모두 console.log로 출력
             console.log('📦 [LevelPicker] getQuestions 응답:', result);
             if (result && Array.isArray(result.questions) && result.questions.length) {
-              // [문제 배열 상세 출력] type/sort_order/제목 등 한눈에 보기
               console.log('[LevelPicker] 문제 배열 상세:', result.questions.map((q, i) => ({
                 idx: i+1, id: q.id, type: q.type, sort_order: q.sort_order, stem: q.stem_md?.slice?.(0, 30)
               })));
               setQuestions(result.questions);
               setQuizId(result.quizId || null);
               setQid(0);
-              setStep(3); // 3단계(탐험메인)로 이동
+              setStep(3);
             } else {
-              // [에러/빈 배열] 명확한 안내 메시지 및 콘솔 출력
               console.warn('⚠️ [LevelPicker] 퀴즈 데이터가 비어있거나 오류:', result?.error, result);
               alert(result?.error || '문제를 불러오지 못했습니다. 다른 조합을 선택해 주세요.');
             }
           } catch (err) {
-            // [API 에러] 콘솔 출력 및 안내
             console.error('❌ [LevelPicker] 문제 불러오기 실패:', err);
             alert('문제를 불러오는 중 오류가 발생했습니다. 다시 시도해 주세요.');
           } finally {
@@ -153,13 +144,13 @@ export default function Explore() {
       <ExploreMain
         total={questions.length}
         done={current - 1}
-        selectedLevel={levelName || level}
+        selectedLevel={levelName || levelNumber || level}
         initialTopic={mainTopic}
         initialSubTopic={subTopic}
         isLoading={isFetchingQuestions}
-        onSelectionConfirm={async ({ level: newLevel, topic: newTopic, subTopic: newSub, topicId: newTopicId, subTopicId: newSubTopicId, levelId: resolvedLevelId }) => {
-          // [문제 재선택/레벨 변경] 시에도 동일하게 API 호출 및 문제 배열 저장
-          setLevel(newLevel);
+        onSelectionConfirm={async ({ level: newLevel, levelNumber: newLevelNumber, topic: newTopic, subTopic: newSub, topicId: newTopicId, subTopicId: newSubTopicId, levelId: resolvedLevelId }) => {
+          setLevel(resolvedLevelId || newLevel);
+          setLevelNumber(newLevelNumber || null);
           setLevelName(typeof newLevel === 'number' ? null : newLevel);
           setMainTopic(newTopic);
           setSubTopic(newSub);
@@ -171,7 +162,6 @@ export default function Explore() {
             const result = await apiGetQuestions({ levelId: resolvedLevelId || newLevel, subTopicId: newSubTopicId || subTopicId, topicId: newTopicId || mainTopicId });
             console.log('📦 [ExploreMain] getQuestions 응답:', result);
             if (result && Array.isArray(result.questions) && result.questions.length) {
-              // [문제 배열 상세 출력] type/sort_order/제목 등 한눈에 보기
               console.log('[ExploreMain] 문제 배열 상세:', result.questions.map((q, i) => ({
                 idx: i+1, id: q.id, type: q.type, sort_order: q.sort_order, stem: q.stem_md?.slice?.(0, 30)
               })));
