@@ -577,11 +577,19 @@ export const getLevelsBySubsector = async (subsectorId) => {
 };
 
 // 답안 제출 (사양: POST /api/quizzes/submit-answer)
-export const submitAnswer = async ({ quizId, questionId, selectedOptionId }) => {
+
+// 답안 제출 (userId/token 항상 포함)
+export const submitAnswer = async ({ quizId, questionId, selectedOptionId, userId, token }) => {
+  // userId/token 보정
+  const uid = userId ?? localStorage.getItem('userId') ?? undefined;
+  const jwt = token ?? localStorage.getItem('accessToken') ?? undefined;
+  const payload = { quizId, questionId, selectedOptionId };
+  if (uid) payload.userId = uid;
   return await http('/quizzes/submit-answer', {
     method: 'POST',
-    body: JSON.stringify({ quizId, questionId, selectedOptionId }),
-  });
+    body: JSON.stringify(payload),
+    headers: jwt ? { Authorization: `Bearer ${jwt}` } : {},
+  }, jwt);
 };
 
 // 퀴즈 완료 (사양: POST /api/quizzes/{id}/complete)
@@ -601,6 +609,7 @@ export const getLevels = async () => {
 };
 
 // UI 편의 래퍼: 단일 문항 답안 제출
+// postAttempt도 userId/token 항상 전달
 export const postAttempt = ({ quizId, questionId, selectedOptionId, userId, token }) =>
   submitAnswer({ quizId, questionId, selectedOptionId, userId, token });
 
