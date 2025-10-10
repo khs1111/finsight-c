@@ -480,10 +480,8 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
           let qs = all.slice(0, 4);
           // ARTICLE 우선, 없으면 STORY
           let specialIdx = qs.findIndex(qq => qq.type === 'ARTICLE');
-          let specialType = 'ARTICLE';
           if (specialIdx === -1) {
             specialIdx = qs.findIndex(qq => qq.type === 'STORY');
-            specialType = 'STORY';
           }
           if (specialIdx === -1) {
             // 1~4번째에 없으면, 5번째 이후에 있는지 찾아서 4번째로 교체
@@ -491,7 +489,6 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
             if (laterSpecialIdx !== -1) {
               qs[3] = all[laterSpecialIdx];
               specialIdx = 3;
-              specialType = all[laterSpecialIdx].type;
             }
           }
           // SPECIAL이 4번째가 아니면 위치 교체
