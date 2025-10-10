@@ -90,15 +90,21 @@ export default function Explore() {
         mainTopic={mainTopic}
         subTopic={subTopic}
         onConfirm={async ({ levelId, levelName: lvName }) => {
-          setLevel(levelId);
+          // levelId가 1,2,3 이외면 1로 fallback
+          let safeLevelId = Number(levelId);
+          if (![1,2,3].includes(safeLevelId)) {
+            console.warn('[LevelPicker] 잘못된 levelId 감지, 1로 보정:', levelId);
+            safeLevelId = 1;
+          }
+          setLevel(safeLevelId);
           setLevelName(lvName || null);
           try {
-            console.log('🎯 [LevelPicker] 퀴즈 데이터 요청:', { topicId: mainTopicId, subTopicId, levelId });
+            console.log('🎯 [LevelPicker] 퀴즈 데이터 요청:', { topicId: mainTopicId, subTopicId, levelId: safeLevelId });
             setIsFetchingQuestions(true);
             const result = await apiGetQuestions({
               topicId: mainTopicId,
               subTopicId: subTopicId,
-              levelId: levelId
+              levelId: safeLevelId
             });
             console.log('📦 [LevelPicker] getQuestions 응답:', result);
             if (result && Array.isArray(result.questions) && result.questions.length) {
