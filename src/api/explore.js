@@ -423,34 +423,20 @@ async function resolveLevelEntityId({ subTopicId, level }) {
 }
 
 export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => {
-  // levelId가 없으면 subsector의 모든 레벨을 순회해서 ARTICLE/STORY 문제라도 반환
-  if (!levelId && subTopicId) {
-    try {
-      const levels = await getLevelsBySubsector(subTopicId);
-      for (const lvl of levels) {
-        const res = await exports.getQuestions({ topicId, subTopicId, levelId: lvl.id, userId });
-        if (Array.isArray(res.questions) && res.questions.some(q => q.type === 'ARTICLE' || q.type === 'STORY')) {
-          return res;
-        }
-      }
-      // 그래도 없으면 첫 번째 레벨의 문제라도 반환
-      if (levels.length) {
-        const res = await exports.getQuestions({ topicId, subTopicId, levelId: levels[0].id, userId });
-        return res;
-      }
-      return { questions: [], totalCount: 0, quizId: null, error: '해당 소주제에 문제를 찾을 수 없습니다.' };
-    } catch (e) {
-      return { questions: [], totalCount: 0, quizId: null, error: '문제 조회 중 오류: ' + e.message };
-    }
+  // 필수값 체크
+  if (!topicId || !subTopicId || !levelId) {
+    console.error('[getQuestions] 필수값 누락:', { topicId, subTopicId, levelId });
+    return { questions: [], totalCount: 0, quizId: null, error: '주제/세부주제/레벨을 모두 선택해 주세요.' };
   }
-  if (!levelId) return { questions: [], totalCount: 0, quizId: null, error: '레벨 정보가 올바르지 않습니다. 다른 난이도를 선택해 주세요.' };
   try {
     const uid = withUserId(userId);
-    // 디버깅 로그: 입력값 확인
-    console.debug('[getQuestions] input subTopicId=', subTopicId, 'levelId=', levelId);
+    console.debug('[getQuestions] input', { topicId, subTopicId, levelId, userId });
     const resolvedLevelId = await resolveLevelEntityId({ subTopicId, level: levelId });
-    if (!resolvedLevelId) return { questions: [], totalCount: 0, quizId: null };
-    console.debug('[getQuestions] resolvedLevelId=', resolvedLevelId);
+    if (!resolvedLevelId) {
+      console.error('[getQuestions] levelId 매핑 실패:', { subTopicId, levelId });
+      return { questions: [], totalCount: 0, quizId: null, error: '레벨 매핑 실패: 올바른 난이도를 선택해 주세요.' };
+    }
+    console.debug('[getQuestions] resolvedLevelId', resolvedLevelId);
     // 1) 레벨의 퀴즈 목록
     const meta = await http(`/levels/${resolvedLevelId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
     const quizCandidates = [
@@ -462,7 +448,6 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
       ...(Array.isArray(meta) ? meta : []),
     ];
     let quizList = quizCandidates.filter(Boolean);
-
     // 일부 백엔드는 레벨 시작 이후에만 퀴즈가 생성됨 → start 호출 후 재시도
     if (!quizList.length) {
       try {
@@ -470,13 +455,16 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
           method: 'POST',
           body: JSON.stringify(uid ? { userId: uid } : {}),
         });
-      } catch (_) { /* ignore start failure; still retry list */ }
+      } catch (e) { console.warn('[getQuestions] start 호출 실패:', e); }
       try {
         const meta2 = await http(`/levels/${resolvedLevelId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
         quizList = Array.isArray(meta2?.quizzes) ? meta2.quizzes : (Array.isArray(meta2) ? meta2 : []);
-      } catch (_) { /* ignore second failure */ }
+      } catch (e) { console.warn('[getQuestions] 두번째 퀴즈 fetch 실패:', e); }
     }
-    if (!quizList.length) return { questions: [], totalCount: 0, quizId: null };
+    if (!quizList.length) {
+      console.error('[getQuestions] 퀴즈 없음:', { topicId, subTopicId, levelId, resolvedLevelId });
+      return { questions: [], totalCount: 0, quizId: null, error: '해당 조합에 퀴즈가 없습니다.' };
+    }
     // 여러 퀴즈 중 4문항 이상 가진 퀴즈를 우선 선택, 없으면 ARTICLE/STORY 포함 퀴즈 우선
     let best = { quizId: null, questions: [], count: 0 };
     let bestWithSpecial = null;
@@ -487,24 +475,32 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
         const detail = await http(`/quizzes/${qid}${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
         const norm = normalizeQuizPayload(detail) || { questions: [] };
         const all = Array.isArray(norm.questions) ? norm.questions : [];
-        // 4문항 이상일 때 ARTICLE이 있으면 반드시 4번째에 배치 (없으면 포함해서 교체)
+        // 4문항 이상일 때 ARTICLE/STORY가 있으면 반드시 4번째에 배치 (없으면 포함해서 교체)
         if (all.length >= 4) {
           let qs = all.slice(0, 4);
-          let articleIdx = qs.findIndex(qq => qq.type === 'ARTICLE');
-          if (articleIdx === -1) {
-            // 1~4번째에 ARTICLE이 없으면, 5번째 이후에 ARTICLE이 있는지 찾아서 4번째로 교체
-            const laterArticleIdx = all.findIndex((qq, idx) => idx >= 4 && qq.type === 'ARTICLE');
-            if (laterArticleIdx !== -1) {
-              qs[3] = all[laterArticleIdx];
+          // ARTICLE 우선, 없으면 STORY
+          let specialIdx = qs.findIndex(qq => qq.type === 'ARTICLE');
+          let specialType = 'ARTICLE';
+          if (specialIdx === -1) {
+            specialIdx = qs.findIndex(qq => qq.type === 'STORY');
+            specialType = 'STORY';
+          }
+          if (specialIdx === -1) {
+            // 1~4번째에 없으면, 5번째 이후에 있는지 찾아서 4번째로 교체
+            const laterSpecialIdx = all.findIndex((qq, idx) => idx >= 4 && (qq.type === 'ARTICLE' || qq.type === 'STORY'));
+            if (laterSpecialIdx !== -1) {
+              qs[3] = all[laterSpecialIdx];
+              specialIdx = 3;
+              specialType = all[laterSpecialIdx].type;
             }
-            articleIdx = qs.findIndex(qq => qq.type === 'ARTICLE');
           }
-          // ARTICLE이 4번째가 아니면 위치 교체
-          if (articleIdx !== 3 && articleIdx !== -1) {
+          // SPECIAL이 4번째가 아니면 위치 교체
+          if (specialIdx !== 3 && specialIdx !== -1) {
             const temp = qs[3];
-            qs[3] = qs[articleIdx];
-            qs[articleIdx] = temp;
+            qs[3] = qs[specialIdx];
+            qs[specialIdx] = temp;
           }
+          console.debug('[getQuestions] 반환 문제:', qs);
           return { questions: qs, totalCount: qs.length, quizId: qid };
         }
         // ARTICLE/STORY 포함 퀴즈 우선 저장 (여러 개면 가장 많은 문제)
@@ -514,7 +510,7 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
           }
         }
         if (all.length > best.count) best = { quizId: qid, questions: all, count: all.length };
-      } catch (_) { /* try next quiz */ }
+      } catch (e) { console.warn('[getQuestions] 퀴즈 상세 fetch 실패:', e); }
     }
     if (bestWithSpecial) {
       // ARTICLE이 있으면 4번째에 배치
@@ -525,13 +521,16 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
         qs[3] = qs[articleIdx];
         qs[articleIdx] = temp;
       }
+      console.debug('[getQuestions] 반환 문제(backup):', qs);
       return { questions: qs, totalCount: qs.length, quizId: bestWithSpecial.quizId };
     }
     if (best.quizId) {
       const questions = best.questions.slice(0, 4);
+      console.debug('[getQuestions] 반환 문제(backup2):', questions);
       return { questions, totalCount: questions.length, quizId: best.quizId };
     }
-    return { questions: [], totalCount: 0, quizId: null };
+    console.error('[getQuestions] 최종 퀴즈 없음:', { topicId, subTopicId, levelId, resolvedLevelId });
+    return { questions: [], totalCount: 0, quizId: null, error: '해당 조합에 퀴즈가 없습니다.' };
   } catch (e) {
     console.error('getQuestions API 호출 실패:', e.message);
     return { questions: [], totalCount: 0, quizId: null, error: e.message };
