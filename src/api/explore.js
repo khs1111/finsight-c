@@ -476,11 +476,26 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
       const detail = await http(`/quizzes/${qid}${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
       const norm = normalizeQuizPayload(detail) || { questions: [] };
       const all = Array.isArray(norm.questions) ? norm.questions : [];
-      const questions = all.slice(0, 4);
+      let questions = all.slice(0, 4);
       if (questions.length !== 4) {
         console.warn(`[getQuestions] 문제 개수 비정상: ${questions.length}개 (quizId: ${qid}, levelId: ${resolvedLevelId})`, questions);
       }
-      console.debug('[getQuestions] 반환 문제(quizId별 4개):', questions);
+      // STORY/ARTICLE 위치 강제: 3번째 STORY, 4번째 ARTICLE
+      const idxStory = questions.findIndex(q => q.type === 'STORY');
+      const idxArticle = questions.findIndex(q => q.type === 'ARTICLE');
+      // 3번째 STORY
+      if (idxStory !== -1 && idxStory !== 2 && questions[2]) {
+        const temp = questions[2];
+        questions[2] = questions[idxStory];
+        questions[idxStory] = temp;
+      }
+      // 4번째 ARTICLE
+      if (idxArticle !== -1 && idxArticle !== 3 && questions[3]) {
+        const temp = questions[3];
+        questions[3] = questions[idxArticle];
+        questions[idxArticle] = temp;
+      }
+      console.debug('[getQuestions] 반환 문제(quizId별 4개, 위치정렬):', questions);
       return { questions, totalCount: questions.length, quizId: qid };
     } catch (e) {
       console.error('[getQuestions] 퀴즈 상세 fetch 실패:', e);
