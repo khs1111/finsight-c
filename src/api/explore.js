@@ -476,8 +476,12 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
       const detail = await http(`/quizzes/${qid}${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
       const norm = normalizeQuizPayload(detail) || { questions: [] };
       const all = Array.isArray(norm.questions) ? norm.questions : [];
-      console.debug('[getQuestions] 반환 문제(quizId별 전체):', all);
-      return { questions: all, totalCount: all.length, quizId: qid };
+      const questions = all.slice(0, 4);
+      if (questions.length !== 4) {
+        console.warn(`[getQuestions] 문제 개수 비정상: ${questions.length}개 (quizId: ${qid}, levelId: ${resolvedLevelId})`, questions);
+      }
+      console.debug('[getQuestions] 반환 문제(quizId별 4개):', questions);
+      return { questions, totalCount: questions.length, quizId: qid };
     } catch (e) {
       console.error('[getQuestions] 퀴즈 상세 fetch 실패:', e);
       return { questions: [], totalCount: 0, quizId: qid, error: '퀴즈 상세 정보를 불러올 수 없습니다.' };
