@@ -315,17 +315,34 @@ export const login = async (username, password) => {
 // 최소 정규화: 백엔드 응답을 UI에서 기대하는 필드로 얇게 변환
 function normalizeQuizPayload(raw) {
   if (!raw) return { questions: [] };
-  const qs = Array.isArray(raw.questions) ? raw.questions : [];
+  // 다양한 백엔드 스키마 대응: questions, items, data, content, results 중 첫 배열 선택
+  const qs = Array.isArray(raw.questions)
+    ? raw.questions
+    : Array.isArray(raw.items)
+      ? raw.items
+      : Array.isArray(raw.data)
+        ? raw.data
+        : Array.isArray(raw.content)
+          ? raw.content
+          : Array.isArray(raw.results)
+            ? raw.results
+            : [];
   const articles = Array.isArray(raw.articles) ? raw.articles : [];
   const aMap = articles.reduce((m, a) => { if (a?.id != null) m[a.id] = a; return m; }, {});
   return {
     id: raw.id,
     questions: qs.map((q, i) => {
       const art = q.articleId ? aMap[q.articleId] : (q.article_id ? aMap[q.article_id] : undefined);
+      // 기사 정보가 없으면 type을 ARTICLE로 강제하지 않음
+      let type = q.type;
+      if (!type) {
+        if (art && (q.articleId || q.article_id)) type = 'ARTICLE';
+        else if (q.story || q.storyTitleMd || q.story_body_md || q.storyBodyMd) type = 'STORY';
+        else type = 'CONCEPT';
+      }
       return {
         id: q.id ?? i + 1,
-        // ARTICLE 유지 (기사 존재 시 유형 보정)
-        type: (q.type || (art ? 'ARTICLE' : 'CONCEPT')),
+        type,
         question: q.stem_md || q.stemMd || q.stem || q.question || '',
         stemMd: q.stem_md || q.stemMd || q.stem || q.question || '',
 
@@ -335,10 +352,14 @@ function normalizeQuizPayload(raw) {
         articleBodyMd: art?.body_md || art?.bodyMd || art?.body || null,
         image: art?.image_url || art?.imageUrl || q.image_url || q.imageUrl || null,
 
+        // 스토리형(Story) 필드 매핑
+        storyTitleMd: q.story_title_md || q.storyTitleMd || q.storyTitle || null,
+        storyBodyMd: q.story_body_md || q.storyBodyMd || q.story || null,
+
         // 학습/힌트/핵심/해설 (README 스키마 반영)
-        teachingExplainerMd: q.teaching_explainer_md || q.teachingExplainerMd || null,
-        solvingKeypointsMd: q.solving_keypoints_md || q.solvingKeypointsMd || null,
-        answerExplanationMd: q.answer_explanation_md || q.answerExplanationMd || null,
+        teachingExplainerMd: q.teaching_explainer_md || q.teachingExplainerMd || q.learning_md || q.learningMd || null,
+        solvingKeypointsMd: q.solving_keypoints_md || q.solvingKeypointsMd || q.keypoints_md || q.keypointsMd || null,
+        answerExplanationMd: q.answer_explanation_md || q.answerExplanationMd || q.explanation_md || q.explanationMd || null,
         hintMd: q.hint_md || q.hintMd || q.hint || null,
 
         // 선택지
@@ -385,10 +406,10 @@ async function resolveLevelEntityId({ subTopicId, level }) {
     // 3) 제목 끝의 숫자 매칭
     const byTitle = list.find(l => new RegExp(`${want}$`).test(String(l.title || '')));
     if (byTitle?.id != null) return byTitle.id;
-    // 매칭 실패 시 더 이상 첫 레벨로 강제하지 않고, 요청한 난이도 숫자(1/2/3) 또는 전달된 level 값을 그대로 반환
-    return (typeof level === 'number' ? level : want);
+    // 매칭 실패 시 fallback하지 않고 null 반환 (정확한 매핑 실패시 문제 호출 X)
+    return null;
   } catch (_) {
-    return typeof level === 'number' ? level : toLevelNumber(level);
+    return null;
   }
 }
 
@@ -399,6 +420,7 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
     // 디버깅 로그: 입력값 확인
     console.debug('[getQuestions] input subTopicId=', subTopicId, 'levelId=', levelId);
     const resolvedLevelId = await resolveLevelEntityId({ subTopicId, level: levelId });
+    if (!resolvedLevelId) return { questions: [], totalCount: 0, quizId: null };
     console.debug('[getQuestions] resolvedLevelId=', resolvedLevelId);
     // 1) 레벨의 퀴즈 목록
     const meta = await http(`/levels/${resolvedLevelId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
@@ -426,8 +448,9 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
       } catch (_) { /* ignore second failure */ }
     }
     if (!quizList.length) return { questions: [], totalCount: 0, quizId: null };
-    // 여러 퀴즈 중 4문항 이상 가진 퀴즈를 우선 선택
+    // 여러 퀴즈 중 4문항 이상 가진 퀴즈를 우선 선택, 없으면 ARTICLE/STORY 포함 퀴즈 우선
     let best = { quizId: null, questions: [], count: 0 };
+    let bestWithSpecial = null;
     for (const q of quizList) {
       const qid = q.id || q.quizId;
       if (!qid) continue;
@@ -439,8 +462,16 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
           const questions = all.slice(0, 4);
           return { questions, totalCount: questions.length, quizId: qid };
         }
+        // ARTICLE/STORY 포함 퀴즈 우선 저장
+        if (!bestWithSpecial && all.some(qq => qq.type === 'ARTICLE' || qq.type === 'STORY')) {
+          bestWithSpecial = { quizId: qid, questions: all, count: all.length };
+        }
         if (all.length > best.count) best = { quizId: qid, questions: all, count: all.length };
       } catch (_) { /* try next quiz */ }
+    }
+    if (bestWithSpecial) {
+      const questions = bestWithSpecial.questions.slice(0, 4);
+      return { questions, totalCount: questions.length, quizId: bestWithSpecial.quizId };
     }
     if (best.quizId) {
       const questions = best.questions.slice(0, 4);
