@@ -79,7 +79,10 @@ function coerceLevelId(levelId) {
   };
   const n = Number(s);
   if (Number.isFinite(n) && n >= 1 && n <= 3) return n;
-  return map[s.toLowerCase()] || 1;
+  const lower = s.toLowerCase();
+  if (map[lower]) return map[lower];
+  console.warn('⚠️ 알 수 없는 levelId, 기본값 1로 대체됨:', s);
+  return 1;
 }
 
 // Normalize any label/number to canonical level number (1..3)
@@ -371,7 +374,8 @@ async function resolveLevelEntityId({ subTopicId, level }) {
     // 3) 제목 끝의 숫자 매칭
     const byTitle = list.find(l => new RegExp(`${want}$`).test(String(l.title || '')));
     if (byTitle?.id != null) return byTitle.id;
-    return list[0]?.id ?? (typeof level === 'number' ? level : want);
+    // 매칭 실패 시 더 이상 첫 레벨로 강제하지 않고, 요청한 난이도 숫자(1/2/3) 또는 전달된 level 값을 그대로 반환
+    return (typeof level === 'number' ? level : want);
   } catch (_) {
     return typeof level === 'number' ? level : toLevelNumber(level);
   }
@@ -381,7 +385,10 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
   if (!levelId) return { questions: [], totalCount: 0, quizId: null };
   try {
     const uid = withUserId(userId);
+    // 디버깅 로그: 입력값 확인
+    console.debug('[getQuestions] input subTopicId=', subTopicId, 'levelId=', levelId);
     const resolvedLevelId = await resolveLevelEntityId({ subTopicId, level: levelId });
+    console.debug('[getQuestions] resolvedLevelId=', resolvedLevelId);
     // 1) 레벨의 퀴즈 목록
     const meta = await http(`/levels/${resolvedLevelId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
     let quizList = Array.isArray(meta?.quizzes) ? meta.quizzes : (Array.isArray(meta) ? meta : []);
@@ -453,15 +460,17 @@ export const getLevelsBySubsector = async (subsectorId) => {
       return [];
     }
     return raw.map(l => {
-      const id = l.id ?? l.levelId ?? l.level_number ?? l.levelNumber;
+      const entityId = l.id ?? l.levelId; // 실제 엔티티 ID만
+      const levelNo = l.level_number ?? l.levelNumber ?? l.number; // 숫자 레벨
+      const id = entityId ?? levelNo; // id/key는 엔티티 ID 우선, 없으면 임시로 번호 사용
       return {
         ...l,
         id,
         key: id,
-        title: l.title || l.name || `레벨 ${id}`,
+        title: l.title || l.name || (levelNo ? `레벨 ${levelNo}` : `레벨 ${id}`),
         desc: l.description || l.desc || l.summary || '',
         goal: l.learning_goal || l.learningGoal || l.goal || '',
-        levelNumber: l.level_number ?? l.levelNumber ?? l.number ?? undefined,
+        levelNumber: levelNo ?? undefined,
       };
     });
   } catch (e) {

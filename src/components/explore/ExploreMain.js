@@ -123,7 +123,7 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     (async () => {
       try {
         setFetching(true);
-        const res = await apiGetQuestions({ topicId, subTopicId, levelId });
+        const res = await apiGetQuestions({ topicId, subTopicId, levelId: Number(levelId) });
         if (cancelled) return;
         const qs = Array.isArray(res?.questions) ? res.questions : [];
         setQuestions(qs);
@@ -221,7 +221,7 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
         onSelectLevel={setSelectedLevel}
         selectedTopic={selectedTopic}
         selectedSubTopic={selectedSubTopic}
-        onConfirm={async ({ level, topic, subTopic }) => {
+  onConfirm={async ({ level, topic, subTopic }) => {
           // UI 표시용 문자열 상태 업데이트
           setSelectedLevel(level);
           setSelectedTopic(topic);
@@ -233,7 +233,7 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
 
           // selection 확정 → 위의 useEffect가 문제 호출
           if (topicId && subTopicId && levelId) {
-            setSelection({ topicId, subTopicId, levelId });
+            setSelection({ topicId, subTopicId, levelId: Number(levelId) });
           } else {
             console.warn('선택값 해석 실패:', { topic, subTopic, level, topicId, subTopicId, levelId });
             setSelection({ topicId: null, subTopicId: null, levelId: null });

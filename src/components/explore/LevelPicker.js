@@ -101,12 +101,13 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
         const list = await getLevelsBySubsector(subsectorId);
         const mapped = Array.isArray(list)
           ? list.map(l => ({
-              // id와 key 모두 보존: key는 렌더링/선택, id는 API 호출에 사용
+              // id/key: API가 반환한 엔티티 ID 우선, 없으면 숫자 레벨 번호를 사용
               id: l.id ?? l.levelId ?? l.level_id ?? l.level_number ?? l.levelNumber,
               key: l.id ?? l.key ?? l.levelId ?? l.level_number ?? l.levelNumber,
-              title: l.title ?? l.name ?? `레벨 ${l.id ?? l.levelId ?? ''}`,
+              title: l.title ?? l.name ?? (l.levelNumber ? `레벨 ${l.levelNumber}` : `레벨 ${l.id ?? ''}`),
               desc: l.desc ?? l.description ?? '',
               goal: l.goal ?? l.learning_goal ?? l.learningGoal ?? '',
+              levelNumber: l.levelNumber ?? l.level_number ?? l.number, // 숫자 레벨 명시적으로 보존
             }))
           : [];
         if (!cancelled) {
@@ -226,8 +227,13 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
     if (!selectedLevel) return;
     const sel = levels.find(l => String(l.key) === String(selectedLevel));
     if (!sel) return;
+    const entityId = Number(sel.id);
+    const levelNo = Number(sel.levelNumber ?? sel.number ?? sel.level_no);
+    const finalLevelId = (Number.isFinite(entityId) && entityId > 3)
+      ? entityId
+      : (Number.isFinite(levelNo) ? levelNo : 1);
     onConfirm({
-      levelId: Number(sel.id ?? sel.key), // 숫자 ID 보장
+      levelId: finalLevelId, // explore.js에서 subsector 문맥으로 실제 id 해석
       levelName: sel.title,
       learningGoal: sel.goal,
     });
