@@ -396,7 +396,10 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
     // 일부 백엔드는 레벨 시작 이후에만 퀴즈가 생성됨 → start 호출 후 재시도
     if (!quizList.length) {
       try {
-        await http(`/levels/${resolvedLevelId}/start${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`, { method: 'POST' });
+        await http(`/levels/${resolvedLevelId}/start`, {
+          method: 'POST',
+          body: JSON.stringify(uid ? { userId: uid } : {}),
+        });
       } catch (_) { /* ignore start failure; still retry list */ }
       try {
         const meta2 = await http(`/levels/${resolvedLevelId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
