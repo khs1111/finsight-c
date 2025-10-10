@@ -361,9 +361,14 @@ async function resolveLevelEntityId({ subTopicId, level }) {
     if (!subTopicId) return typeof level === 'number' ? level : toLevelNumber(level);
     const list = await getLevelsBySubsector(subTopicId);
     const want = toLevelNumber(level);
+    // 1) levelNumber 일치
     const hit = list.find(l => Number(l.levelNumber) === Number(want));
     if (hit?.id != null) return hit.id;
-    // fallback: 제목에 숫자 매칭
+    // 2) 제목 키워드 매칭 (초/중/고 혹은 en)
+    const wantKey = want === 1 ? /(초|입문|beginner|easy)/i : want === 2 ? /(중|intermediate|medium)/i : /(고|advanced|hard)/i;
+    const byKeyword = list.find(l => wantKey.test(String(l.title || l.name || '')));
+    if (byKeyword?.id != null) return byKeyword.id;
+    // 3) 제목 끝의 숫자 매칭
     const byTitle = list.find(l => new RegExp(`${want}$`).test(String(l.title || '')));
     if (byTitle?.id != null) return byTitle.id;
     return list[0]?.id ?? (typeof level === 'number' ? level : want);
@@ -379,7 +384,18 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
     const resolvedLevelId = await resolveLevelEntityId({ subTopicId, level: levelId });
     // 1) 레벨의 퀴즈 목록
     const meta = await http(`/levels/${resolvedLevelId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
-    const quizList = Array.isArray(meta?.quizzes) ? meta.quizzes : (Array.isArray(meta) ? meta : []);
+    let quizList = Array.isArray(meta?.quizzes) ? meta.quizzes : (Array.isArray(meta) ? meta : []);
+
+    // 일부 백엔드는 레벨 시작 이후에만 퀴즈가 생성됨 → start 호출 후 재시도
+    if (!quizList.length) {
+      try {
+        await http(`/levels/${resolvedLevelId}/start${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`, { method: 'POST' });
+      } catch (_) { /* ignore start failure; still retry list */ }
+      try {
+        const meta2 = await http(`/levels/${resolvedLevelId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
+        quizList = Array.isArray(meta2?.quizzes) ? meta2.quizzes : (Array.isArray(meta2) ? meta2 : []);
+      } catch (_) { /* ignore second failure */ }
+    }
     if (!quizList.length) return { questions: [], totalCount: 0, quizId: null };
     const quizId = quizList[0].id || quizList[0].quizId;
     if (!quizId) return { questions: [], totalCount: 0, quizId: null };
