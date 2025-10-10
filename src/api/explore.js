@@ -402,7 +402,15 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
     console.debug('[getQuestions] resolvedLevelId=', resolvedLevelId);
     // 1) 레벨의 퀴즈 목록
     const meta = await http(`/levels/${resolvedLevelId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
-    let quizList = Array.isArray(meta?.quizzes) ? meta.quizzes : (Array.isArray(meta) ? meta : []);
+    const quizCandidates = [
+      ...(Array.isArray(meta?.quizzes) ? meta.quizzes : []),
+      ...(Array.isArray(meta?.content) ? meta.content : []),
+      ...(Array.isArray(meta?.data) ? meta.data : []),
+      ...(Array.isArray(meta?.items) ? meta.items : []),
+      ...(Array.isArray(meta?.results) ? meta.results : []),
+      ...(Array.isArray(meta) ? meta : []),
+    ];
+    let quizList = quizCandidates.filter(Boolean);
 
     // 일부 백엔드는 레벨 시작 이후에만 퀴즈가 생성됨 → start 호출 후 재시도
     if (!quizList.length) {
@@ -418,14 +426,27 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
       } catch (_) { /* ignore second failure */ }
     }
     if (!quizList.length) return { questions: [], totalCount: 0, quizId: null };
-    const quizId = quizList[0].id || quizList[0].quizId;
-    if (!quizId) return { questions: [], totalCount: 0, quizId: null };
-    // 2) 퀴즈 상세 → 4개 문항 제한
-    const detail = await http(`/quizzes/${quizId}${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
-    const norm = normalizeQuizPayload(detail) || { questions: [] };
-    const all = Array.isArray(norm.questions) ? norm.questions : [];
-    const questions = all.slice(0, 4);
-    return { questions, totalCount: questions.length, quizId };
+    // 여러 퀴즈 중 4문항 이상 가진 퀴즈를 우선 선택
+    let best = { quizId: null, questions: [], count: 0 };
+    for (const q of quizList) {
+      const qid = q.id || q.quizId;
+      if (!qid) continue;
+      try {
+        const detail = await http(`/quizzes/${qid}${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
+        const norm = normalizeQuizPayload(detail) || { questions: [] };
+        const all = Array.isArray(norm.questions) ? norm.questions : [];
+        if (all.length >= 4) {
+          const questions = all.slice(0, 4);
+          return { questions, totalCount: questions.length, quizId: qid };
+        }
+        if (all.length > best.count) best = { quizId: qid, questions: all, count: all.length };
+      } catch (_) { /* try next quiz */ }
+    }
+    if (best.quizId) {
+      const questions = best.questions.slice(0, 4);
+      return { questions, totalCount: questions.length, quizId: best.quizId };
+    }
+    return { questions: [], totalCount: 0, quizId: null };
   } catch (e) {
     console.error('getQuestions API 호출 실패:', e.message);
     return { questions: [], totalCount: 0, quizId: null, error: e.message };
