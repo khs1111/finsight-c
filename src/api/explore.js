@@ -364,6 +364,17 @@ async function resolveLevelEntityId({ subTopicId, level }) {
     if (!subTopicId) return typeof level === 'number' ? level : toLevelNumber(level);
     const list = await getLevelsBySubsector(subTopicId);
     const want = toLevelNumber(level);
+    // 0) 전달된 level 값이 실제 엔티티 id와 정확히 일치하는 경우 우선 반환 (id가 1/2/3인 백엔드 대비)
+    if (typeof level === 'number') {
+      const byExactId = list.find(l => Number(l.id) === Number(level));
+      if (byExactId?.id != null) return byExactId.id;
+    } else if (typeof level === 'string') {
+      const asN = Number(level);
+      if (Number.isFinite(asN)) {
+        const byExactIdStr = list.find(l => Number(l.id) === asN);
+        if (byExactIdStr?.id != null) return byExactIdStr.id;
+      }
+    }
     // 1) levelNumber 일치
     const hit = list.find(l => Number(l.levelNumber) === Number(want));
     if (hit?.id != null) return hit.id;
@@ -464,7 +475,7 @@ export const getLevelsBySubsector = async (subsectorId) => {
     }
     return raw.map(l => {
       const entityId = l.id ?? l.levelId; // 실제 엔티티 ID만
-      const levelNo = l.level_number ?? l.levelNumber ?? l.number; // 숫자 레벨
+      const levelNo = l.level_number ?? l.levelNumber ?? l.level_no ?? l.levelNo ?? l.number ?? l.difficulty ?? l.difficulty_level ?? l.difficultyLevel ?? l.rank; // 숫자 레벨 후보들
       const id = entityId ?? levelNo; // id/key는 엔티티 ID 우선, 없으면 임시로 번호 사용
       return {
         ...l,
@@ -473,7 +484,7 @@ export const getLevelsBySubsector = async (subsectorId) => {
         title: l.title || l.name || (levelNo ? `레벨 ${levelNo}` : `레벨 ${id}`),
         desc: l.description || l.desc || l.summary || '',
         goal: l.learning_goal || l.learningGoal || l.goal || '',
-        levelNumber: levelNo ?? undefined,
+        levelNumber: (Number.isFinite(Number(levelNo)) ? Number(levelNo) : levelNo) ?? undefined,
       };
     });
   } catch (e) {
