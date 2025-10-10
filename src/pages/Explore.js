@@ -1,4 +1,10 @@
 // 탐험 페이지 
+
+// [탐험 페이지] - README 명세 기반 전체 학습 흐름 구현
+// 1. 주제/서브주제/레벨 선택 → 2. 퀴즈/문제 fetch (API 명세대로) → 3. 문제 풀이/정답 체크 → 4. 결과/진행도 저장
+// 모든 fetch는 /api/levels/{levelId}/quizzes → /api/quizzes/{quizId} 순서로만 동작하며, fallback/더미/임의 대체 없음
+// fetch 결과/에러는 모두 console.log로 남기고, 문제/퀴즈가 없으면 명확한 안내 메시지 출력
+
 import { useState, useEffect } from "react";
 import TopicPicker from "../components/explore/TopicPicker";
 import LevelPicker from "../components/explore/LevelPicker";
@@ -12,25 +18,28 @@ import { addWrongNoteImmediate } from "../components/study/useWrongNoteStore";
 import CategoryNav from "../components/news/CategoryNav";
 import { useNavVisibility } from "../components/navigation/NavVisibilityContext";
 
+
 export default function Explore() {
+  // [화면 단계] 1: 주제선택, 2: 난이도선택, 3: 탐험메인, 4: 문제풀이, 5: 완료
   const [step, setStep] = useState(1);
-  // topic/subtopic both id and name for reliable API + display
-  const [mainTopic, setMainTopic] = useState(null);       // name
+  // [주제/서브주제/레벨] - 이름/ID 모두 관리 (API 호출 및 화면 표시용)
+  const [mainTopic, setMainTopic] = useState(null);       // 주제명
   // eslint-disable-next-line no-unused-vars
-  const [mainTopicId, setMainTopicId] = useState(null);   // id
-  const [subTopic, setSubTopic] = useState(null);         // name
+  const [mainTopicId, setMainTopicId] = useState(null);   // 주제ID
+  const [subTopic, setSubTopic] = useState(null);         // 서브주제명
   // eslint-disable-next-line no-unused-vars
-  const [subTopicId, setSubTopicId] = useState(null);     // id
-  const [level, setLevel] = useState(null);               // level id (number preferred)
-  const [levelName, setLevelName] = useState(null);       // display name
+  const [subTopicId, setSubTopicId] = useState(null);     // 서브주제ID
+  const [level, setLevel] = useState(null);               // 레벨ID (숫자)
+  const [levelName, setLevelName] = useState(null);       // 레벨명(표시용)
+  // [문제 풀이 진행] - 현재 문제 인덱스, 문제 배열, 퀴즈ID, 정답 결과, 로딩상태
   const [current, setQid] = useState(0);
-  const [questions, setQuestions] = useState([]);
+  const [questions, setQuestions] = useState([]);         // API에서 받아온 문제 배열 (README 명세대로)
   const [quizId, setQuizId] = useState(null);
   const [results, setResults] = useState([]);
   const [isFetchingQuestions, setIsFetchingQuestions] = useState(false);
   const { setHide } = useNavVisibility();
 
-  // 퀴즈 진행도 저장용: useProgress 훅이 읽는 키와 동일한 스키마로 localStorage에 기록
+  // [진행도 저장] - useProgress 훅과 동일한 스키마로 localStorage에 기록 (문제별 선택/정답 여부 저장)
   const persistProgress = (lvl, question, selectedOptionId, isCorrect, currentIndex) => {
     try {
       const key = `explorer:${lvl || 'default'}:progress`;
@@ -46,7 +55,7 @@ export default function Explore() {
     } catch (_) { /* noop */ }
   };
 
-  // 완료 시(5단계 진입) 오늘 날짜를 attendance에 기록(중복 방지)
+  // [출석 기록] - 5단계(완료) 진입 시 오늘 날짜를 attendance에 기록 (중복 방지)
   useEffect(() => {
     if (step === 5) {
       const today = new Date();
@@ -62,12 +71,14 @@ export default function Explore() {
     }
   }, [step]);
 
+  // [탐험/문제풀이 단계]에서는 하단 네비게이션 숨김 처리
   useEffect(() => {
     if (step === 4 || step === 5) setHide(true); else setHide(false);
     return () => setHide(false); 
   }, [step, setHide]);
   let content = null;
 
+  // [1단계] 주제/서브주제 선택 화면
   if (step === 1) {
     content = (
       <TopicPicker
@@ -77,20 +88,20 @@ export default function Explore() {
           setMainTopicId(payload?.topicId || null);
           setSubTopic(payload?.subTopicName || null);
           setSubTopicId(payload?.subTopicId || null);
-          setStep(2);
+          setStep(2); // 2단계(난이도 선택)로 이동
         }}
       />
     );
   }
 
-  // 2단계: 난이도 선택 화면 
+  // [2단계] 난이도(레벨) 선택 화면
   if (step === 2) {
     content = (
       <LevelPicker
         mainTopic={mainTopic}
         subTopic={subTopic}
         onConfirm={async ({ levelId, levelName: lvName }) => {
-          // levelId가 1,2,3 이외면 1로 fallback
+          // [레벨ID 보정] 1,2,3 이외 값이면 1로 강제 (README 명세)
           let safeLevelId = Number(levelId);
           if (![1,2,3].includes(safeLevelId)) {
             console.warn('[LevelPicker] 잘못된 levelId 감지, 1로 보정:', levelId);
@@ -99,6 +110,7 @@ export default function Explore() {
           setLevel(safeLevelId);
           setLevelName(lvName || null);
           try {
+            // [API 호출] /api/levels/{levelId}/quizzes → /api/quizzes/{quizId} 순서로만 문제 fetch
             console.log('🎯 [LevelPicker] 퀴즈 데이터 요청:', { topicId: mainTopicId, subTopicId, levelId: safeLevelId });
             setIsFetchingQuestions(true);
             const result = await apiGetQuestions({
@@ -106,18 +118,24 @@ export default function Explore() {
               subTopicId: subTopicId,
               levelId: safeLevelId
             });
+            // [API 응답] 문제 배열/에러 모두 console.log로 출력
             console.log('📦 [LevelPicker] getQuestions 응답:', result);
             if (result && Array.isArray(result.questions) && result.questions.length) {
-              console.log('✅ [LevelPicker] 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
+              // [문제 배열 상세 출력] type/sort_order/제목 등 한눈에 보기
+              console.log('[LevelPicker] 문제 배열 상세:', result.questions.map((q, i) => ({
+                idx: i+1, id: q.id, type: q.type, sort_order: q.sort_order, stem: q.stem_md?.slice?.(0, 30)
+              })));
               setQuestions(result.questions);
               setQuizId(result.quizId || null);
               setQid(0);
-              setStep(3);
+              setStep(3); // 3단계(탐험메인)로 이동
             } else {
+              // [에러/빈 배열] 명확한 안내 메시지 및 콘솔 출력
               console.warn('⚠️ [LevelPicker] 퀴즈 데이터가 비어있거나 오류:', result?.error, result);
               alert(result?.error || '문제를 불러오지 못했습니다. 다른 조합을 선택해 주세요.');
             }
           } catch (err) {
+            // [API 에러] 콘솔 출력 및 안내
             console.error('❌ [LevelPicker] 문제 불러오기 실패:', err);
             alert('문제를 불러오는 중 오류가 발생했습니다. 다시 시도해 주세요.');
           } finally {
@@ -129,7 +147,7 @@ export default function Explore() {
     );
   }
 
-  // 3단계: 탐험 메인 화면 렌더
+  // [3단계] 탐험 메인 화면 (진행도/레벨/주제 표시, 문제 재선택 등)
   if (step === 3) {
     content = (
       <ExploreMain
@@ -140,6 +158,7 @@ export default function Explore() {
         initialSubTopic={subTopic}
         isLoading={isFetchingQuestions}
         onSelectionConfirm={async ({ level: newLevel, topic: newTopic, subTopic: newSub, topicId: newTopicId, subTopicId: newSubTopicId, levelId: resolvedLevelId }) => {
+          // [문제 재선택/레벨 변경] 시에도 동일하게 API 호출 및 문제 배열 저장
           setLevel(newLevel);
           setLevelName(typeof newLevel === 'number' ? null : newLevel);
           setMainTopic(newTopic);
@@ -152,6 +171,10 @@ export default function Explore() {
             const result = await apiGetQuestions({ levelId: resolvedLevelId || newLevel, subTopicId: newSubTopicId || subTopicId, topicId: newTopicId || mainTopicId });
             console.log('📦 [ExploreMain] getQuestions 응답:', result);
             if (result && Array.isArray(result.questions) && result.questions.length) {
+              // [문제 배열 상세 출력] type/sort_order/제목 등 한눈에 보기
+              console.log('[ExploreMain] 문제 배열 상세:', result.questions.map((q, i) => ({
+                idx: i+1, id: q.id, type: q.type, sort_order: q.sort_order, stem: q.stem_md?.slice?.(0, 30)
+              })));
               setQuestions(result.questions);
               setQuizId(result.quizId || null);
               setQid(0);
@@ -170,8 +193,9 @@ export default function Explore() {
     );
   }
 
-  // 4단계: 실제 문제 풀이 화면
+  // [4단계] 실제 문제 풀이 화면 (questions 배열을 순서대로 QuizQuestion에 전달)
   if (step === 4) {
+    // [문제풀이 단계] - questions 배열을 current 인덱스 기준으로 QuizQuestion에 전달
     const handleBack = () => {
       if (current <= 0) setStep(3);
       else setQid(current - 1);
@@ -184,11 +208,13 @@ export default function Explore() {
         questions={questions}
         selected={currentResult.selected}
         showResult={currentResult.checked}
+        // [문제 선택] - 선택지 클릭 시 결과 갱신
         onSelect={(idx) => {
           const newResults = [...results];
           newResults[current] = { ...currentResult, selected: idx };
           setResults(newResults);
         }}
+        // [정답 체크] - postAttempt로 서버 채점, 결과/진행도/오답노트 반영
         onCheck={async () => {
           const qList = questions || [];
           const question = qList[current];
@@ -200,6 +226,7 @@ export default function Explore() {
 
           let backendCorrectIdx = -1;
           try {
+            // [정답 채점] - postAttempt API 호출 (README 명세)
             const resp = await postAttempt({
               quizId: quizId ?? undefined,
               questionId: question.id,
@@ -209,7 +236,7 @@ export default function Explore() {
               token: localStorage.getItem('accessToken') || undefined,
             });
 
-            // 다양한 서버 응답 스키마 지원: id/index/text/letter
+            // [서버 응답 파싱] - 다양한 스키마 지원 (id/index/text/letter)
             const opts = question.options || [];
             // 중첩 응답 평탄화: { data: {...} } 또는 { result: {...} }
             const flatten = (r) => {
@@ -270,7 +297,7 @@ export default function Explore() {
               }
             }
 
-            // 서버 기준 정답을 옵션에 반영
+            // [정답 옵션 반영] - 서버 기준 정답을 옵션에 반영
             if (opts.length && backendCorrectIdx >= 0) {
               const updatedOptions = opts.map((o, i) => ({ ...o, isCorrect: i === backendCorrectIdx }));
               const updatedQuestions = qList.slice();
@@ -291,9 +318,9 @@ export default function Explore() {
             const newResults = [...results];
             newResults[current] = { ...currentResult, checked: true, correct: isCorrect };
             setResults(newResults);
-            // 진행도 로컬 저장 (ExploreMain의 useProgress에서 읽어 반영)
+            // [진행도 저장] - 로컬에도 반영 (ExploreMain의 useProgress에서 읽어 반영)
             persistProgress(level, question, selectedOptionId, isCorrect, current);
-            // 오답일 경우 즉시 오답노트에 기록 (로컬 + 백엔드)
+            // [오답노트 기록] - 오답일 경우 즉시 로컬+백엔드 기록
             if (!isCorrect) {
               try {
                 // 로컬 즉시 반영
@@ -320,6 +347,7 @@ export default function Explore() {
               } catch (_) { /* ignore */ }
             }
           } catch (e) {
+            // [백엔드 채점 실패] - 로컬 판정으로 폴백
             console.warn('⚠️ 백엔드 채점 실패, 로컬 판정으로 폴백:', e);
             const correctOption = question.options?.find(o => o.isCorrect);
             const localCorrectIdx = correctOption ? question.options.indexOf(correctOption) : -1;
@@ -350,7 +378,7 @@ export default function Explore() {
     );
   }
 
-  // 5단계: 완료
+  // [5단계] 완료 화면 (정답 개수/결과 표시, 재도전/탐험 재시작)
   if (step === 5) {
     const questionList = questions && questions.length > 0 ? questions : [];
     const fixedResults = Array.from({ length: questionList.length }, (_, idx) =>
@@ -391,6 +419,7 @@ export default function Explore() {
     );
   }
 
+  // [화면 렌더] - 단계별 content + 하단 카테고리 네비게이션(1~3단계)
   return (
     <>
       {content}
