@@ -256,27 +256,51 @@ export default function QuizQuestion({ current,
   const naturalSizeRef = useRef({ w: null, h: null });
   const [imgError, setImgError] = useState(false);
   const [imgSrc, setImgSrc] = useState(null);
-  // 이미지 후보 목록: 문제에서 제공한 이미지(있다면) + 프로젝트 내 더미 이미지
+
+  // NEW: 더미 이미지 비율을 미리 측정해 로딩 전에도 동일 규격 유지
+  const defaultRatioRef = useRef(9 / 16); // fallback ratio
+  const [fallbackHeight, setFallbackHeight] = useState(null);
+  useEffect(() => {
+    // 더미 이미지 실제 비율 측정
+    const probe = new Image();
+    probe.onload = () => {
+      if (probe.naturalWidth && probe.naturalHeight) {
+        defaultRatioRef.current = probe.naturalHeight / probe.naturalWidth;
+        // 래퍼 폭 기준으로 placeholder 높이 계산
+        if (articleImgWrapperRef.current) {
+          const wrapW = articleImgWrapperRef.current.clientWidth;
+          setFallbackHeight(Math.round(wrapW * defaultRatioRef.current));
+        }
+      }
+    };
+    probe.src = q4ArticlePng;
+  }, []);
+
+  // 이미지 후보 목록: 서버 제공 필드 + 기사 객체 + 프로젝트 내 더미 이미지
   const imgCandidates = React.useMemo(() => {
     const list = [];
-    const normalize = (v) => (typeof v === 'string' ? v.trim() : '');
-    const isHttpLike = (s) => /^(https?:\/\/|data:|blob:)/i.test(s);
-    const isRelLike = (s) => /^(\.\/|\.\.\/)/.test(s);
-    const isRootLike = (s) => /^\//.test(s);
-    const img = normalize(question?.image);
-    // GitHub Pages 하위 경로 문제 회피: '/assets/..' 같은 앱 루트 기준 경로는 빌드에서 존재하지 않으므로 제외
-    const looksBrokenAppAsset = isRootLike(img) && /\/assets\//i.test(img);
-    if (img && (isHttpLike(img) || isRelLike(img) || (isRootLike(img) && !looksBrokenAppAsset))) {
-      list.push(img);
-    }
-    // 항상 프로젝트 내 더미 이미지를 후보로 추가 (안정적인 폴백)
+    const norm = (v) => (typeof v === 'string' ? v.trim() : '');
+    const pushIf = (v) => {
+      const s = norm(v);
+      if (!s) return;
+      const isHttp = /^(https?:\/\/|data:|blob:)/i.test(s);
+      const isRel = /^(\.\/|\.\.\/)/.test(s);
+      const isRoot = /^\//.test(s);
+      // 앱 루트 /assets/... 경로는 정적 배포 경로와 불일치할 수 있어 제외
+      const looksBroken = isRoot && /\/assets\//i.test(s);
+      if (isHttp || isRel || (isRoot && !looksBroken)) list.push(s);
+    };
+    // 다양한 키 지원
+    pushIf(question?.image);
+    pushIf(question?.imageUrl);
+    pushIf(question?.articleImageUrl);
+    pushIf(question?.article?.image_url);
+    pushIf(question?.article?.imageUrl);
+    // 마지막에 더미 이미지 폴백
     list.push(q4ArticlePng);
-    const unique = Array.from(new Set(list.filter(Boolean)));
-    if (!img || looksBrokenAppAsset) {
-      console.log('ℹ️ 기사 이미지: 제공된 경로가 유효하지 않아 내장 더미 이미지로 폴백합니다.', img);
-    }
-    return unique;
-  }, [question?.image]);
+    return Array.from(new Set(list.filter(Boolean)));
+  }, [question]);
+
   const q4FallbackIndexRef = useRef(0);
 
   /**
@@ -291,23 +315,15 @@ export default function QuizQuestion({ current,
    */
   const handleArticleImgLoad = (e) => {
     try {
-      // 📏 이미지 원본 크기 정보 저장
       const nw = e.target.naturalWidth || 0;
       const nh = e.target.naturalHeight || 0;
       naturalSizeRef.current = { w: nw, h: nh };
-      
-      // ⚠️ 컨테이너나 이미지 크기가 없으면 종료
       if (!articleImgWrapperRef.current || !nw || !nh) return;
-      
-      // 📐 컨테이너 너비에 맞춘 비율 계산
       const wrapW = articleImgWrapperRef.current.clientWidth; 
       const scaledH = nh * (wrapW / nw);
-      
-      // 🔒 최소/최대 높이 제한 적용
-  const exactH = Math.round(scaledH);
-  setArticleImgHeight(exactH);
+      const exactH = Math.round(scaledH);
+      setArticleImgHeight(exactH);
     } catch (err) {
-      // 🚨 계산 실패 시 최소 높이 사용
       console.warn('이미지 크기 계산 실패:', err);
       setArticleImgHeight(ARTICLE_IMG_MIN);
     }
@@ -320,19 +336,17 @@ export default function QuizQuestion({ current,
    */
   useEffect(() => {
     const onResize = () => {
+      const wrap = articleImgWrapperRef.current;
+      if (!wrap) return;
+      const wrapW = wrap.clientWidth;
       const { w, h } = naturalSizeRef.current;
-      
-      // ⚠️ 이미지 크기 정보나 컨테이너가 없으면 종료
-      if (!w || !h || !articleImgWrapperRef.current) return;
-      
-      // 📐 새로운 컨테이너 너비에 맞춰 재계산
-      const wrapW = articleImgWrapperRef.current.clientWidth;
-      const scaledH = h * (wrapW / w);
-  const exactH = Math.round(scaledH);
-  setArticleImgHeight(exactH);
+      if (w && h) {
+        const scaledH = h * (wrapW / w);
+        setArticleImgHeight(Math.round(scaledH));
+      } else if (defaultRatioRef.current) {
+        setFallbackHeight(Math.round(wrapW * defaultRatioRef.current));
+      }
     };
-    
-    // 🔄 이벤트 리스너 등록 및 정리
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -354,12 +368,15 @@ export default function QuizQuestion({ current,
     setChalkLayout(null);
     setImgError(false);
     setLearningText("");
-
-    
-    // 🖼️ 기사 이미지 타입의 경우 이미지 소스 설정 (후보군 순차 시도)
+    // 기사 이미지: 후보군 순차 시도
     if (isArticleType) {
       q4FallbackIndexRef.current = 0;
       setImgSrc(imgCandidates[0] || null);
+      // 아직 실제 이미지 비율을 모르면 더미 비율로 placeholder 높이 유지
+      if (!articleImgHeight && articleImgWrapperRef.current && defaultRatioRef.current) {
+        const wrapW = articleImgWrapperRef.current.clientWidth;
+        setFallbackHeight(Math.round(wrapW * defaultRatioRef.current));
+      }
     } else {
       setImgSrc(null);
     }
@@ -639,7 +656,6 @@ export default function QuizQuestion({ current,
                 alt="기사 이미지"
                 onLoad={handleArticleImgLoad}
                 onError={() => {
-                  // 다음 후보 시도 (초기 URL 실패 시 더미로 폴백)
                   if (q4FallbackIndexRef.current < imgCandidates.length - 1) {
                     q4FallbackIndexRef.current += 1;
                     setImgSrc(imgCandidates[q4FallbackIndexRef.current]);
@@ -648,10 +664,17 @@ export default function QuizQuestion({ current,
                   }
                 }}
                 className="quiz-question-article-img"
-                style={{ height: articleImgHeight ? articleImgHeight : 'auto' }}
+                style={{
+                  width: '100%',
+                  height: articleImgHeight ?? fallbackHeight ?? 'auto',
+                  display: 'block'
+                }}
               />
             ) : (
-              <div className="quiz-question-article-img-placeholder" style={{ height: articleImgHeight ? articleImgHeight : 'auto' }}>
+              <div
+                className="quiz-question-article-img-placeholder"
+                style={{ height: articleImgHeight ?? fallbackHeight ?? 'auto' }}
+              >
                 <span style={{ fontWeight:600 }}>기사 이미지 영역</span>
                 {!imgError ? (
                   <span style={{ opacity:0.7, fontSize:12 }}>업로드 시 비율에 맞춰 이미지 높이에 맞춰 표시됩니다</span>
@@ -666,7 +689,6 @@ export default function QuizQuestion({ current,
                 )}
               </div>
             )}
-            {/* gradient removed to match spec */}
           </div>
         )}
 

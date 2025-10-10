@@ -82,6 +82,11 @@ function coerceLevelId(levelId) {
   return map[s.toLowerCase()] || 1;
 }
 
+// Normalize any label/number to canonical level number (1..3)
+function toLevelNumber(level) {
+  return coerceLevelId(level);
+}
+
 // JWT 토큰을 자동으로 헤더에 포함하는 fetch 함수
 async function ensureAuth() {
   if (authInitialized) return;
@@ -344,23 +349,45 @@ function normalizeQuizPayload(raw) {
     }),
   };
 }
-export const getQuestions = async ({ levelId, userId }) => {
+// 내부 헬퍼: subsector 기준으로 라벨/숫자 레벨을 실제 레벨 엔티티 ID로 변환
+async function resolveLevelEntityId({ subTopicId, level }) {
+  try {
+    // 이미 엔티티 ID 형태로 들어온 경우(숫자 > 3 또는 숫자형 문자열 > 3)는 그대로 사용
+    if (typeof level === 'number' && level > 3) return level;
+    if (typeof level === 'string') {
+      const asN = Number(level);
+      if (Number.isFinite(asN) && asN > 3) return asN;
+    }
+    if (!subTopicId) return typeof level === 'number' ? level : toLevelNumber(level);
+    const list = await getLevelsBySubsector(subTopicId);
+    const want = toLevelNumber(level);
+    const hit = list.find(l => Number(l.levelNumber) === Number(want));
+    if (hit?.id != null) return hit.id;
+    // fallback: 제목에 숫자 매칭
+    const byTitle = list.find(l => new RegExp(`${want}$`).test(String(l.title || '')));
+    if (byTitle?.id != null) return byTitle.id;
+    return list[0]?.id ?? (typeof level === 'number' ? level : want);
+  } catch (_) {
+    return typeof level === 'number' ? level : toLevelNumber(level);
+  }
+}
+
+export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => {
   if (!levelId) return { questions: [], totalCount: 0, quizId: null };
   try {
-    // levelId 문자열(예: '초급','beginner')도 지원
-    const lid = coerceLevelId(levelId);
     const uid = withUserId(userId);
-    // 1) 레벨의 퀴즈 목록 조회 (백엔드가 userId 요구할 수 있어 포함)
-    const meta = await http(`/levels/${lid}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
+    const resolvedLevelId = await resolveLevelEntityId({ subTopicId, level: levelId });
+    // 1) 레벨의 퀴즈 목록
+    const meta = await http(`/levels/${resolvedLevelId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
     const quizList = Array.isArray(meta?.quizzes) ? meta.quizzes : (Array.isArray(meta) ? meta : []);
     if (!quizList.length) return { questions: [], totalCount: 0, quizId: null };
-    // 첫 번째 퀴즈 ID 선택 (필요시 우선순위 로직 향후 확장 가능)
     const quizId = quizList[0].id || quizList[0].quizId;
     if (!quizId) return { questions: [], totalCount: 0, quizId: null };
-    // 2) 퀴즈 상세 조회
+    // 2) 퀴즈 상세 → 4개 문항 제한
     const detail = await http(`/quizzes/${quizId}${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
     const norm = normalizeQuizPayload(detail) || { questions: [] };
-    const questions = Array.isArray(norm.questions) ? norm.questions : [];
+    const all = Array.isArray(norm.questions) ? norm.questions : [];
+    const questions = all.slice(0, 4);
     return { questions, totalCount: questions.length, quizId };
   } catch (e) {
     console.error('getQuestions API 호출 실패:', e.message);
@@ -418,6 +445,7 @@ export const getLevelsBySubsector = async (subsectorId) => {
         title: l.title || l.name || `레벨 ${id}`,
         desc: l.description || l.desc || l.summary || '',
         goal: l.learning_goal || l.learningGoal || l.goal || '',
+        levelNumber: l.level_number ?? l.levelNumber ?? l.number ?? undefined,
       };
     });
   } catch (e) {

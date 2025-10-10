@@ -96,7 +96,7 @@ export default function Explore() {
             console.log('🎯 퀴즈 데이터 요청 중...');
             setIsFetchingQuestions(true);
             // 이름과 ID를 모두 전달하여 getQuestions가 내부에서 필요한 해석 수행
-            const result = await apiGetQuestions({ levelId });
+            const result = await apiGetQuestions({ levelId, subTopicId });
             if (result && Array.isArray(result.questions) && result.questions.length) {
               console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
               setQuestions(result.questions);
@@ -129,15 +129,17 @@ export default function Explore() {
         initialTopic={mainTopic}
         initialSubTopic={subTopic}
         isLoading={isFetchingQuestions}
-        onSelectionConfirm={async ({ level: newLevel, topic: newTopic, subTopic: newSub }) => {
+        onSelectionConfirm={async ({ level: newLevel, topic: newTopic, subTopic: newSub, topicId: newTopicId, subTopicId: newSubTopicId, levelId: resolvedLevelId }) => {
           // Here newLevel may be a label; accept numeric ids too
           setLevel(newLevel);
           setLevelName(typeof newLevel === 'number' ? null : newLevel);
           setMainTopic(newTopic);
           setSubTopic(newSub);
+          if (newTopicId != null) setMainTopicId(newTopicId);
+          if (newSubTopicId != null) setSubTopicId(newSubTopicId);
           try {
             setIsFetchingQuestions(true);
-            const result = await apiGetQuestions({ levelId: newLevel });
+            const result = await apiGetQuestions({ levelId: resolvedLevelId || newLevel, subTopicId: newSubTopicId || subTopicId, topicId: newTopicId || mainTopicId });
             if (result && Array.isArray(result.questions) && result.questions.length) {
               setQuestions(result.questions);
               setQuizId(result.quizId || null);
