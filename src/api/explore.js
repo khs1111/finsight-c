@@ -333,12 +333,26 @@ function normalizeQuizPayload(raw) {
     id: raw.id,
     questions: qs.map((q, i) => {
       const art = q.articleId ? aMap[q.articleId] : (q.article_id ? aMap[q.article_id] : undefined);
-      // 기사 정보가 없으면 type을 ARTICLE로 강제하지 않음
+      // articleId/article_id가 있으면 무조건 ARTICLE로 강제
       let type = q.type;
       if (!type) {
-        if (art && (q.articleId || q.article_id)) type = 'ARTICLE';
+        if (q.articleId || q.article_id) type = 'ARTICLE';
         else if (q.story || q.storyTitleMd || q.story_body_md || q.storyBodyMd) type = 'STORY';
         else type = 'CONCEPT';
+      }
+      // options의 isCorrect가 1개만 true가 되도록 보정
+      let options = Array.isArray(q.options) ? q.options.map((o, oi) => ({
+        id: o.id || o.optionId || (oi + 1),
+        label: o.label || ['A','B','C','D','E','F'][oi] || null,
+        text: o.content_md || o.contentMd || o.content || o.text || o.label || '',
+        isCorrect: !!(o.isCorrect || o.is_correct),
+      })) : [];
+      // isCorrect가 여러 개이거나 0개면 첫 번째만 true로 보정
+      if (options.length) {
+        const correctCount = options.filter(o => o.isCorrect).length;
+        if (correctCount !== 1) {
+          options = options.map((o, oi) => ({ ...o, isCorrect: oi === 0 }));
+        }
       }
       return {
         id: q.id ?? i + 1,
@@ -363,12 +377,7 @@ function normalizeQuizPayload(raw) {
         hintMd: q.hint_md || q.hintMd || q.hint || null,
 
         // 선택지
-        options: Array.isArray(q.options) ? q.options.map((o, oi) => ({
-          id: o.id || o.optionId || (oi + 1),
-          label: o.label || ['A','B','C','D','E','F'][oi] || null,
-          text: o.content_md || o.contentMd || o.content || o.text || o.label || '',
-          isCorrect: !!(o.isCorrect || o.is_correct),
-        })) : [],
+        options,
       };
     }),
   };
@@ -414,7 +423,7 @@ async function resolveLevelEntityId({ subTopicId, level }) {
 }
 
 export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => {
-  if (!levelId) return { questions: [], totalCount: 0, quizId: null };
+  if (!levelId) return { questions: [], totalCount: 0, quizId: null, error: '레벨 정보가 올바르지 않습니다. 다른 난이도를 선택해 주세요.' };
   try {
     const uid = withUserId(userId);
     // 디버깅 로그: 입력값 확인
@@ -462,9 +471,11 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
           const questions = all.slice(0, 4);
           return { questions, totalCount: questions.length, quizId: qid };
         }
-        // ARTICLE/STORY 포함 퀴즈 우선 저장
-        if (!bestWithSpecial && all.some(qq => qq.type === 'ARTICLE' || qq.type === 'STORY')) {
-          bestWithSpecial = { quizId: qid, questions: all, count: all.length };
+        // ARTICLE/STORY 포함 퀴즈 우선 저장 (여러 개면 가장 많은 문제)
+        if (all.some(qq => qq.type === 'ARTICLE' || qq.type === 'STORY')) {
+          if (!bestWithSpecial || all.length > bestWithSpecial.count) {
+            bestWithSpecial = { quizId: qid, questions: all, count: all.length };
+          }
         }
         if (all.length > best.count) best = { quizId: qid, questions: all, count: all.length };
       } catch (_) { /* try next quiz */ }
