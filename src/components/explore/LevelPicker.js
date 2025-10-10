@@ -229,7 +229,7 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
     if (!sel) return;
     const entityId = Number(sel.id);
     const levelNo = Number(sel.levelNumber ?? sel.number ?? sel.level_no);
-    const finalLevelId = (Number.isFinite(entityId) && entityId > 3)
+    const finalLevelId = Number.isFinite(entityId)
       ? entityId
       : (Number.isFinite(levelNo) ? levelNo : 1);
     onConfirm({
