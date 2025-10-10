@@ -95,8 +95,12 @@ export default function Explore() {
           try {
             console.log('🎯 퀴즈 데이터 요청 중...');
             setIsFetchingQuestions(true);
-            // 이름과 ID를 모두 전달하여 getQuestions가 내부에서 필요한 해석 수행
-            const result = await apiGetQuestions({ levelId, subTopicId });
+            // topicId, subTopicId, levelId를 모두 명확히 전달
+            const result = await apiGetQuestions({
+              topicId: mainTopicId,
+              subTopicId: subTopicId,
+              levelId: levelId
+            });
             if (result && Array.isArray(result.questions) && result.questions.length) {
               console.log('✅ 퀴즈 데이터 로드 성공:', result.questions.length, '개 문제');
               setQuestions(result.questions);
