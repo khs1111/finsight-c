@@ -487,21 +487,25 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
         const detail = await http(`/quizzes/${qid}${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
         const norm = normalizeQuizPayload(detail) || { questions: [] };
         const all = Array.isArray(norm.questions) ? norm.questions : [];
-        // 4문항 이상이면서 ARTICLE이 포함된 경우 4번째에 ARTICLE 배치
-        if (all.length >= 4 && all.some(qq => qq.type === 'ARTICLE')) {
+        // 4문항 이상일 때 ARTICLE이 있으면 반드시 4번째에 배치 (없으면 포함해서 교체)
+        if (all.length >= 4) {
           let qs = all.slice(0, 4);
+          let articleIdx = qs.findIndex(qq => qq.type === 'ARTICLE');
+          if (articleIdx === -1) {
+            // 1~4번째에 ARTICLE이 없으면, 5번째 이후에 ARTICLE이 있는지 찾아서 4번째로 교체
+            const laterArticleIdx = all.findIndex((qq, idx) => idx >= 4 && qq.type === 'ARTICLE');
+            if (laterArticleIdx !== -1) {
+              qs[3] = all[laterArticleIdx];
+            }
+            articleIdx = qs.findIndex(qq => qq.type === 'ARTICLE');
+          }
           // ARTICLE이 4번째가 아니면 위치 교체
-          const articleIdx = qs.findIndex(qq => qq.type === 'ARTICLE');
           if (articleIdx !== 3 && articleIdx !== -1) {
             const temp = qs[3];
             qs[3] = qs[articleIdx];
             qs[articleIdx] = temp;
           }
           return { questions: qs, totalCount: qs.length, quizId: qid };
-        }
-        if (all.length >= 4) {
-          const questions = all.slice(0, 4);
-          return { questions, totalCount: questions.length, quizId: qid };
         }
         // ARTICLE/STORY 포함 퀴즈 우선 저장 (여러 개면 가장 많은 문제)
         if (all.some(qq => qq.type === 'ARTICLE' || qq.type === 'STORY')) {
