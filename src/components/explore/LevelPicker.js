@@ -111,7 +111,8 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
           : [];
         if (!cancelled) {
           setLevels(mapped);
-          if (!selectedLevel && mapped.length) setSelectedLevel(mapped[0].key);
+          // 선택 상태는 기존 값이 없다면 초기화하되, 의존성에 selectedLevel을 넣지 않기 위해 함수형 업데이트 사용
+          setSelectedLevel(prev => (prev ? prev : (mapped[0]?.key ?? null)));
         }
       } catch (e) {
         console.warn('레벨 목록 로딩 실패:', e);

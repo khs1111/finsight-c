@@ -19,7 +19,7 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
   const [selectedSubTopic, setSelectedSubTopic] = useState(initialSubTopic || '예금/적금');
   const [totalQuestions, setTotalQuestions] = useState(0); // 서버에서 받아온 총 질문 수
   // 문제 리스트 로컬 저장
-  const [questions, setQuestions] = useState([]);
+  const [, setQuestions] = useState([]);
   // 비동기 호출 로딩 상태
   const [fetching, setFetching] = useState(false);
   // 선택된 ID 모음 (이 값이 확정되면 문제 호출)
