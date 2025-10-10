@@ -372,8 +372,8 @@ export default function QuizQuestion({ current,
     if (isArticleType) {
       q4FallbackIndexRef.current = 0;
       setImgSrc(imgCandidates[0] || null);
-      // 아직 실제 이미지 비율을 모르면 더미 비율로 placeholder 높이 유지
-      if (!articleImgHeight && articleImgWrapperRef.current && defaultRatioRef.current) {
+      // 플레이스홀더 높이 계산 (실제 이미지 로드 전 기본 비율로 계산)
+      if (articleImgWrapperRef.current && defaultRatioRef.current) {
         const wrapW = articleImgWrapperRef.current.clientWidth;
         setFallbackHeight(Math.round(wrapW * defaultRatioRef.current));
       }
