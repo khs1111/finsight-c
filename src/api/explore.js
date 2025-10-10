@@ -487,6 +487,18 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
         const detail = await http(`/quizzes/${qid}${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
         const norm = normalizeQuizPayload(detail) || { questions: [] };
         const all = Array.isArray(norm.questions) ? norm.questions : [];
+        // 4문항 이상이면서 ARTICLE이 포함된 경우 4번째에 ARTICLE 배치
+        if (all.length >= 4 && all.some(qq => qq.type === 'ARTICLE')) {
+          let qs = all.slice(0, 4);
+          // ARTICLE이 4번째가 아니면 위치 교체
+          const articleIdx = qs.findIndex(qq => qq.type === 'ARTICLE');
+          if (articleIdx !== 3 && articleIdx !== -1) {
+            const temp = qs[3];
+            qs[3] = qs[articleIdx];
+            qs[articleIdx] = temp;
+          }
+          return { questions: qs, totalCount: qs.length, quizId: qid };
+        }
         if (all.length >= 4) {
           const questions = all.slice(0, 4);
           return { questions, totalCount: questions.length, quizId: qid };
@@ -501,8 +513,15 @@ export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => 
       } catch (_) { /* try next quiz */ }
     }
     if (bestWithSpecial) {
-      const questions = bestWithSpecial.questions.slice(0, 4);
-      return { questions, totalCount: questions.length, quizId: bestWithSpecial.quizId };
+      // ARTICLE이 있으면 4번째에 배치
+      let qs = bestWithSpecial.questions.slice(0, 4);
+      const articleIdx = qs.findIndex(qq => qq.type === 'ARTICLE');
+      if (articleIdx !== 3 && articleIdx !== -1) {
+        const temp = qs[3];
+        qs[3] = qs[articleIdx];
+        qs[articleIdx] = temp;
+      }
+      return { questions: qs, totalCount: qs.length, quizId: bestWithSpecial.quizId };
     }
     if (best.quizId) {
       const questions = best.questions.slice(0, 4);
@@ -585,10 +604,15 @@ export const submitAnswer = async ({ quizId, questionId, selectedOptionId, userI
   const jwt = token ?? localStorage.getItem('accessToken') ?? undefined;
   const payload = { quizId, questionId, selectedOptionId };
   if (uid) payload.userId = uid;
+  // Content-Type 항상 명시
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(jwt ? { Authorization: `Bearer ${jwt}` } : {})
+  };
   return await http('/quizzes/submit-answer', {
     method: 'POST',
     body: JSON.stringify(payload),
-    headers: jwt ? { Authorization: `Bearer ${jwt}` } : {},
+    headers,
   }, jwt);
 };
 
