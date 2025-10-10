@@ -68,19 +68,17 @@ const withUserId = (userId) => {
 };
 
 // 레벨 키(한글 라벨)를 백엔드에서 기대하는 숫자 ID로 보정
+// 개선: 한글/영문/숫자 혼용 robust 매핑
 function coerceLevelId(levelId) {
   if (typeof levelId === 'number') return levelId;
   if (!levelId) return 1;
-  const s = String(levelId).trim();
-  const map = {
-    '초보자': 1, '초급자': 1, '기초': 1, 'beginner': 1, 'easy': 1,
-    '중급': 2, '중급자': 2, 'intermediate': 2, 'medium': 2,
-    '고급': 3, '고급자': 3, 'advanced': 3, 'hard': 3,
-  };
+  const s = String(levelId).trim().toLowerCase();
+  // 한글/영문 난이도 이름 매핑
+  if (/초|입문|beginner|easy/.test(s)) return 1;
+  if (/중|intermediate|medium/.test(s)) return 2;
+  if (/고|advanced|hard/.test(s)) return 3;
   const n = Number(s);
   if (Number.isFinite(n) && n >= 1 && n <= 3) return n;
-  const lower = s.toLowerCase();
-  if (map[lower]) return map[lower];
   console.warn('⚠️ 알 수 없는 levelId, 기본값 1로 대체됨:', s);
   return 1;
 }
@@ -107,7 +105,8 @@ async function http(path, opts = {}, token) {
   const jwt = opts.token || token || localStorage.getItem('accessToken');
 
   // 경로 보정: API_BASE(/api 여부)와 path(/api 여부) 중복/누락 없이 합치기
-  const base = String(API_BASE || '').replace(/\/+$/, ''); // 끝 슬래시 제거
+  // 끝 슬래시 제거 (윈도우/리눅스 모두 호환)
+  const base = String(API_BASE || '').replace(/\/+$/, '');
   const baseHasApi = /\/api$/i.test(base);
   let p = typeof path === 'string' ? path : '';
   if (!p.startsWith('/')) p = `/${p}`;
@@ -127,18 +126,54 @@ async function http(path, opts = {}, token) {
   };
   if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
 
-  const res = await fetch(`${base}${p}`, {
-    headers,
-    credentials: 'include',
-    ...opts,
-  });
-  if (!res.ok) {
-    let bodyText = '';
-    try { bodyText = await res.text(); } catch (_) {}
-    const msg = bodyText ? `${res.statusText} ${bodyText}` : res.statusText;
-    throw new Error(`HTTP ${res.status}: ${msg}`);
+  // 콘솔에 모든 요청 정보 출력
+  try {
+    console.log('[API 요청]', {
+      url: `${base}${p}`,
+      method: opts.method || 'GET',
+      body: opts.body ? (typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)) : undefined,
+      headers,
+      token: jwt ? '***' : undefined
+    });
+  } catch (_) {}
+
+  let res;
+  try {
+    res = await fetch(`${base}${p}`, {
+      headers,
+      credentials: 'include',
+      ...opts,
+    });
+    // 응답 상태 출력
+    console.log('[API 응답]', {
+      url: `${base}${p}`,
+      status: res.status,
+      ok: res.ok,
+      statusText: res.statusText
+    });
+    if (!res.ok) {
+      let bodyText = '';
+      try { bodyText = await res.text(); } catch (_) {}
+      const msg = bodyText ? `${res.statusText} ${bodyText}` : res.statusText;
+      console.error('[API 에러]', {
+        url: `${base}${p}`,
+        status: res.status,
+        statusText: res.statusText,
+        body: bodyText
+      });
+      throw new Error(`HTTP ${res.status}: ${msg}`);
+    }
+    // 응답 본문(json)도 출력
+    let json;
+    try {
+      json = await res.clone().json();
+      console.log('[API 응답 본문]', json);
+    } catch (_) {}
+    return await res.json();
+  } catch (err) {
+    console.error('[API fetch 실패]', err);
+    throw err;
   }
-  return res.json();
 }
 
 // ========================================
@@ -409,14 +444,18 @@ async function resolveLevelEntityId({ subTopicId, level }) {
     const hit = list.find(l => Number(l.levelNumber) === Number(want));
     if (hit?.id != null) return hit.id;
     // 2) 제목 키워드 매칭 (초/중/고 혹은 en)
-    const wantKey = want === 1 ? /(초|입문|beginner|easy)/i : want === 2 ? /(중|intermediate|medium)/i : /(고|advanced|hard)/i;
+    const wantKey = want === 1 ? /(초|입문|beginner|easy)/i 
+                  : want === 2 ? /(중|intermediate|medium)/i 
+                  : /(고|advanced|hard)/i;
     const byKeyword = list.find(l => wantKey.test(String(l.title || l.name || '')));
     if (byKeyword?.id != null) return byKeyword.id;
-    // 3) 제목 끝의 숫자 매칭
-    const byTitle = list.find(l => new RegExp(`${want}$`).test(String(l.title || '')));
-    if (byTitle?.id != null) return byTitle.id;
-    // 매칭 실패 시 fallback하지 않고 null 반환 (정확한 매핑 실패시 문제 호출 X)
-    return null;
+    // 3) levelNumber 순서 fallback
+    if (list.length >= want && list[want - 1]?.id != null) {
+      return list[want - 1].id;
+    }
+    // 최종 실패 시 기본값
+    console.warn('⚠️ resolveLevelEntityId fallback으로 기본 레벨 반환:', want);
+    return list.find(l => l.levelNumber === 1)?.id ?? null;
   } catch (_) {
     return null;
   }
