@@ -1,17 +1,11 @@
 import './NewsCard.css';
 import React, { useState } from 'react';
 
-// Props:
-// - title: string
-// - description: string
-// - date: string (optional)
-// - image: string (background image url)
-// - tags: array of strings (optional display above description)
-// - onClick: handler
+
 export default function NewsCard({ title, description, date, image, tags = [], onClick }) {
   const [showAllTags, setShowAllTags] = useState(false);
-  const bgImage = image || 'https://via.placeholder.com/400x200?text=News';
-  // Fallback trimming in case line clamp unsupported or description extremely long
+  const bgImage = image;
+
   const MAX_LEN = 160; // approx 2 lines on mobile
   const truncatedDescription = description && description.length > MAX_LEN
     ? description.slice(0, MAX_LEN - 1).trimEnd() + '…'

@@ -67,7 +67,7 @@
 
 .news-card__tags-row {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   flex-wrap: wrap;
   font-size: 12px;
 }

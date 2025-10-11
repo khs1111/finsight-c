@@ -8,14 +8,28 @@
   margin: 0 auto;
   /* 내부 요소의 미세한 넘침 방지 */
   overflow-x: hidden;
+  /* Ensure child elements cannot trigger horizontal overscroll on mobile */
+  overscroll-behavior-x: contain;
+  background: #F4F6FA;
 }
 /* ===== 공통 리셋 & 기본 ===== */
 *,
 *::before,
 *::after { box-sizing: border-box; }
 
+/* Make images and svgs responsive so fixed widths (e.g. logo svg) don't force overflow */
+img, svg { max-width: 100%; height: auto; display: block; }
+
 html, body { height: 100%; }
-body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-serif; }
+/* Prevent horizontal pan/overscroll on touch devices while allowing vertical scrolling */
+html, body {
+  touch-action: pan-y;
+  overscroll-behavior-x: contain;
+}
+body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-serif; min-width: 0; width: 100%; background: #F4F6FA; }
+
+/* Ensure root app container also spans full width when using absolute positioned children */
+#root { min-width: 0; width: 100%; background: #F4F6FA; }
 
 /* 뷰포트 메타 태그도 HTML <head>에 꼭 추가:
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -28,6 +42,8 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
 .explore-container {
   position: absolute;
   /* Ensure 16px left/right gutter + safe-area */
+  left: 0;
+  right: 0;
   padding: 20px calc(16px + env(safe-area-inset-right)) calc(20px + var(--nav-h) + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left));
   width: 100%;
   max-width: 100%; /* keep within viewport */
@@ -204,9 +220,20 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
   padding: 8px 0 env(safe-area-inset-bottom, 0px);
   background: #fff;
   border-top: 1px solid #e5e7eb;
-  display: flex; justify-content: space-around; align-items: center;
+  display: flex; align-items: center;
+  /* allow horizontal scrolling when buttons overflow, but hide native scrollbar */
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
+  white-space: nowrap;
   gap: 0; z-index: 100;
   font-family: 'Pretendard', sans-serif;
+}
+
+/* Hide scrollbar (cross-browser) but keep scrolling functional */
+.category-nav::-webkit-scrollbar { display: none; height: 0; }
+.category-nav { -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 .category-button {
@@ -217,6 +244,8 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
   font-weight: 500;
   cursor: pointer;
   padding-bottom: 6px;
+  /* prevent flex children from stretching so horizontal scroll works */
+  flex: 0 0 auto;
   position: relative;
 }
 
@@ -230,7 +259,6 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
   position: absolute;
   bottom: 0; left: 0;
   width: 100%; height: 2px;
-  /* ⬇️ 문법 오타 수정: linear-gradient 사용 */
   background: linear-gradient(to right, rgba(68,143,255,1), rgba(72,51,208,1));
   border-radius: 1px;
 }
@@ -298,8 +326,8 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
   /* 콘텐츠 컨테이너 2종 모두 보정(겹침 방지) */
   .home-container,
   .explore-container {
-    background: #fff;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    /* ensure mobile uses same background as desktop */
+    background: #F4F6FA;
     overflow: hidden;
     min-height: 100dvh; /* 주소창 변화 대응 */
     min-height: 100vh;  /* 폴백 */
@@ -307,6 +335,8 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
     width: 100%;
     max-width: 100%;
     left: 0; right: 0; /* avoid subpixel shifts */
+    /* On mobile, use normal document flow to avoid absolute-position rounding gaps */
+    position: relative;
   }
   /* Tighten top gap between header and title on mobile */
   .home-container { padding-top: 0; }

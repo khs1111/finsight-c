@@ -109,7 +109,7 @@ html { box-sizing: border-box; }
 .hashtags {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px; /* Figma gap */
+  gap: 4px; /* Figma gap */
 }
 /* 개별 해시태그 칩 */
 .hashtag-chip {

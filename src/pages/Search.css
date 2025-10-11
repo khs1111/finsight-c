@@ -10,7 +10,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
-  background: #fff;
+  background: #F4F6FA;
 }
 
 /* 상단 바 */
@@ -20,7 +20,7 @@
   gap: 8px; /* 뒤로가기 화살표와 입력창 간격: 8px */
   /* 위/아래 패딩은 0으로 두고, 텍스트 기준 간격(20.5px)은 입력 래퍼에서 관리 */
   padding: 0 calc(var(--gutter) + env(safe-area-inset-right, 0px)) 0 calc(var(--gutter) + env(safe-area-inset-left, 0px));
-  background: #FFFFFF;
+  background: #F4F6FA;
   position: relative; /* 전체 폭 밑줄용 기준 */
 }
 .search-topbar::after { /* 상단바 전체폭 파란 밑줄 (양옆 마진 없음) */

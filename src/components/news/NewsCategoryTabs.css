@@ -1,11 +1,16 @@
 /* Category tabs pill styles (Figma spec approximation) */
-.category-tabs {
+.category-tabs-viewport {
+  position: relative;
+  overflow: hidden; /* hide native scrollbars */
+}
+.category-tabs-content {
   display: flex;
   padding: 0 0 12px 0; /* bottom spacing under pills */
   align-items: flex-start;
   gap: 8px; /* pill gap */
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  will-change: transform;
+  transition: transform 0.03s linear; /* small smoothing */
+  touch-action: pan-y; /* allow vertical scroll pass-through */
 }
 .category-tab {
   /* Spec note: Provided padding 18px 10px with fixed height 32px is impossible vertically.

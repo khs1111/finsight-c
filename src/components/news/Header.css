@@ -1,1 +1,13 @@
-/* (Deprecated) Header styles removed. */
+.header-logo {
+  /* 로고가 부모 요소의 너비를 넘지 않도록 합니다. */
+  width: 100%;
+
+  /* 로고의 최대 너비를 133px로 제한하여 너무 커지는 것을 방지합니다. */
+  max-width: 133px;
+
+  /* 너비에 맞춰 높이가 자동으로 비율에 맞게 조절되도록 합니다. */
+  height: auto;
+
+  /* SVG와 같은 인라인 요소 아래에 생길 수 있는 미세한 여백을 제거합니다. */
+  display: block;
+}
