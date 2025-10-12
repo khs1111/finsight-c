@@ -350,7 +350,23 @@ export const getLevelProgress = async (levelId, userId, token) => {
   const lid = coerceLevelId(levelId);
   try {
     const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
-    return await http(`/levels/${lid}/progress${qs}`, {}, token);
+    const data = await http(`/levels/${lid}/progress${qs}`, {}, token);
+    try {
+      console.log('[Progress] getLevelProgress URL:', `/levels/${lid}/progress${qs}`);
+      console.log('[Progress] getLevelProgress raw:', data);
+      const summary = data && typeof data === 'object' ? {
+        isCompleted: !!data.isCompleted,
+        completionRate: Number(data.completionRate ?? data.rate ?? 0),
+        completedQuizzes: Number(data.completedQuizzes ?? data.done ?? 0),
+        totalQuizzes: Number(data.totalQuizzes ?? data.total ?? 0),
+        quizzesSample: Array.isArray(data.quizzes) ? data.quizzes.slice(0, 5).map(q => ({ id: q.id, isCompleted: !!q.isCompleted })) : [],
+      } : null;
+      console.log('[Progress] getLevelProgress summary:', summary);
+      if (typeof window !== 'undefined') {
+        window.__LEVEL_PROGRESS_LAST = { url: `/levels/${lid}/progress${qs}`, raw: data, summary };
+      }
+    } catch (_) {}
+    return data;
   } catch {
     return null;
   }
@@ -1238,6 +1254,16 @@ export const getLevels = async () => {
 // postAttempt도 userId/token 항상 전달
 export const postAttempt = ({ quizId, questionId, selectedOptionId, userId, token }) =>
   submitAnswer({ quizId, questionId, selectedOptionId, userId, token });
+
+// 퀴즈 완료 처리 (인증 포함): POST /api/quizzes/{id}/complete?userId=...
+export const completeQuiz = async (quizId, userId, token) => {
+  const id = Number(quizId);
+  if (!Number.isFinite(id)) throw new Error('Invalid quizId for completeQuiz');
+  const uid = withUserId(userId);
+  const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
+  // http()가 JWT를 자동 첨부하므로 인증 요구 환경에서도 동작
+  return http(`/quizzes/${id}/complete${qs}`, { method: 'POST' }, token);
+};
 
 // 토픽별 통계 조회
 export const getTopicStats = async () => {

@@ -12,7 +12,7 @@ import ExploreMain from "../components/explore/ExploreMain";
 import QuizQuestion from "../components/explore/QuizQuestion";
 import CompletionScreen from "../components/explore/CompletionScreen";
 
-import {getQuestions as apiGetQuestions, postAttempt, getQuizIdForSelection } from "../api/explore";
+import {getQuestions as apiGetQuestions, postAttempt, getQuizIdForSelection, completeQuiz } from "../api/explore";
 import { createWrongNote } from "../api/community";
 import { addWrongNoteImmediate } from "../components/study/useWrongNoteStore";
 import CategoryNav from "../components/news/CategoryNav";
@@ -305,14 +305,11 @@ export default function Explore() {
         }}
         answerResult={currentResult}
         onComplete={async () => {
-          // 퀴즈 완료 POST를 즉시 실행
+          // 퀴즈 완료 POST를 즉시 실행 (인증 포함)
           const userId = localStorage.getItem('userId') || undefined;
+          const token = localStorage.getItem('accessToken') || undefined;
           try {
-            const res = await fetch(`/api/quizzes/${quizId}/complete?userId=${userId}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-            });
-            const data = await res.json();
+            const data = await completeQuiz(quizId, userId, token);
             setQuizCompleteResult(data);
           } catch (e) {
             setQuizCompleteResult({ error: e?.message || '퀴즈 완료 처리 실패' });
@@ -329,19 +326,17 @@ export default function Explore() {
   const [quizCompleteResult, setQuizCompleteResult] = useState(null);
   useEffect(() => {
     if (step === 5 && quizId && !quizCompleteResult) {
-      // 퀴즈 완료 POST
+      // 퀴즈 완료 POST (인증 포함)
       const userId = localStorage.getItem('userId') || undefined;
-      fetch(`/api/quizzes/${quizId}/complete?userId=${userId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-        .then(res => res.json())
+      const token = localStorage.getItem('accessToken') || undefined;
+      completeQuiz(quizId, userId, token)
         .then(data => setQuizCompleteResult(data))
         .catch(e => setQuizCompleteResult({ error: e?.message || '퀴즈 완료 처리 실패' }));
     }
     if (step !== 5 && quizCompleteResult) {
       setQuizCompleteResult(null); // 단계 이동 시 초기화
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, quizId]);
 
   if (step === 5) {

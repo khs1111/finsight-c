@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import FloatingQuizCTA from './FloatingQuizCTA';
 import completeImg from '../../assets/explore/complete.png';
 import allfailImg from '../../assets/explore/allfail.png';
+import './CompletionScreen.css';
 
 export default function CompletionScreen({
   score,
@@ -88,79 +89,18 @@ export default function CompletionScreen({
 
   return (
     <div
-      style={{
-        width: "100%",
-        maxWidth: "100%",
-        minHeight: `${containerMinH}px`,
-        margin: "0 auto",
-        background: "#F4F6FA",
-        fontFamily: "Roboto, sans-serif",
-        position: "relative",
-        overflowX: 'hidden',
-        overflowY: 'auto',
-      }}
+      className="completion-container"
+      style={{ minHeight: `${containerMinH}px` }}
     >
       {/* ===== Status Bar ===== */}
-      <div
-        style={{
-          position: "absolute",
-          top: "94px", // 말풍선 top(138px) - 44px
-          left: 0,
-          width: "100%",
-          height: "48px",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          zIndex: 3,
-        }}
-      >
+      <div className="completion-status-bar">
         {/* 여기에 실제 스테이터스 UI를 넣으세요 */}
       </div>
 
       {/* ===== 말풍선 ===== */}
-      <div
-        style={{
-          position: "absolute",
-          top: `${topBubble}px`,
-          left: "24px",
-          right: "24px",
-          width: "calc(100% - 48px)",
-          height: "88px",
-          filter: "drop-shadow(0px 0px 12px rgba(0,0,0,0.08))",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          zIndex: 2,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "16px 24px",
-            gap: "10px",
-            width: "165px",
-            height: "74px",
-            background: "#FFFFFF",
-            borderRadius: "16px",
-          }}
-        >
-          <span
-            style={{
-              width: "117px",
-              height: "42px",
-              fontFamily: "Roboto, sans-serif",
-              fontWeight: 700,
-              fontSize: "18px",
-              lineHeight: "21px",
-              textAlign: "center",
-              letterSpacing: "-0.02em",
-              color: "#474747",
-              whiteSpace: "pre-line",
-            }}
-          >
+      <div className="completion-bubble-wrap" style={{ top: `${topBubble}px` }}>
+        <div className="completion-bubble">
+          <span className="completion-bubble-text">
             {score === 0 ? (
               "아쉽게도 모두 틀렸어요"
             ) : (
@@ -172,131 +112,43 @@ export default function CompletionScreen({
             )}
           </span>
         </div>
-        <div
-          style={{
-            width: "18px",
-            height: "14px",
-            background: "#FFFFFF",
-            clipPath: "polygon(50% 100%, 0 0, 100% 0)",
-            marginTop: "-2px",
-          }}
-        />
+        <div className="completion-bubble-tail" />
       </div>
 
       {/* ===== 캐릭터 자리 (이미지 렌더) ===== */}
-      <div
-        style={{
-          position: "absolute",
-          top: `${topCharacter}px`,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: `${characterSize}px`,
-          height: `${characterSize}px`,
-        }}
-      >
+      <div className="completion-character" style={{ top: `${topCharacter}px`, width: `${characterSize}px`, height: `${characterSize}px` }}>
         <img
           src={charSrc}
           alt={allWrong ? '전부 오답 캐릭터' : '완료 캐릭터'}
           width={characterSize}
           height={characterSize}
-          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+          className="completion-character-img"
         />
       </div>
 
       {/* ===== 문제별 결과 카드 ===== */}
-      <div
-        style={{
-          position: "absolute",
-          top: `${resultTop}px`, 
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          padding: "16px",
-          gap: "12px",
-          width: `${maxCardWidth}px`,
-          maxWidth: 'calc(100% - 32px)',
-          height: "auto",
-          background: "#FFFFFF",
-          borderRadius: "16px",
-          boxShadow: "0px 0px 12px rgba(0,0,0,0.08)",
-        }}
-      >
+      <div className="completion-card" style={{ top: `${resultTop}px`, width: `${maxCardWidth}px` }}>
         {/* 문제 번호 */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "12px",
-            width: "100%",
-            minHeight: "28px",
-          }}
-        >
+        <div className="completion-card-numbers">
           {results.map((_, idx) => (
-            <div
-              key={idx}
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                width: "28px",
-                height: "28px",
-                borderRadius: "14px",
-                background: "#448FFF",
-                fontFamily: "Roboto, sans-serif",
-                fontWeight: 700,
-                fontSize: "14px",
-                lineHeight: "16px",
-                color: "#FFFFFF",
-              }}
-            >
+            <div key={idx} className="completion-card-number-badge">
               {idx + 1}
             </div>
           ))}
         </div>
 
         {/* O/X 결과 */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
-            width: "100%",
-            minHeight: "32px",
-          }}
-        >
+        <div className="completion-card-ox-row">
           {results.map((r, idx) => {
             const isCorrect = r && r.correct === true;
             return (
-              <div
-                key={idx}
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
+              <div key={idx} style={{ width: '32px', height: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 {isCorrect ? (
                   // 정답 O 
-                  <div
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      border: "6px solid #2EBA4C",
-                      borderRadius: "50%",
-                      boxSizing: "border-box",
-                    }}
-                  />
+                  <div className="completion-card-o" />
                 ) : (
                   // 오답 X
-                  <div style={{ width: 30, height: 30, display:'flex', justifyContent:'center', alignItems:'center' }}>
+                  <div className="completion-card-x">
                     <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M28.5079 26.1836L17.3188 15.0006L28.5079 3.89999C29.0686 3.25055 29.0383 2.27594 28.4382 1.66315C27.8381 1.05036 26.8707 1.00597 26.2177 1.56128L14.9959 12.5796L3.97035 1.47893C3.33231 0.840357 2.30186 0.840357 1.66382 1.47893C1.35414 1.78818 1.17994 2.20914 1.17994 2.64829C1.17994 3.08743 1.35414 3.50839 1.66382 3.81764L12.673 14.9018L1.48388 25.986C1.17419 26.2952 1 26.7162 1 27.1554C1 27.5945 1.17419 28.0155 1.48388 28.3247C1.79259 28.633 2.21051 28.8049 2.64532 28.8023C3.07216 28.8049 3.48309 28.6394 3.79041 28.3412L14.9959 17.2241L26.2177 28.5224C26.5264 28.8306 26.9444 29.0025 27.3792 29C27.8083 28.9982 28.2196 28.8266 28.5242 28.5224C28.8318 28.2109 29.003 27.7887 29 27.3496C28.9969 26.9104 28.8197 26.4907 28.5079 26.1836Z" fill="#FF5959" stroke="#FF5959" strokeWidth="2"/>
                     </svg>
@@ -309,53 +161,11 @@ export default function CompletionScreen({
       </div>
 
       {/* 프리미엄 안내 말풍선  */}
-      <div
-        style={{
-          position: 'fixed',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          bottom: premiumBubbleBottom,
-          width: '348px',
-          height: '52px', 
-          pointerEvents: 'none',
-          zIndex: 130,
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            width: '348px',
-            height: '40px',
-            left: 0,
-            top: 0,
-            background: '#FFFFFF',
-            borderRadius: '8px',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            fontFamily: 'Roboto, sans-serif',
-            fontWeight: 700,
-            fontSize: '12px',
-            lineHeight: '14px',
-            color: '#474747',
-            boxShadow: '0px 0px 12px rgba(0,0,0,0.16)'
-          }}
-        >
+      <div className="completion-premium-wrap" style={{ bottom: premiumBubbleBottom }}>
+        <div className="completion-premium-box">
           프리미엄 가입시, 틀린 문제를 다시 확인할 수 있어요!
         </div>
-        <div
-          style={{
-            position: 'absolute',
-            width: '24.49px',
-            height: '12px',
-            left: '50%',
-            top: '40px',
-            transform: 'translateX(-50%)',
-            background: '#FFFFFF',
-            clipPath: 'polygon(50% 100%, 0 0, 100% 0)',
-            boxShadow: '0px 0px 12px rgba(0,0,0,0.16)'
-          }}
-        />
+        <div className="completion-premium-tail" />
       </div>
 
       <FloatingQuizCTA

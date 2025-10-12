@@ -1,9 +1,8 @@
 // 탐험 메인화면
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 
 import FloatingQuizCTA from './FloatingQuizCTA';
-import useProgress from '../useProgress';
 import { getQuestions as apiGetQuestions, getSectorsWithSubsectors, getQuizIdForSelection, getLevelProgress } from '../../api/explore';
 import antCharacter from '../../assets/explore/stepant.png';
 import './ExploreMain.css';
@@ -146,7 +145,7 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
 
   // ===== 백엔드 진행도/완료/배지 상태 =====
   const [backendProgress, setBackendProgress] = useState(null); // { isCompleted, completionRate, totalQuizzes, completedQuizzes, totalScore, maxScore, completedAt, quizzes: [...], ... }
-  const [progressLoading, setProgressLoading] = useState(false);
+  const [, setProgressLoading] = useState(false); // ESLint: progressLoading 사용하지 않음
   // userId는 localStorage에서 가져오거나, selection이 바뀔 때마다 갱신
   // 진행도는 항상 최신 userId로 조회 (localStorage에서 직접 읽음)
   useEffect(() => {
@@ -173,7 +172,10 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
             quizzes: res.quizzes
           });
         }
-        if (!cancelled) setBackendProgress(res);
+        if (!cancelled) {
+          setBackendProgress(res);
+          try { window.__EXPLORE_MAIN_PROGRESS = res; } catch (_) {}
+        }
       } catch (e) {
         console.error('[진행도 API 에러] getLevelProgress', e);
         if (!cancelled) setBackendProgress(null);
@@ -187,7 +189,8 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
   // 진행도/완료/점수/배지 정보 파싱
   const totalProblems = backendProgress?.totalQuizzes || totalQuestions;
   const answeredCount = backendProgress?.completedQuizzes ?? 0;
-  const correctCount = backendProgress?.totalScore ?? 0;
+  // eslint-disable-next-line no-unused-vars
+  const _ = backendProgress?.totalScore ?? 0; // correctCount - 사용하지 않음
   const progressPercent = totalProblems > 0 ? (answeredCount / totalProblems) * 100 : 0;
   const isCompleted = !!backendProgress?.isCompleted;
   const badge = backendProgress?.currentBadge;
@@ -202,6 +205,47 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     : Array(totalStages).fill(false);
   // active 단계: 현재 푸는 문제 index (모두 끝나면 -1 로 처리)
   const activeStage = answeredCount < totalStages ? answeredCount : -1;
+
+  // ===== DEBUG: 진행도 상세 로깅 및 전역 노출 =====
+  useEffect(() => {
+    try {
+      // 전역에 최신 진행도와 선택 상태를 노출하여 빠른 점검 가능
+      if (typeof window !== 'undefined') {
+        window.__EXPLORE_MAIN_PROGRESS = backendProgress || null;
+        window.__EXPLORE_MAIN_SELECTION = selection || null;
+        window.__EXPLORE_MAIN_PROGRESS_SUMMARY = {
+          isCompleted,
+          progressPercent: Math.round(progressPercent),
+          answeredCount,
+          totalProblems,
+          totalStages,
+          activeStage,
+        };
+      }
+
+      // 콘솔에 사람이 읽기 쉬운 형태로 출력
+      // 너무 시끄럽지 않도록 그룹 콜랩스 사용
+      // 필요시 window.__FIN_DEBUG=true 로 강제 오픈
+      const title = `📊 [ExploreMain] 진행도 업데이트 (answered ${answeredCount}/${totalProblems}, ${Math.round(progressPercent)}%, completed=${isCompleted})`;
+      const collapse = !(typeof window !== 'undefined' && window.__FIN_DEBUG);
+      const group = collapse ? console.groupCollapsed : console.group;
+      group(title);
+      console.log('selection (IDs)', selection);
+      console.log('backendProgress raw', backendProgress);
+      console.log('derived:', {
+        isCompleted,
+        progressPercent,
+        answeredCount,
+        totalProblems,
+        totalStages,
+        activeStage,
+      });
+      console.log('quizCompletionArr', quizCompletionArr);
+      console.groupEnd();
+    } catch (e) {
+      // 로깅 도중 오류로 인해 렌더가 막히지 않도록 안전 처리
+    }
+  }, [backendProgress, selection, totalProblems, answeredCount, totalStages, activeStage, progressPercent, isCompleted, quizCompletionArr]);
 
   return (
     <div
@@ -333,8 +377,31 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
 
   <div className="explore-main-cta-fixed">
     <FloatingQuizCTA
-      onClick={isLoading || fetching ? undefined : onStart}
-      label={isLoading || fetching ? '문제 불러오는 중...' : '퀴즈 풀러가기'}
+      onClick={isLoading || fetching ? undefined : () => {
+        try {
+          const summary = {
+            isLoading: !!isLoading,
+            fetching: !!fetching,
+            isCompleted,
+            progressPercent: Math.round(progressPercent),
+            answeredCount,
+            totalProblems,
+            totalStages,
+            activeStage,
+            selection,
+          };
+          console.log('▶️ [ExploreMain] CTA 클릭 - 현재 진행/게이팅 상태', summary);
+          if (typeof window !== 'undefined') {
+            window.__EXPLORE_MAIN_LAST_CTA = summary;
+          }
+        } catch {}
+        if (typeof onStart === 'function') onStart();
+      }}
+      label={
+        isLoading || fetching
+          ? '문제 불러오는 중...'
+          : (isCompleted ? '다시 풀기' : '퀴즈 풀러가기')
+      }
       disabled={!!(isLoading || fetching)}
     />
   </div>
@@ -349,6 +416,7 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
 
   const VIEWPORT_HEIGHT = 430; 
   const OFFSET_LEFT = 34;     
+  const BASE_WIDTH = 336;     // 고정 좌표계 너비 (스케일 기준)
 
   const baseRawPositions = [
     { left: 172, top: 665 }, // Stage 0 (bottom)
@@ -443,6 +511,7 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
   }
 
   const [dynamicTop, setDynamicTop] = React.useState(320);
+  const [scale, setScale] = React.useState(1);
   React.useEffect(() => {
     function recalc() {
       const root = document.querySelector('[data-explore-root]');
@@ -456,6 +525,14 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
       const proposedTop = targetBottomInRoot - VIEWPORT_HEIGHT;
   // 하단 버튼과의 간격을 정확히 44px로 유지하기 위해 클램프 없이 적용
   setDynamicTop(Math.round(proposedTop));
+
+      // 가용 너비 기반 스케일 계산 (양옆 16px 여백 반영)
+      const container = document.querySelector('.explore-main-container');
+      if (container) {
+        const available = Math.max(0, container.clientWidth - 32); // 16px * 2 여백
+        const nextScale = Math.min(1, available / BASE_WIDTH);
+        setScale(nextScale);
+      }
     }
     recalc(); 
     window.addEventListener('resize', recalc);
@@ -468,39 +545,42 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
   }, [totalStages, VIEWPORT_HEIGHT]);
 
   return (
-  <div style={{ position: 'absolute', left: OFFSET_LEFT, top: dynamicTop, width: 336, height: VIEWPORT_HEIGHT, overflowY: 'auto', overscrollBehavior: 'contain', transition: 'top .25s ease' }} ref={scrollRef}>
-      <div style={{ position: 'relative', width: 336, height: TOTAL_HEIGHT }}>
-        {/* 개미 캐릭터 (스크롤과 함께 이동) */}
-        <img
-          src={antCharacter}
-          alt="ant"
-          style={{
-            position: 'absolute',
-            // 루트 기준 (64, 511)을 스크롤 영역 내부 좌표로 변환: left는 OFFSET_LEFT를 보정, top은 minTop/MICRO_SHIFT_Y/STONES_SHIFT_Y 반영
-            left: 40 - OFFSET_LEFT,
-            top: 511 - minTop + MICRO_SHIFT_Y + STONES_SHIFT_Y,
-            width: 140,
-            height: 140,
-            objectFit: 'contain',
-            pointerEvents: 'none',
-            zIndex: 5,
-          }}
-        />
-  <svg width="301" height={TOTAL_HEIGHT} viewBox="0 0 301 599" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ position: 'absolute', left: 20, top: STONES_SHIFT_Y }}>
-          <path d="M150.5 595C199 589.333 296 555.9 296 467.5C296 379.1 199 360.333 150.5 362C101.333 363.833 3.19998 351.499 3.99998 287.499C4.99998 207.499 50 171.499 134.5 172.999C219 174.499 291.5 152.999 296 103.499C300.5 53.9994 269.5 2.99936 134.5 4.99936" stroke="url(#stepping_path_grad)" strokeWidth="8" strokeDasharray="15 15"/>
-          <defs>
-            <linearGradient id="stepping_path_grad" x1="150.203" y1="4.94238" x2="150.203" y2="595" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#DEECFF"/>
-              <stop offset="0.764423" stopColor="#DEECFF"/>
-              <stop offset="1" stopColor="#448FFF"/>
-            </linearGradient>
-            <linearGradient id="circle_grad" x1="-5.56897" y1="0" x2="83.967" y2="23.0671" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#448FFF"/>
-              <stop offset="1" stopColor="#4833D0"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        {Array.from({ length: totalStages }).map((_, i) => <StageCircle key={i} index={i} />)}
+  <div style={{ position: 'absolute', left: 16, right: 16, top: dynamicTop, height: VIEWPORT_HEIGHT, overflowY: 'auto', overscrollBehavior: 'contain', transition: 'top .25s ease' }} ref={scrollRef}>
+      {/* 스케일 적용을 위한 sizer 래퍼 (스크롤 높이 확보) */}
+      <div style={{ position: 'relative', width: BASE_WIDTH * scale, height: TOTAL_HEIGHT * scale }}>
+        {/* 고정 좌표계(336 x TOTAL_HEIGHT) 콘텐츠를 스케일로 축소/확대 */}
+        <div style={{ position: 'absolute', left: 0, top: 0, width: BASE_WIDTH, height: TOTAL_HEIGHT, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+          {/* 개미 캐릭터 (스크롤과 함께 이동) */}
+          <img
+            src={antCharacter}
+            alt="ant"
+            style={{
+              position: 'absolute',
+              left: 40 - OFFSET_LEFT,
+              top: 511 - minTop + MICRO_SHIFT_Y + STONES_SHIFT_Y,
+              width: 140,
+              height: 140,
+              objectFit: 'contain',
+              pointerEvents: 'none',
+              zIndex: 5,
+            }}
+          />
+          <svg width="301" height={TOTAL_HEIGHT} viewBox="0 0 301 599" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ position: 'absolute', left: 20, top: STONES_SHIFT_Y }}>
+            <path d="M150.5 595C199 589.333 296 555.9 296 467.5C296 379.1 199 360.333 150.5 362C101.333 363.833 3.19998 351.499 3.99998 287.499C4.99998 207.499 50 171.499 134.5 172.999C219 174.499 291.5 152.999 296 103.499C300.5 53.9994 269.5 2.99936 134.5 4.99936" stroke="url(#stepping_path_grad)" strokeWidth="8" strokeDasharray="15 15"/>
+            <defs>
+              <linearGradient id="stepping_path_grad" x1="150.203" y1="4.94238" x2="150.203" y2="595" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#DEECFF"/>
+                <stop offset="0.764423" stopColor="#DEECFF"/>
+                <stop offset="1" stopColor="#448FFF"/>
+              </linearGradient>
+              <linearGradient id="circle_grad" x1="-5.56897" y1="0" x2="83.967" y2="23.0671" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#448FFF"/>
+                <stop offset="1" stopColor="#4833D0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          {Array.from({ length: totalStages }).map((_, i) => <StageCircle key={i} index={i} />)}
+        </div>
       </div>
     </div>
   );

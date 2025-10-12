@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import NewsletterRoot from '../components/newsletter/NewsletterRoot';
+import './Newsletter.css';
 
 // Wrapper component so routing pattern matches other top-level pages (e.g., Explore.js)
 export default function Newsletter() {

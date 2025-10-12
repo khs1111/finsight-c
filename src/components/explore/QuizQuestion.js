@@ -88,7 +88,7 @@ export default function QuizQuestion({ current,
   
   // 🎨 UI 관련 참조 및 상태
   const chalkTextRef = useRef(null);
-  const [chalkLayout, setChalkLayout] = useState(null);
+  const [, setChalkLayout] = useState(null); // keep setter for resets; omit state to avoid unused var warning
   
   /**
    * 📝 학습 텍스트 정규화 함수
@@ -507,49 +507,7 @@ export default function QuizQuestion({ current,
    * - 분필 라인 위치
    * - 칠판 배경 영역 크기
    */
-  useEffect(() => {
-    // ⚠️ 학습 모드가 아니거나 칠판 텍스트 참조가 없으면 종료
-    if (!showLearning) return;
-    if (!chalkTextRef.current) return;
-
-    // 📏 칠판 레이아웃 상수 정의
-  const TOP_PAD = 24;             // 상단 패딩
-  const SIDE_PAD = 16;            // 좌우 패딩
-  const CONTENT_GAP = 16;         // 콘텐츠 간격
-  const CHALK_BAND_HEIGHT = 6;    // 분필 라인 높이
-  const BOTTOM_BAR_HEIGHT = 19;   // 하단 바 높이
-  const BOARD_OVERLAP = 6;        // 칠판 배경 오버랩
-  const BOTTOM_EXTRA = 11;        // 분필 아래 칠판 끝까지 거리
-
-    /**
-     * 📐 칠판 크기 측정 및 레이아웃 계산 함수
-     */
-    const measure = () => {
-      if (!chalkTextRef.current) return;
-      
-      // 📏 텍스트 영역의 실제 높이 측정
-      const raw = chalkTextRef.current.scrollHeight;
-      const textHeight = Math.max(0, raw - TOP_PAD); 
-
-      // 📍 분필 라인 Y 위치 계산
-      const chalkY = TOP_PAD + textHeight + CONTENT_GAP;
-  // 🧮 전체 칠판 높이 계산 (분필 아래 11px 추가)
-  // totalHeight 제거 (boardRectHeight만 사용)
-      // 📏 칠판 배경 높이 계산 (분필 아래 11px 추가)
-      const boardRectHeight = chalkY + CHALK_BAND_HEIGHT + BOARD_OVERLAP + BOTTOM_EXTRA;
-
-      // 💾 계산된 레이아웃 정보 저장
-      setChalkLayout({
-        chalkY,
-        boardRectHeight,
-        constants: { TOP_PAD, SIDE_PAD, CONTENT_GAP, CHALK_BAND_HEIGHT, BOTTOM_BAR_HEIGHT, BOARD_OVERLAP, BOTTOM_EXTRA }
-      });
-    };
-
-  measure(); // 초기 1회 실행
-  window.addEventListener('resize', measure);
-  return () => window.removeEventListener('resize', measure);
-  }, [showLearning, current, question?.id]);
+  // 칠판 레이아웃은 CSS가 자동으로 처리하도록 변경 (측정 로직 제거)
 
   /**
    * 🎯 선택지 선택 처리 함수
@@ -622,27 +580,7 @@ export default function QuizQuestion({ current,
    * - 최소 높이 보장
    * - 동적 여백 계산
    */
-  useEffect(() => {
-    if (showLearning && chalkTextRef.current) {
-      const textElement = chalkTextRef.current;
-      
-      // ⏱️ 텍스트가 실제로 렌더링된 후 높이 측정 (10ms 지연)
-      setTimeout(() => {
-        const scrollHeight = textElement.scrollHeight;
-        
-        // 📏 최소 120px 보장, 텍스트 + 여백 40px 추가
-        const computedHeight = Math.max(120, scrollHeight + 40);
-        
-        // 💾 칠판 레이아웃 업데이트
-        setChalkLayout((prev) => ({
-          ...prev,
-          totalHeight: computedHeight,
-          chalkY: computedHeight - (prev.constants.BOTTOM_BAR_HEIGHT + prev.constants.CHALK_BAND_HEIGHT + prev.constants.CONTENT_GAP),
-          boardRectHeight: computedHeight - prev.constants.BOTTOM_BAR_HEIGHT,
-        }));
-      }, 10);
-    }
-  }, [showLearning, learningText]); // 학습 모드나 학습 텍스트 변경 시 실행
+  // 높이 강제 보정 로직 제거: CSS와 scrollHeight 기반 측정으로 자연 확장
 
   /**
    * ⚠️ 문제 데이터 없음 상태 처리
@@ -865,8 +803,8 @@ export default function QuizQuestion({ current,
             <div className="quiz-question-learning-svg-inner quiz-question-learning-bubble">
               <div className="quiz-question-learning-svg-label">{normalizePlain(question?.hintMd) || '이 문제는 말 그대로 용어의 정의를 묻고 있어요!'}</div>
             </div>
-            <div style={{ position:"absolute", right:0, top:-16, width:72, height:72, zIndex:5 }}> 
-              <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" style={{ position:"absolute", inset:0, filter:'drop-shadow(0 2px 4px rgba(0,0,0,0.25))' }}>
+            <div className="quiz-question-learning-ant"> 
+              <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" style={{ filter:'drop-shadow(0 2px 4px rgba(0,0,0,0.25))' }}>
                 <rect width="72" height="72" fill="url(#pattern0_903_5350)" />
                 <defs>
                   <pattern id="pattern0_903_5350" patternContentUnits="objectBoundingBox" width="1" height="1"><use xlinkHref="#image0_903_5350" transform="scale(0.00347222)" /></pattern>
@@ -877,35 +815,18 @@ export default function QuizQuestion({ current,
           </div>
           <div style={{ marginBottom:1 }} />
           <div className="quiz-question-learning-chalkboard-wrap">
-            <div className="quiz-question-learning-chalkboard-inner" style={{ minHeight: chalkLayout ? chalkLayout.boardRectHeight : 120 }}>
-              <svg
-                width={chalkLayout ? '100%' : 380}
-                height={chalkLayout ? chalkLayout.boardRectHeight : 0}
-                viewBox={`0 0 380 ${chalkLayout ? chalkLayout.boardRectHeight : 0}`}
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                style={{ position:'absolute', left:0, top:0, width:'100%', height:chalkLayout ? chalkLayout.boardRectHeight : 0, pointerEvents:'none', zIndex:0 }}
-              >
-                {chalkLayout && (() => {
-                  const { chalkY, boardRectHeight, constants } = chalkLayout;
-                  const { CHALK_BAND_HEIGHT, BOTTOM_BAR_HEIGHT } = constants;
-                  return (
-                    <g>
-                      <rect x={8} y={0} width={364} height={boardRectHeight} rx={4} fill="#4B794C" />
-                      <rect x={32} y={chalkY} width={72} height={CHALK_BAND_HEIGHT} rx={2} fill="white" />
-                      <rect x={121} y={chalkY} width={72} height={CHALK_BAND_HEIGHT} rx={2} fill="#FF5959" />
-                      <rect x={0} y={chalkY + CHALK_BAND_HEIGHT} width={380} height={BOTTOM_BAR_HEIGHT} rx={4} fill="#7D5F5F" />
-                    </g>
-                  );
-                })()}
-              </svg>
+            <div className="quiz-question-learning-chalkboard-inner">
               <div
                 ref={chalkTextRef}
                 className="quiz-question-learning-chalkboard-text"
               >
                 {renderLearningContent()}
               </div>
+              {/* 텍스트가 끝난 후 정확히 16px 아래에 분필 라인 */}
+              <div className="quiz-question-chalk-line white" />
+              <div className="quiz-question-chalk-line red" />
             </div>
+            <div className="quiz-question-chalk-bottom-bar" />
           </div>
         </div>
       )}
