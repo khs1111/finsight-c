@@ -13,8 +13,6 @@
   touch-action: pan-y; /* allow vertical scroll pass-through */
 }
 .category-tab {
-  /* Spec note: Provided padding 18px 10px with fixed height 32px is impossible vertically.
-     Using height:32px with horizontal padding 10px and center alignment; vertical padding omitted. */
   flex: 0 0 auto;
   /* Spec: height 32px; padding: 18px 10px (horizontal). Using min-height + horizontal padding; vertical padding limited by height */
   display: flex;

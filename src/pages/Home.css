@@ -212,7 +212,6 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
 .error { color: red; }
 .loading { color: gray; }
 
-/* ===== 하단 고정 탭 네비 (모든 화면 폭에서 하단 고정) ===== */
 .category-nav {
   position: fixed;
   inset: auto 0 0 0;
@@ -220,20 +219,9 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
   padding: 8px 0 env(safe-area-inset-bottom, 0px);
   background: #fff;
   border-top: 1px solid #e5e7eb;
-  display: flex; align-items: center;
-  /* allow horizontal scrolling when buttons overflow, but hide native scrollbar */
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
-  white-space: nowrap;
+  display: flex; justify-content: space-around; align-items: center;
   gap: 0; z-index: 100;
   font-family: 'Pretendard', sans-serif;
-}
-
-/* Hide scrollbar (cross-browser) but keep scrolling functional */
-.category-nav::-webkit-scrollbar { display: none; height: 0; }
-.category-nav { -ms-overflow-style: none; /* IE/Edge */
-  scrollbar-width: none; /* Firefox */
 }
 
 .category-button {
@@ -244,8 +232,6 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
   font-weight: 500;
   cursor: pointer;
   padding-bottom: 6px;
-  /* prevent flex children from stretching so horizontal scroll works */
-  flex: 0 0 auto;
   position: relative;
 }
 
@@ -255,7 +241,6 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
 }
 
 .category-button.active::after {
-  content: "";
   position: absolute;
   bottom: 0; left: 0;
   width: 100%; height: 2px;

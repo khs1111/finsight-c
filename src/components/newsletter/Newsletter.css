@@ -1,0 +1,361 @@
+@media (max-width: 768px) {
+  .no-scrollbar {
+    /* IE, Edge */
+    -ms-overflow-style: none;
+    /* Firefox */
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    /* Webkit 계열 브라우저 */
+    display: none;
+  }
+}
+
+body {
+    background-color: #F4F6FA;
+    
+    /* 브라우저가 기본으로 주는 body의 여백을 제거하여 화면에 꽉 차게 만듭니다. */
+    margin: 0;
+    
+    /* Pretendard 폰트가 있다면 여기에 선언하는 것이 좋습니다. */
+    font-family: Pretendard, Roboto, system-ui, -apple-system, sans-serif;
+}
+
+/* =========================================================================
+   1. 전체 레이아웃 및 컨테이너 (Global Layout & Container)
+   - 앱의 기본 배경색과 전체적인 좌우 여백을 설정합니다.
+========================================================================= */
+.nl-container {
+    /* 전체 컴포넌트를 감싸는 컨테이너입니다. */
+    background-color: #F4F6FA;
+    min-height: 100vh;
+}
+
+
+/* =========================================================================
+   2. 상단 바 (Top bar) - 수정됨
+   - '뉴스레터' 타이틀이 포함된 헤더 영역입니다.
+   - 이제 스크롤을 따라 올라갑니다.
+========================================================================= */
+.nl-topbar {
+    padding: 16px 16px 12px;
+
+    /* 기존 스타일 유지 */
+    display: flex;
+    align-items: center;
+    background-color: #F4F6FA;
+    z-index: 3; /* 탭보다 위에 있도록 z-index는 유지 */
+}
+
+.nl-title {
+    /* '뉴스레터' 텍스트에 대한 피그마 규격 적용 (기존과 동일) */
+    color: #474747;
+    font-family: Roboto, system-ui, -apple-system, sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: normal;
+    letter-spacing: -0.36px;
+}
+
+
+/* =========================================================================
+   3. 탭 메뉴 (Tabs) - 수정됨
+   - HOT, 주제별, My news 등 네비게이션 탭 영역입니다.
+   - 이제 화면 맨 위에 고정됩니다.
+========================================================================= */
+.nl-tabs {
+    display: flex;
+    /* 스크롤시 따라오지 않도록 sticky 제거 */
+    position: static;
+    padding: 8px 16px 0;
+    background-color: #F4F6FA;
+    border-bottom: 2px solid #EAEAEA;
+}
+
+.nl-tab {
+    flex: 1;
+    color: #9B9B9B;
+    text-align: center;
+    font-family: Roboto, system-ui, -apple-system, sans-serif;
+    font-size: 20px;
+    font-weight: 400;
+    line-height: 1.4; /* line-height 현실화 */
+    letter-spacing: -0.8px;
+    padding-bottom: 12px;
+
+    text-decoration: none;
+    position: relative;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: color 0.2s ease-in-out;
+}
+
+.nl-tab.active {
+    color: #1B1B1B;
+    font-weight: 700;
+    border-bottom: 2px solid #1B1B1B;
+    margin-bottom: -2px;
+}
+
+/*.nl-tab.active::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #1B1B1B;
+    
+    bottom: -1px; 
+}*/
+
+/* =========================================================================
+   4. 맞춤 뉴스 배너 (Banner)
+   - 'My news로 맞춤 뉴스 보자!' 배너 영역입니다.
+========================================================================= */
+.nl-banner {
+    display: flex;           /* 이미지와 텍스트를 가로로 나란히 배치 */
+    align-items: center;     /* 수직 중앙 정렬 */
+    gap: 20px;               /* 이미지와 텍스트 사이의 간격을 20px로 설정 */
+
+    /* 배너 자체의 스타일 */
+    padding: 10px 16px;      /* 내부 상하 10px, 좌우 16px 여백 */
+    background: #B8D4FF;
+    border-radius: 8px;
+    margin: 16px 0 12px;      /* 배너 외부의 위아래 여백 */
+    box-sizing: border-box;
+
+    margin: 16px 16px;
+}
+
+.nl-banner-news-img {
+    /* clamp(최소, 기본, 최대) 함수를 사용한 반응형 이미지 크기 */
+    width: clamp(45px, 15%, 60px);
+
+    height: auto;          /* 너비에 맞춰 높이 자동 조절 */
+    aspect-ratio: 1 / 1;   /* 1:1 정사각형 비율 유지 */
+    object-fit: contain;
+    flex-shrink: 0;        /* 공간이 부족해도 이미지가 찌그러지지 않도록 방지 */
+}
+
+.nl-banner-text {
+    flex: 1;               /* 남은 공간을 모두 차지하도록 설정 */
+    min-width: 0;          /* 텍스트가 길어질 때 레이아웃이 깨지는 것을 방지 */
+    display: flex;
+    flex-direction: column;/* 제목과 부제를 세로로 배치 */
+    gap: 4px;              /* 제목과 부제 사이의 간격을 4px로 설정 */
+}
+
+.nl-banner-title {
+    color: #10274A;
+    font-family: Roboto;
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    letter-spacing: -0.36px;
+    margin: 0;
+}
+
+.nl-banner-desc {
+    color: #122C54;
+    font-family: Roboto;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    letter-spacing: -0.24px;
+    margin: 0;
+}
+
+
+/* =========================================================================
+   5. 콘텐츠 섹션 및 카드 (List, Card)
+   - 뉴스 목록과 각 뉴스 카드의 스타일입니다.
+========================================================================= */
+.nl-section {
+    /* 각 탭 콘텐츠 영역의 아래쪽 여백 */
+    padding-bottom: 24px;
+}
+
+.nl-list-meta {
+    /* "N개의 소식이 있어요" 텍스트 스타일 */
+    color: var(--Text-color_box, #616161);
+    font-family: Roboto;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: normal;
+    letter-spacing: -0.56px;
+    margin: 16px;
+}
+
+.nl-card-link {
+    text-decoration: none; /* 이 한 줄이 텍스트의 밑줄을 제거합니다. */
+    color: inherit;        /* 부모 요소의 글자 색상을 그대로 사용합니다. */
+    display: block;        /* a 태그가 div처럼 동작하도록 만듭니다. */
+}
+
+.nl-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    margin: 0 32px 16px;
+    overflow: hidden; 
+
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.nl-card-link:hover .nl-card {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.nl-card-image {
+    width: 100%;
+    height: 160px;
+    
+    border-radius: 14px 14px 0 0;
+    
+    background-size: cover;
+    background-position: center;
+}
+
+.nl-card-content {
+    display: flex;
+    flex-direction: column;
+    padding: 0 12px 16px;
+    gap: 8px;
+}
+
+.nl-card-tags {
+    display: flex;       /* 태그들을 가로로 나란히 배치 */
+    flex-wrap: wrap;     /* 공간이 부족하면 다음 줄로 넘김 */
+    gap: 6px;            /* 태그들 사이의 간격 */
+}
+
+.nl-badge {
+     padding: 4px 8px;
+    
+    font-family: Roboto, system-ui, -apple-system, sans-serif;
+    display: inline-block;
+    font-size: 12px;
+    border-radius: 999px;
+    background: #DCEAFF;
+    color: #234E8F;
+    font-weight: 500;
+    
+    align-self: flex-start;
+}
+
+.nl-card-title {
+    color: #000;
+
+    font-family: Roboto;
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 22px;
+    line-height: 1.4;
+    margin: 0;
+    letter-spacing: -0.01em;
+
+    white-space: pre-line;
+}
+
+.nl-card-sub {
+    color: #474747;
+
+    font-family: Roboto;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    letter-spacing: -0.24px;
+    margin: 0;
+}
+
+.nl-card-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: #9AA0A6;
+    margin-top: 4px; /* 위 콘텐츠와의 간격 */
+}
+
+.nl-card-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px; /* 아이콘과 텍스트 간격 */
+}
+
+/* =========================================================================
+   6. 빈 페이지 상태 (Empty State)
+   - 'My news' 탭에 콘텐츠가 없을 때 표시될 영역의 스타일입니다.
+========================================================================= */
+.nl-empty {
+    padding: 24px;
+    text-align: center;
+    color: #5F6368;
+    background: #F7F8FA;
+    border-radius: 12px;
+}
+
+/* =========================================================================
+   7. 주제별 카테고리 필터 (Category Filters) - 간격 수정
+   - '주제별' 탭 하단에 표시되는 카테고리 버튼들의 스타일입니다.
+========================================================================= */
+.nl-category-filters {
+    display: flex;
+    gap: 8px;
+    /* [핵심 수정] 상/하 8px, 좌/우 16px 여백 */
+    margin: 8px 16px;
+    
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.nl-category-filters::-webkit-scrollbar {
+    display: none;
+}
+
+.nl-category-filters + .nl-banner {
+    margin-top: 0; /* 마진 상쇄를 막기 위해 배너의 margin-top을 0으로 초기화 */
+}
+
+/* 개별 카테고리 버튼의 기본 스타일 */
+.nl-category-btn {
+    /* 수직 중앙 정렬을 위한 레이아웃 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    /* 패딩과 모양 */
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid #DFE5EE;
+    background-color: #EEF2F6;
+
+    /* 타이포그래피: 수직 정렬 정확도를 높이기 위해 line-height를 1로 고정 */
+    color: #626262;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1; /* 핵심: 텍스트가 상하로 치우치지 않게 고정 */
+
+    /* 기타 */
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease-in-out;
+}
+
+.nl-category-btn.active {
+    background: linear-gradient(104deg, #448FFF -6.51%, #4833D0 105.13%);
+    color: #fff;
+    border-color: transparent;
+    font-weight: 700;
+}

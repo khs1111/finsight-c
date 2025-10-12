@@ -84,7 +84,6 @@
   font-size: 12px;
   font-style: normal;
   font-weight: 400;
-  line-height: 1; /* 콘텐츠 박스를 글자 크기에 맞춰 정확히 중앙 정렬 */
   white-space: nowrap;
 }
 
@@ -101,8 +100,8 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  display: inline-block;
-  line-height: 12px; /* 글자크기와 동일하게 맞춰 정확히 중앙 */
+/*  display: inline-block;*/
+  position: relative;
 }
 
 .news-card__description {  
