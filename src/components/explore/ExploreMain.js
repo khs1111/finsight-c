@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import FloatingQuizCTA from './FloatingQuizCTA';
 import useProgress from '../useProgress';
-import { getQuestions as apiGetQuestions, getSectorsWithSubsectors } from '../../api/explore';
+import { getQuestions as apiGetQuestions, getSectorsWithSubsectors, getQuizIdForSelection, getLevelProgress } from '../../api/explore';
 import antCharacter from '../../assets/explore/stepant.png';
 import './ExploreMain.css';
 
@@ -123,7 +123,10 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     (async () => {
       try {
         setFetching(true);
-        const res = await apiGetQuestions({ topicId, subTopicId, levelId: Number(levelId) });
+        // Resolve quizId once, then fetch by quizId only
+        const quizId = await getQuizIdForSelection({ subTopicId, levelId: Number(levelId) });
+        if (!quizId) throw new Error('quizId not found for selection');
+  const res = await apiGetQuestions({ quizId, topicId, subTopicId, levelId });
         if (cancelled) return;
         const qs = Array.isArray(res?.questions) ? res.questions : [];
         setQuestions(qs);
@@ -140,39 +143,65 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     return () => { cancelled = true; };
   }, [selection]);
 
-  // 진행 상황: 서버에서 받아온 총 질문 수를 전달
-  const { total: totalProblems, index: currentIndex, answers } = useProgress(selectedLevel || 'default', totalQuestions);
-  const answeredCount = answers.length; // 사용자가 풀면 진행
-  // eslint-disable-next-line no-unused-vars
-  const correctCount = answers.filter(a => a.correct).length;
-  const progressPercent = totalProblems > 0 ? (answeredCount / totalProblems) * 100 : 0; // 진행 퍼센트
 
-  // 진행도 바 위치 기준 (현재 미사용)
-  // eslint-disable-next-line no-unused-vars  
-  const progressBarTop = 210;
-  // eslint-disable-next-line no-unused-vars
-  const progressBarLeft = "calc(50% - 355px/2 + 0.5px)";
-
-  // 징검다리 단계: 문제 수 기준 (질문이 없을 때 최소 0)
-  const totalStages = Math.max(0, totalProblems || 0);
-  // active 단계: 현재 푸는 문제 index (모두 끝나면 -1 로 처리)
-  const activeStage = currentIndex < totalStages ? currentIndex : -1;
-
-  // 각 단계별 원(스테이지) 렌더 함수
-
-  // 징검다리 스크롤 ref
-  const steppingRef = useRef(null);
-
+  // ===== 백엔드 진행도/완료/배지 상태 =====
+  const [backendProgress, setBackendProgress] = useState(null); // { isCompleted, completionRate, totalQuizzes, completedQuizzes, totalScore, maxScore, completedAt, quizzes: [...], ... }
+  const [progressLoading, setProgressLoading] = useState(false);
+  // userId는 localStorage에서 가져오거나, selection이 바뀔 때마다 갱신
+  // 진행도는 항상 최신 userId로 조회 (localStorage에서 직접 읽음)
   useEffect(() => {
-    if (steppingRef.current) {
-      const el = steppingRef.current;
-      el.scrollTop = el.scrollHeight - el.clientHeight;
-    }
-  }, []);
+    const { levelId } = selection || {};
+    const userId = localStorage.getItem('userId') || undefined;
+    if (!levelId || !userId) return;
+    let cancelled = false;
+    (async () => {
+      setProgressLoading(true);
+      try {
+        console.log('[진행도 API 요청] getLevelProgress', { levelId, userId });
+        const res = await getLevelProgress(levelId, userId);
+        console.log('[진행도 API 응답] getLevelProgress', res);
+        if (res && typeof res === 'object') {
+          console.log('[진행도 상세]', {
+            isCompleted: res.isCompleted,
+            completionRate: res.completionRate,
+            totalQuizzes: res.totalQuizzes,
+            completedQuizzes: res.completedQuizzes,
+            totalScore: res.totalScore,
+            maxScore: res.maxScore,
+            completedAt: res.completedAt,
+            badge: res.currentBadge,
+            quizzes: res.quizzes
+          });
+        }
+        if (!cancelled) setBackendProgress(res);
+      } catch (e) {
+        console.error('[진행도 API 에러] getLevelProgress', e);
+        if (!cancelled) setBackendProgress(null);
+      } finally {
+        if (!cancelled) setProgressLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selection]);
 
+  // 진행도/완료/점수/배지 정보 파싱
+  const totalProblems = backendProgress?.totalQuizzes || totalQuestions;
+  const answeredCount = backendProgress?.completedQuizzes ?? 0;
+  const correctCount = backendProgress?.totalScore ?? 0;
+  const progressPercent = totalProblems > 0 ? (answeredCount / totalProblems) * 100 : 0;
+  const isCompleted = !!backendProgress?.isCompleted;
+  const badge = backendProgress?.currentBadge;
   // 진행도 숫자: 현재/다음 단계 표시 (예: 1 2 -> 2 3)
   const currentNumber = totalProblems > 0 ? Math.min(answeredCount + 1, totalProblems) : 1;
   const nextNumber = totalProblems > 0 ? Math.min(currentNumber + 1, totalProblems) : 2;
+  // 징검다리 단계: 문제 수 기준 (질문이 없을 때 최소 0)
+  const totalStages = Math.max(0, totalProblems || 0);
+  // 문제별 완료 상태 배열 (서버 응답 기반)
+  const quizCompletionArr = Array.isArray(backendProgress?.quizzes)
+    ? backendProgress.quizzes.map(q => !!q.isCompleted)
+    : Array(totalStages).fill(false);
+  // active 단계: 현재 푸는 문제 index (모두 끝나면 -1 로 처리)
+  const activeStage = answeredCount < totalStages ? answeredCount : -1;
 
   return (
     <div
@@ -267,6 +296,7 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
         </div>
       </div>
 
+
       {/* 진행도 바 배경  */}
       <div id="explore-progress-bar" className="explore-main-progress-bar">
         <div className="explore-main-progress-bar-inner" style={{ width: `${progressPercent}%` }} />
@@ -274,17 +304,30 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
 
       {/* 진행도 바 양쪽 숫자 */}
       <div className="explore-main-progress-numbers">
-        <div className="explore-main-progress-number active">{currentNumber}</div>
+        <div className={`explore-main-progress-number${isCompleted ? ' completed' : ' active'}`}>{currentNumber}</div>
         <div className="explore-main-progress-number">{nextNumber}</div>
       </div>
 
+      {/* 완료 체크/배지 UI */}
+      {isCompleted && (
+        <div className="explore-main-complete-badge">
+          <span role="img" aria-label="완료" style={{ fontSize: 22, marginRight: 8 }}>🏆</span>
+          <span style={{ fontWeight: 700, color: '#448FFF' }}>퀴즈 완료!</span>
+          {badge && (
+            <span style={{ marginLeft: 12, fontWeight: 600, color: '#FFBC02' }}>
+              {badge.name} 배지 획득
+            </span>
+          )}
+        </div>
+      )}
+
       {/* 징검다리 스크롤 영역 */}
-  <div className="explore-main-steppingstones-wrap">
+      <div className="explore-main-steppingstones-wrap">
         <SteppingStonesScrollable
           totalStages={totalStages}
           activeStage={activeStage}
           answeredCount={answeredCount}
-          currentIndex={currentIndex}
+          quizCompletionArr={quizCompletionArr}
         />
       </div>
 
@@ -302,7 +345,7 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
 /**
  SteppingStones 컴포넌트
  */
-function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredCount = 0, currentIndex = 0 }) {
+function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredCount = 0, currentIndex = 0, quizCompletionArr = [] }) {
 
   const VIEWPORT_HEIGHT = 430; 
   const OFFSET_LEFT = 34;     
@@ -362,14 +405,17 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
   }, [totalStages]);
 
   function StageCircle({ index }) {
-    const status = index < answeredCount ? 'done' : (index === currentIndex && currentIndex < totalStages) ? 'active' : 'locked';
-  const pos = positions[index] || { left: 0, top: 0 };
-  const adj = INDEX_MICRO[index] || { dx: 0, dy: 0 };
-  const style = { position: 'absolute', left: pos.left + adj.dx, top: pos.top + adj.dy };
+    // 문제별 완료 상태를 quizCompletionArr에서 가져옴
+    const isDone = !!quizCompletionArr[index];
+    const status = isDone ? 'done' : (index === activeStage && activeStage < totalStages) ? 'active' : 'locked';
+    const pos = positions[index] || { left: 0, top: 0 };
+    const adj = INDEX_MICRO[index] || { dx: 0, dy: 0 };
+    const style = { position: 'absolute', left: pos.left + adj.dx, top: pos.top + adj.dy };
     if (status === 'done') {
       return (
         <svg key={index} width="68" height="68" viewBox="0 0 68 68" fill="none" style={style}>
           <rect width="68" height="68" rx="34" fill="url(#circle_grad)"/>
+          {/* 체크 아이콘 */}
           <path d="M30.2387 41.5338C29.8201 41.5335 29.4145 41.3884 29.0908 41.123L23.6775 36.6884C22.9373 36.0453 22.8426 34.9303 23.4639 34.1717C24.0851 33.4131 25.197 33.2861 25.9733 33.885L30.1662 37.3167L42.2495 26.188C42.7037 25.6479 43.43 25.4206 44.1111 25.6052C44.7921 25.7899 45.3041 26.3531 45.4232 27.0486C45.5423 27.7441 45.247 28.4455 44.6662 28.8463L31.4712 41.0505C31.1373 41.3633 30.6962 41.5363 30.2387 41.5338Z" fill="white"/>
         </svg>
       );
@@ -379,14 +425,18 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
         <div key={index} style={{ ...style, width: 68, height: 82 }}>
           <svg width="68" height="68" viewBox="0 0 68 68" fill="none" style={{ position:'absolute', left:0, top:0 }}>
             <rect width="68" height="68" rx="34" fill="url(#circle_grad)"/>
+            {/* 진행중 아이콘 */}
+            <circle cx="34" cy="34" r="16" fill="#fff" opacity="0.2" />
             <path fillRule="evenodd" clipRule="evenodd" d="M26.6785 25.542H41.1785C43.8479 25.542 46.0119 27.7059 46.0119 30.3753V37.6253C46.0119 40.2947 43.8479 42.4587 41.1785 42.4587H26.6785C24.0092 42.4587 21.8452 40.2947 21.8452 37.6253V30.3753C21.8452 27.7059 24.0092 25.542 26.6785 25.542ZM25.7844 37.3232H42.0727C42.5732 37.3232 42.979 36.9175 42.979 36.417C42.979 35.9165 42.5732 35.5107 42.0727 35.5107H25.7844C25.2839 35.5107 24.8781 35.9165 24.8781 36.417C24.8781 36.9175 25.2839 37.3232 25.7844 37.3232Z" fill="white"/>
           </svg>
         </div>
       );
     }
+    // 잠금(미완료) 상태
     return (
       <svg key={index} width="68" height="68" viewBox="0 0 68 68" fill="none" style={style}>
         <rect width="68" height="68" rx="34" fill="#DDEBFF" />
+        {/* 자물쇠/미완료 아이콘 (연하게) */}
         <path d="M34 21.01C36.0223 21.01 37.67 21.4836 38.9706 22.3625C40.269 23.2399 41.1031 24.442 41.6356 25.6994C42.3244 27.326 42.5413 29.1459 42.6112 30.6887H43.1688C44.2941 30.6888 45.2059 31.6015 45.2059 32.7268V44.9523C45.2059 46.0775 44.2941 46.9893 43.1688 46.9895H24.83C23.7048 46.9892 22.793 46.0774 22.7928 44.9523V32.7268C22.7928 31.6016 23.7047 30.6889 24.83 30.6887H25.3739C25.4486 28.8904 25.6897 26.9339 26.4696 25.2658C27.037 24.0526 27.9012 22.9548 29.1942 22.176C30.4778 21.4029 32.0738 21.01 34 21.01ZM34 24.0666C32.4867 24.0666 31.4699 24.3735 30.7715 24.7941C30.0827 25.209 29.5938 25.8004 29.2383 26.5607C28.7063 27.6986 28.5094 29.1262 28.4375 30.6887H39.5498C39.4843 29.3835 39.3078 28.0398 38.8213 26.8908C38.464 26.0474 37.9632 25.3702 37.2598 24.8947C36.5584 24.4208 35.5364 24.0667 34 24.0666Z" fill="#BAD1F3" />
       </svg>
     );

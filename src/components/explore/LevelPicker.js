@@ -247,9 +247,6 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
     if (!sel) return;
     const entityId = Number(sel.id);
     const levelNo = Number(sel.levelNumber ?? sel.number ?? sel.level_no);
-    const finalLevelId = Number.isFinite(entityId)
-      ? entityId
-      : (Number.isFinite(levelNo) ? levelNo : 1);
     onConfirm({
       levelId: entityId, // 실제 backend PK
       levelNumber: Number.isFinite(levelNo) ? levelNo : undefined, // 1/2/3 등 난이도 번호

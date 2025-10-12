@@ -9,6 +9,7 @@ export default function CompletionScreen({
   total,
   results = [],
   questions = [],
+  completeResult = null,
   onRetry,
   onExplore,
 }) {

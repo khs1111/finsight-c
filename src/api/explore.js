@@ -2,6 +2,31 @@
 import { API_BASE } from './config';
 import { guestLogin } from './auth';
 
+// [ARTICLE STATIC MAP] (id, title, image_url)
+const ARTICLE_STATIC_MAP = {
+  '1_1_1': { title: '금융권1', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/1/1-1/banking_finance-jobs_ARTICLE_1.png' },
+  '1_1_2': { title: '금융권2', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/1/1-1/banking_finance-jobs_ARTICLE_2.png' },
+  '1_1_3': { title: '금융권3', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/1/1-1/banking_finance-jobs_ARTICLE_3.png' },
+  '1_2_1': { title: '예금/적금1', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/1/1-2/banking_deposits_ARTICLE_1.png' },
+  '1_2_2': { title: '예금/적금2', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/1/1-2/banking_deposits_ARTICLE_2.png' },
+  '1_2_3': { title: '예금/적금3', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/1/1-2/banking_deposits_ARTICLE_3.png' },
+  '1_3_1': { title: '계좌1', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/1/1-3/banking_accounts_ARTICLE_1.png' },
+  '1_3_2': { title: '계좌2', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/1/1-3/banking_accounts_ARTICLE_2.png' },
+  '1_3_3': { title: '계좌3', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/1/1-3/banking_accounts_ARTICLE_3.png' },
+  '1_4_1': { title: '대출1', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/1/1-5/banking_loans_ARTICLE_1.png' },
+  '1_4_2': { title: '대출2', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/1/1-5/banking_loans_ARTICLE_2.png' },
+  '1_4_3': { title: '대출3', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/1/1-5/banking_loans_ARTICLE_3.png' },
+  '2_1_1': { title: '카드1', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/2/2-1/card_card_ARTICLE_1.png' },
+  '2_1_2': { title: '카드2', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/2/2-1/card_card_ARTICLE_2.png' },
+  '2_1_3': { title: '카드3', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/2/2-1/card_card_ARTICLE_3.png' },
+  '3_1_1': { title: '투자1', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/3/3-1/investment_investment_ARTICLE_1.png' },
+  '3_1_2': { title: '투자2', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/3/3-1/investment_investment_ARTICLE_2.png' },
+  '3_1_3': { title: '투자3', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/3/3-1/investment_investment_ARTICLE_3.png' },
+  '4_1_1': { title: '세금1', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/4/4-1/tax_tax_ARTICLE_1.png' },
+  '4_1_2': { title: '세금2', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/4/4-1/tax_tax_ARTICLE_2.png' },
+  '4_1_3': { title: '세금3', imageUrl: 'https://s3.ap-northeast-2.amazonaws.com/fin.img99/4/4-1/tax_tax_ARTICLE_3.png' },
+};
+
 // 백엔드 연결 상태 확인 (정보용)
 let isBackendConnected = true; // 낙관적으로 시작하여 건강 체크 실패로 기능이 막히지 않게 함
 let authInitialized = false;
@@ -85,11 +110,6 @@ function coerceLevelId(levelId) {
 
   console.warn('⚠️ 알 수 없는 levelId, 기본값 1로 대체됨:', s);
   return 1;
-}
-
-// Normalize any label/number to canonical level number (1..3)
-function toLevelNumber(level) {
-  return coerceLevelId(level);
 }
 
 // JWT 토큰을 자동으로 헤더에 포함하는 fetch 함수
@@ -178,6 +198,70 @@ async function http(path, opts = {}, token) {
     console.error('[API fetch 실패]', err);
     throw err;
   }
+}
+
+// ========================================
+// 📰 기사 정보 직접 조회 유틸 (id / code / slug / path 모두 시도)
+// ========================================
+async function fetchArticleByRef({ id, code, slug, path }) {
+  // 이미 충분한 정보가 없으면 조기 종료
+  if (id == null && !code && !slug && !path) return null;
+
+  const tryList = [];
+  const enc = encodeURIComponent;
+
+  // 1) ID로 직접 조회
+  if (id != null) {
+    const numId = Number(id);
+    if (Number.isFinite(numId)) {
+      tryList.push(`/articles/${numId}`);
+      tryList.push(`/article/${numId}`);
+      tryList.push(`/articles/detail/${numId}`);
+      tryList.push(`/articles?id=${enc(numId)}`);
+    } else {
+      // 문자열 ID인 경우도 대비
+      tryList.push(`/articles/${enc(String(id))}`);
+      tryList.push(`/articles?id=${enc(String(id))}`);
+    }
+  }
+
+  // 2) 코드 기반 조회
+  if (code) {
+    tryList.push(`/articles/by-code/${enc(code)}`);
+    tryList.push(`/articles?code=${enc(code)}`);
+    tryList.push(`/articles/search?code=${enc(code)}`);
+  }
+
+  // 3) 슬러그 기반 조회
+  if (slug) {
+    tryList.push(`/articles/by-slug/${enc(slug)}`);
+    tryList.push(`/articles?slug=${enc(slug)}`);
+    tryList.push(`/articles/search?slug=${enc(slug)}`);
+  }
+
+  // 4) 경로 기반 조회
+  if (path) {
+    tryList.push(`/articles/by-path?path=${enc(path)}`);
+    tryList.push(`/articles?path=${enc(path)}`);
+    tryList.push(`/articles/search?path=${enc(path)}`);
+  }
+
+  for (const p of tryList) {
+    try {
+      const res = await http(p);
+      if (res && typeof res === 'object') {
+        // 배열로 내려오는 경우 첫 요소 사용
+        if (Array.isArray(res)) {
+          if (res.length === 0) continue;
+          return res[0];
+        }
+        return res;
+      }
+    } catch (_) {
+      // 다음 시도
+    }
+  }
+  return null;
 }
 
 // ========================================
@@ -393,165 +477,497 @@ export const login = async (username, password) => {
 // Always fetch 4 questions per topic/subtopic/level, matching backend contract
 // 최소 정규화: 백엔드 응답을 UI에서 기대하는 필드로 얇게 변환
 function normalizeQuizPayload(raw) {
-  if (!raw) return { questions: [] };
-  // 다양한 백엔드 스키마 대응: questions, items, data, content, results 중 첫 배열 선택
-  const qs = Array.isArray(raw.questions)
-    ? raw.questions
-    : Array.isArray(raw.items)
-      ? raw.items
-      : Array.isArray(raw.data)
-        ? raw.data
-        : Array.isArray(raw.content)
-          ? raw.content
-          : Array.isArray(raw.results)
-            ? raw.results
-            : [];
-  const articles = Array.isArray(raw.articles) ? raw.articles : [];
-  const aMap = articles.reduce((m, a) => { if (a?.id != null) m[a.id] = a; return m; }, {});
-  return {
-    id: raw.id,
-    questions: qs.map((q, i) => {
-      const art = q.articleId ? aMap[q.articleId] : (q.article_id ? aMap[q.article_id] : undefined);
-      // articleId/article_id가 있으면 무조건 ARTICLE로 강제
-      let type = q.type;
-      if (!type) {
-        if (q.articleId || q.article_id) type = 'ARTICLE';
-        else if (q.story || q.storyTitleMd || q.story_body_md || q.storyBodyMd) type = 'STORY';
-        else type = 'CONCEPT';
+  if (!raw) return null;
+
+  const firstArray = (...cands) => cands.find(Array.isArray) || [];
+
+  // 1) 질문 배열 추출
+  let qs = firstArray(
+    raw.questions,
+    raw.items,
+    raw.data?.questions,
+    raw.content?.questions,
+    raw.results?.questions,
+    raw.data,
+    raw.content,
+    raw.results
+  );
+
+  // 2) 기사 배열 매핑(aMap) 제거: 백엔드가 각 질문에 article을 포함해 내려준다고 가정
+
+  // 3) 키포인트 배열과 매핑 테이블 (옵션)
+  const keyPoints = firstArray(
+    raw.keyPoints,
+    raw.data?.keyPoints,
+    raw.content?.keyPoints,
+    raw.results?.keyPoints
+  );
+  const kMap = keyPoints.reduce((m, k) => {
+    const kid = k.id ?? k.keyPointId ?? k.key_point_id;
+    if (kid != null) {
+      m[Number(kid)] = {
+        title: k.title || k.keyPointTitle,
+        body: k.body || k.keyPointBody,
+      };
+    }
+    return m;
+  }, {});
+  console.log('Normalized Key Points:', kMap);
+
+  // 4) 정렬
+  qs = Array.isArray(qs)
+    ? [...qs].sort((a, b) => {
+        const sa = Number(a?.sortOrder ?? a?.order ?? a?.sort_order ?? a?.id ?? 0);
+        const sb = Number(b?.sortOrder ?? b?.order ?? b?.sort_order ?? b?.id ?? 0);
+        return sa - sb;
+      })
+    : [];
+
+  console.log('normalizeQuizPayload Input:', raw);
+  console.log('normalizeQuizPayload Questions count:', Array.isArray(qs) ? qs.length : 0);
+
+  // 5) 질문 정규화
+  const normalizedQuestions = qs.map((q, i) => {
+  // ✅ 백엔드가 주는 article 객체만 사용 (평탄화)
+  if (q && typeof q.article === 'object' && q.article) {
+    const a = q.article;
+    q.articleId = a.id ?? a.articleId ?? a.articleCode ?? a.article_id;
+    q.articleTitleMd = a.title ?? q.articleTitleMd;
+    q.articleBodyMd = a.body ?? q.articleBodyMd;
+    const img = a.imageUrl ?? a.image ?? a.image_url ?? a.thumbnail ?? a.coverImage;
+    if (img) {
+      q.image = q.image ?? img;
+      q.imageUrl = q.imageUrl ?? img;
+      q.articleImageUrl = q.articleImageUrl ?? img;
+    }
+    q.articleSource = a.sourceNote ?? a.source ?? q.articleSource;
+  }
+  // [가상 기사 보강] articleId만 있고 article 객체가 없거나, 이미지가 없으면 static map에서 보강
+  if (
+    (!q.article || typeof q.article !== 'object') &&
+    (q.articleId || q.article_id) &&
+    (q.type === 'article' || q.type === 'ARTICLE')
+  ) {
+    const aid = String(q.articleId ?? q.article_id);
+    const staticArticle = ARTICLE_STATIC_MAP[aid];
+    if (staticArticle) {
+      q.article = { id: aid, ...staticArticle };
+      q.articleTitleMd = q.articleTitleMd ?? staticArticle.title;
+      q.articleImageUrl = q.articleImageUrl ?? staticArticle.imageUrl;
+      q.imageUrl = q.imageUrl ?? staticArticle.imageUrl;
+      q.image = q.image ?? staticArticle.imageUrl;
+    }
+  }
+  // 🩶 Fallback: article 객체가 없고 articleId만 제공될 때 임시 article 구성
+  if ((!q || !q.article) && (q?.articleId != null || q?.article_id != null)) {
+    const aid = q.articleId ?? q.article_id;
+    q.article = { id: aid };
+  }
+  const articleId = q?.articleId ?? q?.article_id ?? q?.article?.id ?? undefined;
+  const articleFromQ = (q && typeof q.article === 'object') ? q.article : undefined;
+    const storyId = Number(q.storyId ?? q.story_id ?? q.stoy_id ?? q.story?.id);
+  const correctIdRaw = q.correctOptionId ?? q.correct_option_id ?? q.answerId ?? q.answer_id;
+    const correctIdxRaw = q.correctIndex ?? q.correct_index ?? q.answerIndex ?? q.answer_index;
+    const correctLetterRaw = q.correctOption ?? q.correct_option ?? q.correctLetter ?? q.correct_letter;
+  const correctTextRaw = q.correctAnswer ?? q.correct_answer ?? q.answerText ?? q.correctText ?? q.correct_text;
+
+    // 원시 옵션 목록 및 텍스트 도출 함수
+    const rawOptions = Array.isArray(q.options) ? q.options : [];
+
+    // 인덱스/레터/텍스트 기반 정답 인덱스 도출
+    let derivedCorrectIdx = -1;
+    if (Number.isFinite(Number(correctIdxRaw))) {
+      const n = typeof correctIdxRaw === 'string' ? parseInt(correctIdxRaw, 10) : correctIdxRaw;
+      if (Number.isFinite(n)) {
+        if (n >= 1 && n <= rawOptions.length) derivedCorrectIdx = n - 1;
+        else if (n >= 0 && n < rawOptions.length) derivedCorrectIdx = n;
       }
-      // options의 isCorrect가 1개만 true가 되도록 보정
-      let options = Array.isArray(q.options) ? q.options.map((o, oi) => ({
-        id: o.id || o.optionId || (oi + 1),
-        label: o.label || ['A','B','C','D','E','F'][oi] || null,
-        text: o.content_md || o.contentMd || o.content || o.text || o.label || '',
-        isCorrect: !!(o.isCorrect || o.is_correct),
-      })) : [];
-      // isCorrect가 여러 개이거나 0개면 첫 번째만 true로 보정
-      if (options.length) {
-        const correctCount = options.filter(o => o.isCorrect).length;
-        if (correctCount !== 1) {
-          options = options.map((o, oi) => ({ ...o, isCorrect: oi === 0 }));
+    }
+    if (derivedCorrectIdx < 0 && typeof correctLetterRaw === 'string' && /^[A-Za-z]$/.test(correctLetterRaw.trim())) {
+      const idx = correctLetterRaw.trim().toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+      if (idx >= 0 && idx < rawOptions.length) derivedCorrectIdx = idx;
+    }
+    if (derivedCorrectIdx < 0 && typeof correctTextRaw === 'string' && correctTextRaw.trim()) {
+      const target = correctTextRaw.trim();
+      const idx = rawOptions.findIndex((o) => (o?.text ?? o?.contentMd ?? o?.content ?? o?.content_md ?? '').trim() === target);
+      if (idx >= 0) derivedCorrectIdx = idx;
+    }
+
+    const options = rawOptions.map((o, idx) => {
+      const oidRaw = o.id ?? o.optionId ?? o.option_id;
+      const oidNum = Number(oidRaw);
+      // id 폴백: 원본 id가 없으면 1-based 인덱스를 id로 부여 (로컬 채점/기록 보강)
+      const oid = Number.isFinite(oidNum) ? oidNum : (oidRaw != null ? String(oidRaw) : (idx + 1));
+      const contentMd = o.contentMd ?? o.text ?? o.content ?? o.content_md;
+
+      // ✅ 우선순위: isCorrect 필드군 → 없으면 correctOptionId 비교 → 최종 false
+      let isCorrect;
+      if (typeof o.isCorrect === 'boolean') {
+        isCorrect = o.isCorrect;
+      } else if (o.correct === true || o.is_answer === true) {
+        isCorrect = true;
+      } else if (correctIdRaw != null) {
+        const a = String(oidRaw);
+        const b = String(correctIdRaw);
+        isCorrect = a === b;
+      } else if (typeof correctTextRaw === 'string' && correctTextRaw.trim()) {
+        const norm = (t) => (typeof t === 'string' ? t.trim() : '');
+        const cand = norm(contentMd);
+        const target = norm(correctTextRaw);
+        isCorrect = cand && target && cand === target;
+      } else if (derivedCorrectIdx >= 0) {
+        isCorrect = idx === derivedCorrectIdx;
+      } else {
+        isCorrect = false;
+      }
+
+      return { id: oid, label: o.label, text: o.text ?? contentMd, contentMd, isCorrect };
+    });
+
+    // 보조: 정답 인덱스/레터를 통해 correctOptionId 추론
+    let effectiveCorrectId = correctIdRaw;
+    if (effectiveCorrectId == null && Array.isArray(q.options) && q.options.length) {
+      const n = typeof correctIdxRaw === 'string' ? parseInt(correctIdxRaw, 10) : correctIdxRaw;
+      if (Number.isFinite(n)) {
+        // 1-based 우선 처리 후 0-based 처리
+        if (n >= 1 && n <= q.options.length) effectiveCorrectId = q.options[n - 1]?.id ?? q.options[n - 1]?.optionId ?? q.options[n - 1]?.option_id;
+        else if (n >= 0 && n < q.options.length) effectiveCorrectId = q.options[n]?.id ?? q.options[n]?.optionId ?? q.options[n]?.option_id;
+      }
+      if (effectiveCorrectId == null && typeof correctLetterRaw === 'string' && /^[A-Za-z]$/.test(correctLetterRaw.trim())) {
+        const idx = correctLetterRaw.trim().toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+        if (idx >= 0 && idx < q.options.length) {
+          effectiveCorrectId = q.options[idx]?.id ?? q.options[idx]?.optionId ?? q.options[idx]?.option_id;
         }
       }
-      return {
-        id: q.id ?? i + 1,
-        type,
-        question: q.stem_md || q.stemMd || q.stem || q.question || '',
-        stemMd: q.stem_md || q.stemMd || q.stem || q.question || '',
+      // 보조: 텍스트/인덱스 일치 기반 정답 id 추론
+      if (effectiveCorrectId == null) {
+        let idxByText = -1;
+        if (typeof correctTextRaw === 'string' && correctTextRaw.trim()) {
+          const target = correctTextRaw.trim();
+          idxByText = options.findIndex(o => (o?.text ?? o?.contentMd ?? '').trim() === target);
+        }
+        const idx = derivedCorrectIdx >= 0 ? derivedCorrectIdx : idxByText;
+        if (idx >= 0 && idx < options.length) {
+          effectiveCorrectId = options[idx]?.id;
+        }
+      }
+    }
 
-        // 기사형 필드
-        articleId: q.articleId || q.article_id || null,
-        articleTitleMd: art?.title_md || art?.titleMd || art?.title || null,
-        articleBodyMd: art?.body_md || art?.bodyMd || art?.body || null,
-        image: art?.image_url || art?.imageUrl || q.image_url || q.imageUrl || null,
+    try {
+      const qidLog = q.id ?? q.questionId ?? q.question_id ?? i;
+      const qType = (q.type || '').toString();
+      const hasImg = !!(q?.image || q?.imageUrl || q?.articleImageUrl || q?.article?.imageUrl);
+      console.log('[normalize] question', { qid: qidLog, type: qType, articleId, hasImg });
+    } catch (_) {}
 
-        // 스토리형(Story) 필드 매핑
-        storyTitleMd: q.story_title_md || q.storyTitleMd || q.storyTitle || null,
-        storyBodyMd: q.story_body_md || q.storyBodyMd || q.story || null,
+    const normalized = {
+      id: Number(q.id ?? q.questionId ?? q.question_id) || i,
+      // Preserve original question_id/code string (e.g., "QST_04") for local mapping
+      questionIdRaw: (q.questionId ?? q.question_id ?? q.code ?? q.questionCode ?? q.question_code ?? q.id) != null
+        ? String(q.questionId ?? q.question_id ?? q.code ?? q.questionCode ?? q.question_code ?? q.id)
+        : undefined,
+      sortOrder: Number(q.sortOrder ?? q.order ?? q.sort_order ?? i),
+      type: q.type || q.questionType || q.kind || undefined,
+      stemMd: q.stemMd || q.stem_md || q.questionText || q.question_text || q.prompt || q.title || q.text,
+      options,
+      // 정답 ID는 원본 타입 보존(문자/숫자) + 인덱스/레터 기반 추론값 포함
+      correctOptionId: effectiveCorrectId ?? undefined,
+      // story/article
+    storyId: Number.isFinite(storyId) ? storyId : undefined,
+  storyTitleMd: q.storyTitleMd || q.storyTitle || q.story_title,
+  storyBodyMd: q.storyBodyMd || q.storyBody || q.story_body,
+  articleId: articleId,
+      articleTitleMd: q.articleTitleMd || q.articleTitle || q.article?.title,
+      articleBodyMd: q.articleBodyMd || q.articleBody || q.article?.body,
+      image: (
+        q.image || q.imageUrl || q.imageURL || q.articleImage || q.articleImageUrl || q.article_image_url ||
+        q.article?.imageUrl || q.article?.image_url || q.article?.thumbnail || q.article?.coverImage
+      ),
+      imageUrl: (q.imageUrl || q.articleImageUrl || q.article_image_url || q.article?.imageUrl) ?? undefined,
+      articleImageUrl: (q.articleImageUrl || q.imageUrl || q.article_image_url || q.article?.imageUrl) ?? undefined,
+      article: articleFromQ,
+      articleSource: q.articleSource || q.article?.sourceNote || q.article?.source || undefined,
+      // learning/hints/explanations
+      hintMd: q.hintMd || q.hint_md || q.hint,
+      answerExplanationMd: q.answerExplanationMd || q.explanationMd || q.explanation || q.answer_explanation_md,
+      solvingKeypointsMd: q.solvingKeypointsMd || q.keypointsMd || q.keyPointsMd || q.key_points_md,
+      teachingExplainerMd: q.teachingExplainerMd || q.explainerMd || q.explainer_md,
+      // keyPoint metadata (optional)
+      keyPointId: Number(q.keyPointId ?? q.key_point_id),
+      keyPointTitle: kMap[Number(q.keyPointId ?? q.key_point_id)]?.title,
+      keyPointBody: kMap[Number(q.keyPointId ?? q.key_point_id)]?.body,
+      // 🔎 원본 문항 메타데이터 보존: 섹터/서브주제/레벨 (ARTICLE 코드 계산용)
+      mainSectorId: q.mainSectorId ?? q.categoryId ?? q.mainCategoryId,
+      categoryId: q.categoryId,
+      mainCategoryId: q.mainCategoryId,
+      subsectorId: q.subsectorId ?? q.subsector_id ?? q.topicId ?? q.subCategoryId,
+      topicId: q.topicId,
+      subCategoryId: q.subCategoryId,
+      levelId: q.levelId ?? q.level_id ?? q.levelNumber ?? q.stage,
+      levelNumber: q.levelNumber ?? q.level_number ?? q.levelNo ?? q.level_no ?? q.stage,
+    };
 
-        // 학습/힌트/핵심/해설 (README 스키마 반영)
-        teachingExplainerMd: q.teaching_explainer_md || q.teachingExplainerMd || q.learning_md || q.learningMd || null,
-        solvingKeypointsMd: q.solving_keypoints_md || q.solvingKeypointsMd || q.keypoints_md || q.keypointsMd || null,
-        answerExplanationMd: q.answer_explanation_md || q.answerExplanationMd || q.explanation_md || q.explanationMd || null,
-        hintMd: q.hint_md || q.hintMd || q.hint || null,
+    // 디버그: 각 문제의 정답 요약 로그 (필요 시 주석처리 가능)
+    try {
+      const optSummary = (normalized.options || []).map(o => ({ id: o.id, label: o.label, isCorrect: o.isCorrect }));
+      console.log('[정규화 정답 체크]', { qid: normalized.id, correctOptionId: normalized.correctOptionId, options: optSummary });
+    } catch (_) {}
 
-        // 선택지
-        options,
-      };
-    }),
+    return normalized;
+  });
+
+  return {
+    id: Number(raw.id ?? raw.quizId ?? raw.quiz_id) || null,
+    questions: normalizedQuestions,
   };
 }
 
 
-export const getQuestions = async ({ topicId, subTopicId, levelId, userId }) => {
-  // 필수값 체크
-  if (!topicId || !subTopicId || !levelId) {
-    console.error('[getQuestions] 필수값 누락:', { topicId, subTopicId, levelId });
-    return { questions: [], totalCount: 0, quizId: null, error: '주제/세부주제/레벨을 모두 선택해 주세요.' };
+// 퀴즈 단건 상세 조회: quizId로 직접 호출 (백엔드가 기사 포함해 내려줌)
+export const getQuizById = async (quizId, userId) => {
+  const uid = withUserId(userId);
+  const id = Number(quizId);
+  if (!Number.isFinite(id)) {
+    return { questions: [], totalCount: 0, quizId: null, error: '유효하지 않은 quizId' };
   }
-  try {
-    const uid = withUserId(userId);
-    // levelId는 라벨/숫자/PK 모두 지원: resolveLevelEntityId로 robust하게 해석
-    const resolvedLevelId = await resolveLevelEntityId({ subTopicId, level: levelId });
-    if (!resolvedLevelId) {
-      console.error('[getQuestions] levelId 해석 실패:', { subTopicId, levelId });
-      return { questions: [], totalCount: 0, quizId: null, error: '레벨 정보가 올바르지 않습니다.' };
-    }
-  console.log('[getQuestions] level 해석', { inputLevel: levelId, subTopicId, resolvedLevelId });
-  // 1) 레벨의 퀴즈 목록
-    const meta = await http(`/levels/${resolvedLevelId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
-    const quizCandidates = [
-      ...(Array.isArray(meta?.quizzes) ? meta.quizzes : []),
-      ...(Array.isArray(meta?.content) ? meta.content : []),
-      ...(Array.isArray(meta?.data) ? meta.data : []),
-      ...(Array.isArray(meta?.items) ? meta.items : []),
-      ...(Array.isArray(meta?.results) ? meta.results : []),
-      ...(Array.isArray(meta) ? meta : []),
-    ];
-    let quizList = quizCandidates.filter(Boolean);
-    // 일부 백엔드는 레벨 시작 이후에만 퀴즈가 생성됨 → start 호출 후 재시도
-    if (!quizList.length) {
-      try {
-        await http(`/levels/${resolvedLevelId}/start`, {
-          method: 'POST',
-          body: JSON.stringify(uid ? { userId: uid } : {}),
-        });
-      } catch (e) { console.warn('[getQuestions] start 호출 실패:', e); }
-      try {
-        const meta2 = await http(`/levels/${resolvedLevelId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
-        quizList = Array.isArray(meta2?.quizzes) ? meta2.quizzes : (Array.isArray(meta2) ? meta2 : []);
-      } catch (e) { console.warn('[getQuestions] 두번째 퀴즈 fetch 실패:', e); }
-    }
-    if (!quizList.length) {
-      console.error('[getQuestions] 퀴즈 없음:', { topicId, subTopicId, levelId, resolvedLevelId });
-      return { questions: [], totalCount: 0, quizId: null, error: '해당 조합에 퀴즈가 없습니다.' };
-    }
-    // 여러 퀴즈가 있을 경우, 첫 번째 퀴즈의 모든 문제를 순서대로 반환 (임의 가공 금지)
-    const firstQuiz = quizList[0];
-    const qid = firstQuiz.id || firstQuiz.quizId;
-    if (!qid) {
-      console.error('[getQuestions] quizId 없음:', firstQuiz);
-      return { questions: [], totalCount: 0, quizId: null, error: '퀴즈 ID가 올바르지 않습니다.' };
-    }
+  const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
+  const tryPaths = [
+    `/quizzes/${id}${qs}`,
+    `/quiz/${id}${qs}`,
+    `/quizzes/detail/${id}${qs}`,
+    `/quizzes?id=${encodeURIComponent(id)}${uid ? `&userId=${encodeURIComponent(uid)}` : ''}`,
+  ];
+  for (const p of tryPaths) {
     try {
-      const detail = await http(`/quizzes/${qid}${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
-      const norm = normalizeQuizPayload(detail) || { questions: [] };
-      const all = Array.isArray(norm.questions) ? norm.questions : [];
-      let questions = all.slice(0, 4);
-      if (questions.length !== 4) {
-        console.warn(`[getQuestions] 문제 개수 비정상: ${questions.length}개 (quizId: ${qid}, levelId: ${resolvedLevelId})`, questions);
+      console.log('[getQuizById] 요청 경로:', p);
+      const response = await http(p);
+      console.log('[getQuizById] Response:', response);
+      if (response && typeof response === 'object') {
+        const norm = normalizeQuizPayload(response);
+        let questions = Array.isArray(norm?.questions) ? norm.questions.slice(0, 4) : [];
+
+        // 🎯 ARTICLE_STATIC_MAP 자동 매핑 (문항별 계산: (대주제ID)(서브주제ID)(레벨ID))
+        try {
+          const normTo13 = (v) => {
+            if (v == null) return undefined;
+            const s = String(v).trim().toLowerCase();
+            if (/고|상급|고급자|advanced|hard/.test(s)) return 3;
+            if (/중|intermediate|medium/.test(s)) return 2;
+            if (/초|입문|beginner|easy/.test(s)) return 1;
+            const n = Number(s);
+            if (Number.isFinite(n) && n >= 1 && n <= 3) return n;
+            return undefined;
+          };
+          const num = (v) => {
+            const n = Number(v);
+            return Number.isFinite(n) ? n : undefined;
+          };
+          // quizId → articleCode 매핑 테이블 (getQuestions와 동일하게 유지)
+          const quizToArticleMap = {
+            1: '1_1_1', 2: '1_1_2', 3: '1_1_3',
+            4: '1_2_1', 5: '1_2_2', 6: '1_2_3',
+            7: '1_3_1', 8: '1_3_2', 9: '1_3_3',
+            10: '1_4_1', 11: '1_4_2', 12: '1_4_3',
+            13: '2_1_1', 14: '2_1_2', 15: '2_1_3',
+            16: '3_1_1', 17: '3_1_2', 18: '3_1_3',
+            19: '4_1_1', 20: '4_1_2', 21: '4_1_3',
+          };
+          questions = questions.map((q, idx) => {
+            if (String(q?.type || '').toLowerCase() === 'article') {
+              // 우선 quizId 기반 articleCode 매핑
+              let articleCode = quizToArticleMap[quizId];
+              // quizId가 매핑되지 않으면 기존 방식 fallback
+              if (!articleCode) {
+                let mainId = num(q.mainSectorId) ?? num(q.categoryId) ?? num(q.mainCategoryId);
+                if (!mainId) mainId = num(response?.mainSectorId) ?? num(response?.categoryId) ?? num(response?.sectorId) ?? num(response?.sector?.id) ?? 1;
+                let subId = num(q.subsectorId) ?? num(q.topicId) ?? num(q.subCategoryId);
+                if (!subId) subId = num(response?.subsectorId) ?? num(response?.subTopicId) ?? num(response?.topicId) ?? num(response?.subsector?.id) ?? num(response?.topic?.id) ?? 1;
+                let level = (
+                  normTo13(q.levelNumber) ?? normTo13(q.level_number) ?? normTo13(q.levelNo) ?? normTo13(q.level_no) ??
+                  normTo13(q.level) ?? normTo13(q.levelId) ?? normTo13(q.stage) ?? normTo13(q.difficulty) ?? normTo13(q.rank) ??
+                  normTo13(q.levelName) ?? normTo13(q.level_label) ?? normTo13(q.difficultyLabel) ??
+                  normTo13(response?.levelNumber) ?? normTo13(response?.level?.levelNumber) ?? normTo13(response?.level?.number)
+                );
+                if (!level) level = (idx % 3) + 1;
+                articleCode = `${mainId}_${subId}_${level}`;
+              }
+
+              try {
+                console.log('[ARTICLE_CODE 계산]', {
+                  qid: q.id,
+                  quizId,
+                  idx,
+                  articleCode,
+                });
+              } catch (_) {}
+
+              const staticArticle = ARTICLE_STATIC_MAP[articleCode];
+              if (staticArticle) {
+                const img = q.image || q.imageUrl || q.articleImageUrl || staticArticle.imageUrl;
+                q = {
+                  ...q,
+                  article: { id: articleCode, code: articleCode, articleCode, ...staticArticle },
+                  articleId: q.articleId ?? articleCode,
+                  articleCode: q.articleCode ?? articleCode,
+                  image: img,
+                  imageUrl: staticArticle.imageUrl ?? img,
+                  articleImageUrl: staticArticle.imageUrl ?? img,
+                  articleTitleMd: staticArticle.title ?? q.articleTitleMd,
+                };
+                try {
+                  console.log(`[ARTICLE 매핑 성공] id=${articleCode}`, { title: q.articleTitleMd, image: q.articleImageUrl });
+                } catch (_) {}
+              } else {
+                try { console.warn(`[ARTICLE_MAP 누락] articleCode=${articleCode}`); } catch (_) {}
+              }
+            }
+            return q;
+          });
+        } catch (_) {}
+
+        // ✅ 기사/스토리 데이터 보강: article type은 article 테이블에서 직접 조회해 병합
+        try {
+          // 병렬로 각 문항에 대해 필요한 기사 조회 수행
+          const enriched = await Promise.all(
+            questions.map(async (q) => {
+              // article 타입이 아니면 그대로 반환
+              const qType = String(q?.type || '').toLowerCase();
+              if (qType !== 'article') return q;
+
+              const existingArticle = q?.article && typeof q.article === 'object' ? q.article : {};
+              const hasEssential = !!(q?.articleTitleMd || q?.articleBodyMd || existingArticle?.title || existingArticle?.body);
+
+              // 충분한 정보가 이미 있으면 패스하되 이미지만 보강 시도
+              if (hasEssential && (q?.image || q?.imageUrl || q?.articleImageUrl || existingArticle?.imageUrl)) {
+                return q;
+              }
+
+              const aIdRaw = q?.articleId ?? q?.article_id ?? existingArticle?.id ?? existingArticle?.articleId ?? existingArticle?.article_id;
+              const aCode = existingArticle?.code ?? existingArticle?.articleCode;
+              const aSlug = existingArticle?.slug ?? existingArticle?.articleSlug;
+              const aPath = existingArticle?.path ?? existingArticle?.articlePath;
+
+              let fetched = null;
+              try {
+                fetched = await fetchArticleByRef({ id: aIdRaw, code: aCode, slug: aSlug, path: aPath });
+              } catch (e) {
+                console.warn('[getQuizById] fetchArticleByRef 실패:', e?.message || e);
+              }
+
+              // static map 보강 (id가 1_1_1 같은 문자열일 수 있음)
+              if (!fetched) {
+                const aidKey = String(aIdRaw ?? '').trim();
+                if (aidKey && ARTICLE_STATIC_MAP[aidKey]) {
+                  fetched = { id: aidKey, ...ARTICLE_STATIC_MAP[aidKey] };
+                }
+              }
+
+              if (!fetched) return q;
+
+              const fetchedImage = fetched.imageUrl ?? fetched.image ?? fetched.image_url ?? fetched.thumbnail ?? fetched.coverImage;
+              const mergedArticle = {
+                ...(fetched || {}),
+                ...(existingArticle || {}),
+                id: existingArticle.id ?? fetched.id ?? aIdRaw,
+                imageUrl: existingArticle.imageUrl ?? fetchedImage,
+              };
+
+              const finalImage = q.image || q.imageUrl || q.articleImageUrl || mergedArticle.imageUrl || fetchedImage;
+
+              return {
+                ...q,
+                article: mergedArticle,
+                articleId: mergedArticle.id ?? q.articleId ?? q.article_id,
+                articleTitleMd: q.articleTitleMd ?? mergedArticle.title ?? fetched.title ?? fetched.titleMd ?? fetched.title_md,
+                articleBodyMd: q.articleBodyMd ?? mergedArticle.body ?? fetched.body ?? fetched.bodyMd ?? fetched.body_md,
+                image: finalImage,
+                imageUrl: q.imageUrl ?? mergedArticle.imageUrl ?? finalImage,
+                articleImageUrl: q.articleImageUrl ?? mergedArticle.imageUrl ?? finalImage,
+                articleSource: q.articleSource ?? mergedArticle.sourceNote ?? mergedArticle.source ?? fetched.sourceNote ?? fetched.source,
+              };
+            })
+          );
+
+          questions = enriched;
+        } catch (_) {}
+
+        console.log(
+          `[getQuizById] quizId=${id}, 기사 포함 여부:`,
+          questions.map((q) => ({ id: q.id, type: q.type, hasArticle: !!q.article, hasImg: !!(q.image || q.imageUrl || q.articleImageUrl || q?.article?.imageUrl) }))
+        );
+        return { questions, totalCount: questions.length, quizId: id };
       }
-      // STORY/ARTICLE 위치 강제: 3번째 STORY, 4번째 ARTICLE
-      const idxStory = questions.findIndex(q => q.type === 'STORY');
-      const idxArticle = questions.findIndex(q => q.type === 'ARTICLE');
-      // 3번째 STORY
-      if (idxStory !== -1 && idxStory !== 2 && questions[2]) {
-        const temp = questions[2];
-        questions[2] = questions[idxStory];
-        questions[idxStory] = temp;
-      }
-      // 4번째 ARTICLE
-      if (idxArticle !== -1 && idxArticle !== 3 && questions[3]) {
-        const temp = questions[3];
-        questions[3] = questions[idxArticle];
-        questions[idxArticle] = temp;
-      }
-      console.debug('[getQuestions] 반환 문제(quizId별 4개, 위치정렬):', questions);
-      return { questions, totalCount: questions.length, quizId: qid };
-    } catch (e) {
-      console.error('[getQuestions] 퀴즈 상세 fetch 실패:', e);
-      return { questions: [], totalCount: 0, quizId: qid, error: '퀴즈 상세 정보를 불러올 수 없습니다.' };
+    } catch (error) {
+      console.error('[getQuizById] Error:', error);
     }
-  } catch (e) {
-    console.error('getQuestions API 호출 실패:', e.message);
-    return { questions: [], totalCount: 0, quizId: null, error: e.message };
   }
+  return { questions: [], totalCount: 0, quizId: id, error: '퀴즈 상세를 불러오지 못했습니다.' };
 };
 
-// getLevelMeta / getKeyPoints 제거 → 퀴즈 상세 응답에 포함된 필드 직접 사용
+export const getQuestions = async ({ quizId, userId, topicId, subTopicId, levelId }) => {
+  // quizId가 주어지면 quizId를 3자리 article_id(1_1_1 등)로 변환해서 기사 fetch
+  if (quizId) {
+    // ✅ quizId → article_id 직접 매핑
+    const quizToArticleMap = {
+      1: '1_1_1', // 금융권1
+      2: '1_1_2', // 금융권2
+      3: '1_1_3', // 금융권3
+      4: '1_2_1', // 예금/적금1
+      5: '1_2_2', // 예금/적금2
+      6: '1_2_3', // 예금/적금3
+      7: '1_3_1', // 계좌1
+      8: '1_3_2', // 계좌2
+      9: '1_3_3', // 계좌3
+      10: '1_4_1', // 대출1
+      11: '1_4_2', // 대출2
+      12: '1_4_3', // 대출3
+      13: '2_1_1', // 카드1
+      14: '2_1_2', // 카드2
+      15: '2_1_3', // 카드3
+      16: '3_1_1', // 투자1
+      17: '3_1_2', // 투자2
+      18: '3_1_3', // 투자3
+      19: '4_1_1', // 세금1
+      20: '4_1_2', // 세금2
+      21: '4_1_3', // 세금3
+    };
 
-// Subsector -> Levels 목록 조회 (예상 엔드포인트 구조)
-// ✅ levelId 자동 보정 + subsector별 레벨 구조 보강 버전
+    const article_id = quizToArticleMap[quizId] || '1_1_1';
+    console.log('[ARTICLE_ID 매핑]', { quizId, article_id });
+
+    // ✅ 퀴즈 데이터 호출
+    const quizDetail = await getQuizById(quizId, userId);
+
+    // ✅ 기사 데이터 호출 (API 경로 보정: http() 유틸 사용)
+    let articleData = null;
+    try {
+      articleData = await http(`/articles/${article_id}`);
+    } catch (err) {
+      console.warn('[ARTICLE 매핑 오류]', err);
+    }
+
+    // ✅ ARTICLE 문제 병합
+    let questions = Array.isArray(quizDetail?.questions)
+      ? quizDetail.questions.map((q) => {
+          if (String(q.type).toLowerCase() !== 'article') return q;
+          if (!articleData) return q;
+          return {
+            ...q,
+            articleId: article_id,
+            article: articleData,
+            imageUrl: articleData.imageUrl,
+            articleTitleMd: articleData.title,
+            articleBodyMd: articleData.body,
+            articleImageUrl: articleData.imageUrl,
+          };
+        })
+      : [];
+
+    return { questions, totalCount: questions.length, quizId };
+  }
+
+  return { questions: [], totalCount: 0, quizId: null, error: 'quizId is required' };
+};
 // =========================================================
 export const getLevelsBySubsector = async (subsectorId) => {
   if (!subsectorId) return [];
@@ -639,6 +1055,32 @@ export const getLevelsBySubsector = async (subsectorId) => {
   }
 };
 
+// Helper: Derive quizId from selection with one lightweight call
+export const getQuizIdForSelection = async ({ subTopicId, levelId, userId }) => {
+  if (!subTopicId || !levelId) return null;
+  const uid = withUserId(userId);
+  try {
+    // 레벨 번호(1/2/3)를 subsector별 레벨 엔티티 PK로 변환
+    const resolvedLevelEntityId = await resolveLevelEntityId({ subTopicId, level: levelId });
+    if (!resolvedLevelEntityId) return null;
+    const list = await http(`/levels/${resolvedLevelEntityId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
+    const arr = Array.isArray(list?.quizzes) ? list.quizzes : (Array.isArray(list) ? list : []);
+    if (!arr.length) return null;
+    const toNum = (v) => (v == null ? undefined : Number(v));
+    const matched = arr.find((qz) => {
+      const ss = toNum(qz.subsectorId ?? qz.subsector_id ?? qz.subsector?.id ?? qz.subTopicId ?? qz.topicId);
+      return Number(ss) === Number(subTopicId);
+    });
+    const chosen = matched || arr[0];
+    const qid = chosen?.id ?? chosen?.quizId ?? chosen?.quiz_id ?? chosen?.quiz?.id ?? chosen?.quiz?.quizId;
+    const finalQid = Number.isFinite(Number(qid)) ? Number(qid) : null;
+    try { console.log('[getQuizIdForSelection]', { subTopicId, inputLevel: levelId, resolvedLevelEntityId, quizId: finalQid }); } catch (_) {}
+    return finalQid;
+  } catch (_) {
+    return null;
+  }
+};
+
 // =========================================================
 // 레벨 ID 해석기 (엔티티 PK → levelNumber 자동 변환)
 // =========================================================
@@ -677,32 +1119,114 @@ export const resolveLevelEntityId = async ({ subTopicId, level }) => {
 
 // 답안 제출 (userId/token 항상 포함)
 export const submitAnswer = async ({ quizId, questionId, selectedOptionId, userId, token }) => {
-  // userId/token 보정
-  const uid = userId ?? localStorage.getItem('userId') ?? undefined;
+  if (!quizId || !questionId || !selectedOptionId) {
+    throw new Error('Missing required fields: quizId, questionId, or selectedOptionId');
+  }
+
+  let uid = userId ?? localStorage.getItem('userId') ?? undefined;
   const jwt = token ?? localStorage.getItem('accessToken') ?? undefined;
-  const payload = { quizId, questionId, selectedOptionId };
-  if (uid) payload.userId = uid;
-  // Content-Type 항상 명시
+
+  // userId가 없으면 게스트 로그인 시도
+  if (!uid) {
+    console.warn('[submitAnswer] userId not found. Attempting guest login...');
+    try {
+      const guest = await guestLogin(API_BASE);
+      if (guest?.userId) {
+        uid = guest.userId;
+        localStorage.setItem('userId', uid);
+        console.log('[submitAnswer] Guest login successful. userId:', uid);
+      } else {
+        throw new Error('Guest login did not return a valid userId.');
+      }
+    } catch (error) {
+      console.error('[submitAnswer] Guest login failed:', error);
+      throw new Error('Unable to authenticate user. Please try again.');
+    }
+  }
+
+  const payload = {
+    quizId, // 일부 백엔드에서 필요
+    questionId,
+    selectedOptionId,
+    // 호환 별칭
+    optionId: selectedOptionId,
+    answerId: selectedOptionId,
+    userId: uid,
+  };
+
   const headers = {
     'Content-Type': 'application/json',
     ...(jwt ? { Authorization: `Bearer ${jwt}` } : {})
   };
-  return await http('/quizzes/submit-answer', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-    headers,
-  }, jwt);
-};
 
-// 퀴즈 완료 (사양: POST /api/quizzes/{id}/complete)
-export const completeQuiz = async (quizId) => {
-  return await http(`/quizzes/${quizId}/complete`, { method: 'POST' });
-};
+  console.log('[submitAnswer] Sending payload:', payload);
 
-// 폴백 함수들 (하위 호환성) - 더미 데이터 사용
-export const getTopics = async () => {
-  // 현재 백엔드 스펙에 /topics는 없음 → 빈 배열 반환
-  return [];
+  try {
+    const response = await http('/quizzes/submit-answer', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers,
+    }, jwt);
+
+    console.log('[submitAnswer] Raw response:', response);
+
+    // 응답 데이터 처리 및 정규화
+    const rawIsCorrect = (
+      response?.isCorrect ??
+      response?.is_correct ??
+      response?.correct ??
+      response?.result ??
+      response?.status
+    );
+
+    let isCorrect = null;
+    if (typeof rawIsCorrect === 'boolean') {
+      isCorrect = rawIsCorrect;
+    } else if (typeof rawIsCorrect === 'number') {
+      isCorrect = rawIsCorrect === 1;
+    } else if (typeof rawIsCorrect === 'string') {
+      const s = rawIsCorrect.trim().toLowerCase();
+      if (s === 'true' || s === 'y' || s === 'yes' || s === '1') isCorrect = true;
+      else if (s === 'false' || s === 'n' || s === 'no' || s === '0') isCorrect = false;
+    }
+
+    const correctOptionId = (
+      response?.correctOptionId ??
+      response?.correct_option_id ??
+      response?.correctId ??
+      response?.answerId ??
+      null
+    );
+    const feedback = (
+      response?.feedback ??
+      response?.explanation ??
+      response?.message ??
+      null
+    );
+
+    console.log('[submitAnswer] Normalized:', { isCorrect, correctOptionId, feedback });
+    return { isCorrect, correctOptionId, feedback };
+  } catch (error) {
+    console.error('[submitAnswer] Request failed:', error);
+
+    // 400 에러 처리: userId가 유효하지 않을 경우 로컬 스토리지 초기화
+    if (error.message.includes('User not found')) {
+      console.warn('[submitAnswer] Invalid userId detected. Clearing localStorage and retrying guest login.');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('accessToken');
+      try {
+        const guest = await guestLogin(API_BASE);
+        if (guest?.userId) {
+          localStorage.setItem('userId', guest.userId);
+          console.log('[submitAnswer] Retried guest login successful. userId:', guest.userId);
+        }
+      } catch (guestError) {
+        console.error('[submitAnswer] Retried guest login failed:', guestError);
+      }
+    }
+
+    throw error;
+  }
 };
 
 export const getLevels = async () => {

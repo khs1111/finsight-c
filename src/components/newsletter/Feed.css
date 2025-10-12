@@ -1,0 +1,58 @@
+.nl-page-outer { width: 100%; display: flex; justify-content: center; background: #F4F6FA; min-height: 100vh; padding-bottom: 120px; }
+.nl-canvas { position: relative; width: 412px; max-width: 100%; background: #F4F6FA; min-height: 917px; font-family: Roboto, sans-serif; }
+
+/* Top bar */
+.nl-top-bar { position: absolute; top: 64px; left: 16px; width: 380px; height: 24px; display: flex; align-items: center; justify-content: space-between; z-index: 10; }
+.nl-search-icon { width: 24px; height: 24px; border-radius: 4px; border: 1px solid #474747; background: #fff; position: relative; }
+
+/* Tabs */
+.nl-tabs { position: absolute; top: 108px; left: 16px; width: 380px; height: 38px; display: flex; gap: 16px; z-index: 10; }
+.nl-tab-col { flex: 1; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+.nl-tab-label { font-size: 20px; font-weight: 400; color: #9B9B9B; line-height: 34px; letter-spacing: -0.04em; }
+.nl-tab-label.active { font-weight: 700; color: #1B1B1B; }
+.nl-underline { width: 100%; height: 2px; background: transparent; }
+.nl-underline.active { background: #1B1B1B; }
+
+/* Banner HOT */
+.nl-banner-box { position: absolute; top: 162px; left: 16px; width: 380px; height: 80px; background: #B8D4FF; border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; box-sizing: border-box; }
+.nl-banner-inner { display: flex; flex-direction: row; align-items: center; gap: 20px; }
+.nl-banner-img { width: 60px; height: 60px; background: #D9D9D9; border-radius: 8px; }
+.nl-banner-text-col { display: flex; flex-direction: column; gap: 8px; }
+.nl-banner-title { font-size: 18px; font-weight: 700; color: #10274A; letter-spacing: -0.02em; line-height: 21px; }
+.nl-banner-sub { font-size: 12px; font-weight: 400; color: #122C54; letter-spacing: -0.02em; line-height: 14px; max-width: 255px; }
+.nl-count-text { position: absolute; top: 258px; left: 16px; font-size: 14px; font-weight: 500; color: #616161; letter-spacing: -0.04em; }
+.nl-cards-col { position: absolute; top: 290px; left: 32px; width: 348px; display: flex; flex-direction: column; gap: 16px; }
+.nl-img-card { width: 348px; background: #FFFFFF; box-shadow: 0 0 8px rgba(10,26,51,0.18); border-radius: 16px; overflow: hidden; cursor: pointer; }
+.nl-article-img { display: block; width: 100%; height: auto; }
+.nl-empty { width: 348px; padding: 40px; text-align: center; color: #64748B; background: #fff; border-radius: 16px; }
+
+/* 주제별 */
+.nl-topic-divider { position: absolute; top: 144px; left: 0; width: 412px; height: 2px; background: #E6EBF2; }
+.nl-topic-flow { position: absolute; top: 146px; left: 0; width: 412px; height: 768px; display: flex; flex-direction: column; }
+.nl-topic-header { width: 412px; display: flex; flex-direction: column; align-items: flex-start; }
+.nl-topic-cat-row { width: 412px; height: 64px; display: flex; flex-direction: row; align-items: flex-start; padding: 16px; gap: 8px; box-sizing: border-box; overflow-x: auto; }
+.nl-topic-cat { display: inline-flex; align-items: center; justify-content: center; border-radius: 30px; padding: 10px 12px; height: 32px; font-size: 14px; line-height: 16px; letter-spacing: -0.03em; font-weight: 400; color: #626262; background: #EEF2F6; border: 1px solid #DFE5EE; white-space: nowrap; cursor: pointer; }
+.nl-topic-cat.active { font-weight: 700; letter-spacing: -0.04em; color: #F9F9F9; background: linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%); border: none; text-shadow: 0 0 2px rgba(0,0,0,0.25); }
+.nl-topic-banner-box { width: 412px; height: 96px; display: flex; flex-direction: column; padding: 0 16px 16px; box-sizing: border-box; }
+.nl-topic-banner-inner { width: 380px; height: 80px; background: #B8D4FF; border-radius: 8px; padding: 10px; display: flex; flex-direction: row; align-items: center; gap: 20px; box-sizing: border-box; }
+.nl-topic-banner-text-col { display: flex; flex-direction: column; gap: 8px; width: 174px; }
+.nl-topic-banner-title { font-size: 18px; font-weight: 700; color: #10274A; letter-spacing: -0.02em; line-height: 21px; }
+.nl-topic-banner-sub { font-size: 12px; font-weight: 400; color: #122C54; letter-spacing: -0.02em; line-height: 14px; width: 255px; }
+.nl-topic-count-row { width: 412px; height: 32px; padding: 0 16px 16px; display: flex; align-items: center; box-sizing: border-box; }
+.nl-topic-count-text { font-size: 14px; font-weight: 500; color: #616161; letter-spacing: -0.04em; }
+.nl-topic-cards-wrap { width: 412px; height: 576px; display: flex; flex-direction: row; justify-content: center; padding: 0 32px; box-sizing: border-box; }
+.nl-topic-cards-col { width: 348px; display: flex; flex-direction: column; gap: 16px; }
+
+/* My news */
+.nl-my-hero { position: relative; width: 412px; height: 917px; z-index: 1; }
+.nl-my-img { position: absolute; width: 120px; height: 120px; left: calc(50% - 60px); top: 280px; display: flex; align-items: center; justify-content: center; }
+.nl-my-headline { position: absolute; width: 244px; height: 24px; left: calc(50% - 122px); top: 432px; text-align: center; font-family: Roboto, sans-serif; font-weight: 700; font-size: 20px; line-height: 24px; letter-spacing: -0.02em; color: #000000; margin: 0; display: flex; align-items: center; justify-content: center; }
+.nl-my-subcopy { position: absolute; width: 256px; height: 44px; left: calc(50% - 128px); top: 476px; text-align: center; font-family: Roboto, sans-serif; font-weight: 400; font-size: 14px; line-height: 22px; letter-spacing: -0.02em; color: #4D4D4D; margin: 0; display: flex; align-items: center; justify-content: center; }
+.nl-my-cards-wrap { position: absolute; width: 380px; height: 272px; left: 16px; top: 589px; display: flex; flex-direction: column; gap: 16px; }
+.nl-my-feature-card { box-sizing: border-box; background: linear-gradient(#FFFFFF,#FFFFFF) padding-box, linear-gradient(90deg,#448FFF 0%,#4833D0 100%) border-box; border: 1px solid transparent; border-radius: 16px; padding: 11px 16px; width: 380px; height: 72px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 10px; box-shadow: 0 4px 10px -2px rgba(56,111,255,0.12); }
+.nl-my-feature-row { display: flex; flex-direction: row; align-items: center; gap: 16px; width: 100%; height: 48px; }
+.nl-my-icon-box { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
+.nl-my-text-col { display: flex; flex-direction: column; gap: 4px; width: 300px; height: 48px; }
+.nl-my-title { width: 100%; height: 22px; font-family: Roboto, sans-serif; font-weight: 700; font-size: 14px; line-height: 22px; letter-spacing: -0.02em; color: #000; display: flex; align-items: center; }
+.nl-my-desc { width: 100%; height: 22px; font-family: Roboto, sans-serif; font-weight: 400; font-size: 14px; line-height: 22px; letter-spacing: -0.02em; color: #474747; display: flex; align-items: center; word-break: keep-all; overflow-wrap: break-word; }
+.nl-my-cta { position: absolute; left: 50%; transform: translateX(-50%); top: 881px; width: 380px; max-width: 90%; height: 60px; background: linear-gradient(91.43deg,#448FFF 0%,#4833D0 100%); border-radius: 8px; border: none; color: #FFFFFF; font-family: Roboto, sans-serif; font-weight: 700; font-size: 18px; cursor: pointer; letter-spacing: -0.02em; }

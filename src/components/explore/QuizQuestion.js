@@ -40,25 +40,51 @@ export default function QuizQuestion({ current,
   onSelect,
   onCheck,
   onComplete,
-  onBack}) {
+  onBack,
+  answerResult,
+  quizCompletionArr = [] }) {
   
   // 🎓 학습 모드 관련 상태
   const [showLearning, setShowLearning] = useState(false);        // 학습 모드 표시 여부
   const [showHint, setShowHint] = useState(false);               // 힌트 표시 여부
   const [learningText, setLearningText] = useState("");          // 학습 모드 텍스트
 
+  // 간단 텍스트 정규화: '/n' -> 줄바꿈, CRLF 정규화
+  const normalizePlain = (text) => {
+    if (!text || typeof text !== 'string') return '';
+    let t = text.replace(/\s*\/n\s*/g, '\n');
+    t = t.replace(/\r\n?/g, '\n');
+    return t;
+  };
+
 
   // 📚 문제 데이터 처리
   const questionList = questions && questions.length > 0 ? questions : [];
   const question = questionList[current];
+  try { console.log('Rendering Question:', question); } catch (_) {}
   // 기사형 판별(호환): 백엔드에서 'ARTICLE' 등으로 내려오거나 정규화된 'articleImage' 모두 지원
   const isArticleType = String(question?.type || '').toLowerCase() === 'articleimage' || String(question?.type || '').toLowerCase() === 'article';
   // 스토리형 판별: 정규화된 'story' 또는 스토리 본문/제목 존재 시
   const isStoryType = String(question?.type || '').toLowerCase() === 'story' || !!(question?.storyTitleMd || question?.storyBodyMd);
   
-  // ✅ 정답 인덱스 계산 (백엔드에서 받은 isCorrect 필드 기반)
-  const correctOption = question?.options?.find(option => option.isCorrect);
-  const correctIdx = correctOption ? question.options.indexOf(correctOption) : -1;
+  // ✅ 정답 인덱스 계산 (옵션 isCorrect 우선, 없으면 correctOptionId로 폴백 - 숫자/문자 모두 허용)
+  let correctIdx = -1;
+  if (Array.isArray(question?.options)) {
+    const byFlag = question.options.findIndex(o => o && o.isCorrect === true);
+    if (byFlag >= 0) correctIdx = byFlag;
+    else if (question?.correctOptionId != null) {
+      // 1) 문자열/숫자 동일성 비교
+      const cidStr = String(question.correctOptionId);
+      const byStr = question.options.findIndex(o => String(o?.id) === cidStr);
+      if (byStr >= 0) correctIdx = byStr;
+      else if (Number.isFinite(Number(cidStr))) {
+        // 2) 최후: 숫자로도 비교
+        const cidNum = Number(cidStr);
+        const byNum = question.options.findIndex(o => Number(o?.id) === cidNum);
+        if (byNum >= 0) correctIdx = byNum;
+      }
+    }
+  }
   
   // 🎨 UI 관련 참조 및 상태
   const chalkTextRef = useRef(null);
@@ -258,7 +284,7 @@ export default function QuizQuestion({ current,
   const [imgSrc, setImgSrc] = useState(null);
 
   // NEW: 더미 이미지 비율을 미리 측정해 로딩 전에도 동일 규격 유지
-  const defaultRatioRef = useRef(9 / 16); // fallback ratio
+  const defaultRatioRef = useRef(9 / 16); // fallback ratio (dummy uses 16:9 width:height)
   const [fallbackHeight, setFallbackHeight] = useState(null);
   useEffect(() => {
     // 더미 이미지 실제 비율 측정
@@ -291,14 +317,30 @@ export default function QuizQuestion({ current,
       if (isHttp || isRel || (isRoot && !looksBroken)) list.push(s);
     };
     // 다양한 키 지원
-    pushIf(question?.image);
-    pushIf(question?.imageUrl);
-    pushIf(question?.articleImageUrl);
+  // 우선순위: 백엔드 병합 필드 우선
+  pushIf(question?.imageUrl);
+  pushIf(question?.articleImageUrl);
+  pushIf(question?.image);
     pushIf(question?.article?.image_url);
     pushIf(question?.article?.imageUrl);
-    // 마지막에 더미 이미지 폴백
-    list.push(q4ArticlePng);
-    return Array.from(new Set(list.filter(Boolean)));
+  // 마지막에 더미 이미지 폴백은 후보가 전혀 없을 때만 사용
+  if (list.length === 0) list.push(q4ArticlePng);
+    const result = Array.from(new Set(list.filter(Boolean)));
+    try {
+      console.log('[Quiz UI][Image] candidates built', {
+        questionId: question?.id ?? question?.questionId ?? question?.qid,
+        type: question?.type,
+        from: {
+          image: question?.image,
+          imageUrl: question?.imageUrl,
+          articleImageUrl: question?.articleImageUrl,
+          article_image_url: question?.article?.image_url,
+          article_imageUrl: question?.article?.imageUrl,
+        },
+        candidates: result,
+      });
+    } catch (_) {}
+    return result;
   }, [question]);
 
   const q4FallbackIndexRef = useRef(0);
@@ -318,6 +360,13 @@ export default function QuizQuestion({ current,
       const nw = e.target.naturalWidth || 0;
       const nh = e.target.naturalHeight || 0;
       naturalSizeRef.current = { w: nw, h: nh };
+      try {
+        console.log('[Quiz UI][Image] onLoad', {
+          src: e?.target?.src,
+          naturalWidth: nw,
+          naturalHeight: nh,
+        });
+      } catch (_) {}
       if (!articleImgWrapperRef.current || !nw || !nh) return;
       const wrapW = articleImgWrapperRef.current.clientWidth; 
       const scaledH = nh * (wrapW / nw);
@@ -371,7 +420,18 @@ export default function QuizQuestion({ current,
     // 기사 이미지: 후보군 순차 시도
     if (isArticleType) {
       q4FallbackIndexRef.current = 0;
-      setImgSrc(imgCandidates[0] || null);
+      // 초기에는 백엔드 후보가 있으면 그것만 세팅, 더미는 즉시 선택하지 않음
+      const first = imgCandidates[0] || null;
+      // 만약 first가 프로젝트 더미라면(null 유지) → 로딩 중 플레이스홀더 유지, onError에서만 더미로 이동
+      const isDummy = first === q4ArticlePng;
+      setImgSrc(isDummy ? null : first);
+      try {
+        console.log('[Quiz UI][Image] init for article', {
+          isArticleType,
+          firstCandidate: imgCandidates[0] || null,
+          candidates: imgCandidates,
+        });
+      } catch (_) {}
       // 플레이스홀더 높이 계산 (실제 이미지 로드 전 기본 비율로 계산)
       if (articleImgWrapperRef.current && defaultRatioRef.current) {
         const wrapW = articleImgWrapperRef.current.clientWidth;
@@ -382,17 +442,45 @@ export default function QuizQuestion({ current,
     }
   }, [current, imgCandidates, question?.type, isArticleType]);
 
+  // 보조 로그: 문제 내 기사 관련 필드 요약
+  useEffect(() => {
+    if (!question) return;
+    if (!isArticleType) return;
+    const art = question?.article;
+    const artSummary = art && typeof art === 'object'
+      ? {
+          keys: Object.keys(art || {}),
+          image_url: art?.image_url,
+          imageUrl: art?.imageUrl,
+          title: art?.title || art?.titleMd || null,
+        }
+      : null;
+    try {
+      console.log('[Quiz UI][Image] article fields summary', {
+        questionId: question?.id ?? question?.questionId ?? question?.qid,
+        isArticleType,
+        image: question?.image,
+        imageUrl: question?.imageUrl,
+        articleImageUrl: question?.articleImageUrl,
+        articleTitleMd: question?.articleTitleMd,
+        articleBodyMd: (question?.articleBodyMd || '').slice(0, 80) + (question?.articleBodyMd && question.articleBodyMd.length > 80 ? '…' : ''),
+        article: artSummary,
+      });
+    } catch (_) {}
+  }, [question, isArticleType]);
+
   // 학습하기가 열릴 때 백엔드에서 받은 퀴즈 데이터의 키포인트를 사용
   useEffect(() => {
     const q = question;
     if (!showLearning || !q) return;
     
     try {
-      // � 백엔드에서 받은 퀴즈 데이터에서 학습 내용 추출 (우선순위 순)
+      // 백엔드에서 받은 퀴즈 데이터에서 학습(칠판) 내용 추출
+      // 요구사항: teachingExplainerMd가 칠판에 들어감
       const pickLocalLearning = () => {
-        if (q.solvingKeypointsMd) return q.solvingKeypointsMd;           // 1순위: 핵심 포인트
-        if (q.teachingExplainerMd) return q.teachingExplainerMd;         // 2순위: 설명 텍스트
-        if (q.hintMd) return q.hintMd;                                   // 3순위: 힌트
+        if (q.teachingExplainerMd) return q.teachingExplainerMd;         // 1순위: 학습 설명(칠판)
+        if (q.solvingKeypointsMd) return q.solvingKeypointsMd;           // 2순위: 핵심 포인트(폴백)
+        if (q.hintMd) return q.hintMd;                                   // 3순위: 힌트(최후 폴백)
         return null;
       };
 
@@ -576,6 +664,18 @@ export default function QuizQuestion({ current,
     );
   }
 
+  console.log('Current Question:', question);
+  console.log('Rendering Question:', question);
+  if (showResult && answerResult) {
+    try {
+      console.log('[Quiz UI] Server result:', {
+        serverCorrect: answerResult.serverCorrect,
+        serverFeedback: answerResult.serverFeedback,
+        serverCorrectOptionId: answerResult.serverCorrectOptionId,
+      });
+    } catch (_) {}
+  }
+
   /**
    * 🎨 메인 컴포넌트 렌더링
    * 
@@ -593,11 +693,12 @@ export default function QuizQuestion({ current,
       style={{ paddingBottom: bottomPad }}
     >
       {/* 상단 진행도 */}
-     <ProgressHeader
-      current={current + 1}
-      total={questions?.length || 1}
-      onBack={onBack}
- />
+  <ProgressHeader
+   current={current + 1}
+   total={questions?.length || 1}
+   onBack={onBack}
+   quizCompletionArr={quizCompletionArr}
+    />
       {/* 문제 */}
       <div className="quiz-question-header">
         {(() => {
@@ -628,15 +729,10 @@ export default function QuizQuestion({ current,
           </div>
         )}
 
-        {/* 기사형 지문: 제목/본문 렌더링 (있을 때만) */}
-        {isArticleType && (question?.articleTitleMd || question?.articleBodyMd) && (
+        {/* 기사형 지문: 제목 없이 본문만 렌더링 */}
+        {isArticleType && question?.articleBodyMd && (
           <div className="quiz-question-article-text-block">
-            {question?.articleTitleMd && (
-              <div className="quiz-question-article-title">{question.articleTitleMd}</div>
-            )}
-            {question?.articleBodyMd && (
-              <div className="quiz-question-article-body">{question.articleBodyMd}</div>
-            )}
+            <div className="quiz-question-article-body">{question.articleBodyMd}</div>
           </div>
         )}
 
@@ -649,9 +745,10 @@ export default function QuizQuestion({ current,
 
         {/* 기사 이미지 타입이면 제목 아래에 이미지(또는 플레이스홀더) */}
         {isArticleType && (
-          <div className="article-image-wrap" ref={articleImgWrapperRef}>
+          <div className="article-image-wrap">
             {imgSrc && !imgError ? (
               <img
+                ref={articleImgWrapperRef}
                 src={imgSrc}
                 alt="기사 이미지"
                 onLoad={handleArticleImgLoad}
@@ -667,11 +764,13 @@ export default function QuizQuestion({ current,
                 style={{
                   width: '100%',
                   height: articleImgHeight ?? fallbackHeight ?? 'auto',
-                  display: 'block'
+                  display: 'block',
+                  margin: 0
                 }}
               />
             ) : (
               <div
+                ref={articleImgWrapperRef}
                 className="quiz-question-article-img-placeholder"
                 style={{ height: articleImgHeight ?? fallbackHeight ?? 'auto' }}
               >
@@ -694,8 +793,10 @@ export default function QuizQuestion({ current,
 
         {question?.options?.map((opt, idx) => {
           const isSelected = selected === idx;
-          const isCorrect = showResult && isSelected && idx === correctIdx;
-          const isWrong = showResult && isSelected && idx !== correctIdx;
+          // 서버 판정이 있으면 우선 적용
+          const serverSaysCorrect = showResult && isSelected && typeof answerResult?.serverCorrect === 'boolean' ? answerResult.serverCorrect : null;
+          const isCorrect = showResult && isSelected && (serverSaysCorrect === null ? idx === correctIdx : serverSaysCorrect);
+          const isWrong = showResult && isSelected && !isCorrect;
           let cardClass = "quiz-question-option-card";
           if (isCorrect) cardClass += " correct";
           else if (isWrong) cardClass += " wrong";
@@ -721,17 +822,25 @@ export default function QuizQuestion({ current,
           );
         })}
 
-        {/* 정답 해설*/}
-        {showResult && selected === correctIdx && (
+        {/* 정답/피드백 */}
+        {showResult && selected != null && (
           <div className="quiz-question-explanation">
             <div className="quiz-question-explanation-header">
-              <span className="quiz-question-explanation-label">정답</span>
-              <div className="quiz-question-explanation-badge">
-                <span className="quiz-question-explanation-badge-text">{String.fromCharCode(65 + correctIdx)}</span>
-              </div>
+              <span className="quiz-question-explanation-label">{(answerResult?.serverCorrect === false) ? '피드백' : '정답'}</span>
+              {Number.isInteger(correctIdx) && correctIdx >= 0 && (
+                <div className="quiz-question-explanation-badge">
+                  <span className="quiz-question-explanation-badge-text">{String.fromCharCode(65 + correctIdx)}</span>
+                </div>
+              )}
             </div>
             <div className="quiz-question-explanation-text">
-              {question.answerExplanationMd || question.explanation || "해설이 준비되지 않았습니다."}
+              {(typeof answerResult?.serverCorrect === 'boolean')
+                ? (answerResult.serverCorrect
+                    ? (answerResult?.serverFeedback || question.answerExplanationMd || question.explanation || "해설이 준비되지 않았습니다.")
+                    : (answerResult?.serverFeedback || ""))
+                : (selected === correctIdx
+                    ? (question.answerExplanationMd || question.explanation || "해설이 준비되지 않았습니다.")
+                    : "")}
             </div>
           </div>
         )}
@@ -752,11 +861,9 @@ export default function QuizQuestion({ current,
       {showLearning && (
         <div className="quiz-question-learning-wrap">
           <div className="quiz-question-learning-svg-wrap">
-            <div className="quiz-question-learning-svg-inner">
-              <svg width="272" height="38" viewBox="0 0 272 38" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ position:"absolute", inset:0 }}>
-                <path d="M255.04 0C259.458 0.000105391 263.04 3.58179 263.04 8V25.6475C266.305 28.6428 269.633 31.6972 271.675 33.5654C272.356 34.1885 271.898 35.3493 270.976 35.3496H260.987C259.523 36.9765 257.401 37.9999 255.04 38H8C3.58173 38 3.22139e-08 34.4183 0 30V8C0 3.58172 3.58172 8.05699e-08 8 0H255.04Z" fill="#448FFF" />
-              </svg>
-              <div className="quiz-question-learning-svg-label">이 문제는 말 그대로 용어의 정의를 묻고 있어요!</div>
+            {/* Flexible speech bubble */}
+            <div className="quiz-question-learning-svg-inner quiz-question-learning-bubble">
+              <div className="quiz-question-learning-svg-label">{normalizePlain(question?.hintMd) || '이 문제는 말 그대로 용어의 정의를 묻고 있어요!'}</div>
             </div>
             <div style={{ position:"absolute", right:0, top:-16, width:72, height:72, zIndex:5 }}> 
               <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" style={{ position:"absolute", inset:0, filter:'drop-shadow(0 2px 4px rgba(0,0,0,0.25))' }}>
@@ -811,10 +918,22 @@ export default function QuizQuestion({ current,
       <div className="quiz-question-point-card">
         <div className="quiz-question-point-title">💡 핵심 포인트</div>
         {(() => {
-          const hintContent = question?.hintMd || "힌트가 준비되지 않았습니다.";
+          // 요구사항: 핵심포인트에는 solvingKeypointsMd가 들어감
+          const hintContent = normalizePlain(
+            question?.solvingKeypointsMd || question?.keyPointsMd || question?.hintMd || "힌트가 준비되지 않았습니다."
+          );
+          const renderMdInlineBold = (text) => {
+            if (!text || typeof text !== 'string') return null;
+            const parts = text.split(/(\*\*.*?\*\*)/g);
+            return parts.map((p, i) => {
+              const m = /^\*\*(.*?)\*\*$/.exec(p);
+              if (m) return <strong key={i}>{m[1]}</strong>;
+              return <span key={i}>{p}</span>;
+            });
+          };
           return (
             <div className="quiz-question-point-content">
-              <div className="quiz-question-point-content-pre">{hintContent}</div>
+              <div className="quiz-question-point-content-pre" style={{ whiteSpace: 'pre-wrap' }}>{renderMdInlineBold(hintContent)}</div>
             </div>
           );
         })()}

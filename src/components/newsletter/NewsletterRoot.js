@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
 import './Newsletter.css';
 
+
 // 아이콘 및 데이터 import
 import finletterIcon from '../../assets/newsletter/finletter.svg'
 import newsIcon from '../../assets/newsletter/news-icon.png';
