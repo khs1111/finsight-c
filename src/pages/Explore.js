@@ -12,7 +12,7 @@ import ExploreMain from "../components/explore/ExploreMain";
 import QuizQuestion from "../components/explore/QuizQuestion";
 import CompletionScreen from "../components/explore/CompletionScreen";
 
-import {getQuestions as apiGetQuestions, postAttempt } from "../api/explore";
+import {getQuestions as apiGetQuestions, postAttempt, getQuizIdForSelection } from "../api/explore";
 import { createWrongNote } from "../api/community";
 import { addWrongNoteImmediate } from "../components/study/useWrongNoteStore";
 import CategoryNav from "../components/news/CategoryNav";
@@ -108,11 +108,8 @@ export default function Explore() {
           try {
             console.log('🎯 [LevelPicker] 퀴즈 데이터 요청:', { topicId: mainTopicId, subTopicId, levelId });
             setIsFetchingQuestions(true);
-            const result = await apiGetQuestions({
-              topicId: mainTopicId,
-              subTopicId: subTopicId,
-              levelId: levelId
-            });
+            const qid = await getQuizIdForSelection({ subTopicId, levelId });
+            const result = await apiGetQuestions({ quizId: qid, topicId: mainTopicId, subTopicId, levelId });
             console.log('📦 [LevelPicker] getQuestions 응답:', result);
             if (result && Array.isArray(result.questions) && result.questions.length) {
               console.log('[LevelPicker] 문제 배열 상세:', result.questions.map((q, i) => ({
@@ -159,7 +156,8 @@ export default function Explore() {
           try {
             console.log('🎯 [ExploreMain] 퀴즈 데이터 재요청:', { topicId: newTopicId || mainTopicId, subTopicId: newSubTopicId || subTopicId, levelId: resolvedLevelId || newLevel });
             setIsFetchingQuestions(true);
-            const result = await apiGetQuestions({ levelId: resolvedLevelId || newLevel, subTopicId: newSubTopicId || subTopicId, topicId: newTopicId || mainTopicId });
+            const qid2 = await getQuizIdForSelection({ subTopicId: newSubTopicId || subTopicId, levelId: resolvedLevelId || newLevel });
+            const result = await apiGetQuestions({ quizId: qid2 });
             console.log('📦 [ExploreMain] getQuestions 응답:', result);
             if (result && Array.isArray(result.questions) && result.questions.length) {
               console.log('[ExploreMain] 문제 배열 상세:', result.questions.map((q, i) => ({
@@ -198,13 +196,21 @@ export default function Explore() {
         questions={questions}
         selected={currentResult.selected}
         showResult={currentResult.checked}
+        // 문제별 완료 상태를 ExploreMain에서 받아서 전달
+        quizCompletionArr={(() => {
+          // ExploreMain에서 내려주는 backendProgress.quizzes의 isCompleted를 활용
+          if (window.__EXPLORE_MAIN_PROGRESS && Array.isArray(window.__EXPLORE_MAIN_PROGRESS.quizzes)) {
+            return window.__EXPLORE_MAIN_PROGRESS.quizzes.map(q => !!q.isCompleted);
+          }
+          return Array.isArray(questions) ? questions.map(() => false) : [];
+        })()}
         // [문제 선택] - 선택지 클릭 시 결과 갱신
         onSelect={(idx) => {
           const newResults = [...results];
           newResults[current] = { ...currentResult, selected: idx };
           setResults(newResults);
         }}
-        // [정답 체크] - postAttempt로 서버 채점, 결과/진행도/오답노트 반영
+        // [정답 체크] - GET으로 받은 정답값으로 로컬 채점, POST는 기록 용도만
         onCheck={async () => {
           const qList = questions || [];
           const question = qList[current];
@@ -212,11 +218,30 @@ export default function Explore() {
           if (!question || selectedIdx == null || selectedIdx < 0) return;
 
           const selectedOption = question.options?.[selectedIdx];
-          const selectedOptionId = selectedOption?.id ?? (selectedIdx + 1);
+          // 서버 호환: 가능하면 숫자 ID로 전송, 아니면 원본/인덱스 기반 폴백 (기록 용도)
+          const selIdRaw = selectedOption?.id;
+          const selIdNum = Number(selIdRaw);
+          const selectedOptionId = Number.isFinite(selIdNum) ? selIdNum : (selIdRaw ?? (selectedIdx + 1));
 
-          let backendCorrectIdx = -1;
+          // 1) 로컬 기준 정답 인덱스 계산: 옵션 isCorrect > correctOptionId 매칭
+          const opts = question.options || [];
+          let localCorrectIdx = opts.findIndex(o => o && o.isCorrect === true);
+          if (localCorrectIdx < 0 && question?.correctOptionId != null) {
+            const cidStr = String(question.correctOptionId);
+            const byStr = opts.findIndex(o => String(o?.id) === cidStr);
+            if (byStr >= 0) localCorrectIdx = byStr;
+            else if (Number.isFinite(Number(cidStr))) {
+              const cidNum = Number(cidStr);
+              const byNum = opts.findIndex(o => Number(o?.id) === cidNum);
+              if (byNum >= 0) localCorrectIdx = byNum;
+            }
+          }
+
+          // 2) 백엔드 판정 우선: 서버 응답이 있으면 그 결과를 사용하고, 없으면 로컬 기준 사용
+          let serverIsCorrect = null;
+          let serverFeedback = null;
+          let serverCorrectOptionId = null;
           try {
-            // [정답 채점] - postAttempt API 호출 (README 명세)
             const resp = await postAttempt({
               quizId: quizId ?? undefined,
               questionId: question.id,
@@ -225,171 +250,122 @@ export default function Explore() {
               userId: localStorage.getItem('userId') || undefined,
               token: localStorage.getItem('accessToken') || undefined,
             });
-
-            // [서버 응답 파싱] - 다양한 스키마 지원 (id/index/text/letter)
-            const opts = question.options || [];
-            // 중첩 응답 평탄화: { data: {...} } 또는 { result: {...} }
-            const flatten = (r) => {
-              if (!r || typeof r !== 'object') return {};
-              const a = r.data && typeof r.data === 'object' ? r.data : {};
-              const b = r.result && typeof r.result === 'object' ? r.result : {};
-              return { ...r, ...a, ...b };
-            };
-            const toIdxById = (id) => opts.findIndex(o => String(o.id) === String(id));
-            const toIdxByText = (txt) => opts.findIndex(o => String(o.text).trim() === String(txt).trim());
-            const clamp = (n) => Math.max(0, Math.min(opts.length - 1, n));
-            const asNum = (v) => {
-              if (typeof v === 'number' && Number.isFinite(v)) return v;
-              if (typeof v === 'string') { const n = parseInt(v, 10); return Number.isFinite(n) ? n : NaN; }
-              return NaN;
-            };
-
-            const r = flatten(resp || {});
-            // 진단 로그: 백엔드 응답 주요 키 요약
-            try { console.log('📥 postAttempt 응답 키:', Object.keys(r)); } catch (_) {}
-            const idCandidates = [r.correctOptionId, r.correct_option_id, r.answerId, r.answer_id];
-            const idxCandidates = [r.correctIndex, r.correct_index, r.answerIndex, r.answer_index];
-            const textCandidates = [r.correctAnswer, r.correct_answer, r.answerText];
-            const letterCandidates = [r.correctOption, r.correct_option, r.correctLetter, r.correct_letter];
-
-            // 1) ID 매칭
-            for (const cid of idCandidates) {
-              if (cid != null) { const i = toIdxById(cid); if (i >= 0) { backendCorrectIdx = i; break; } }
-            }
-            // 2) 인덱스(0/1-based) 매칭
-            if (backendCorrectIdx < 0) {
-              for (const c of idxCandidates) {
-                const n = asNum(c);
-                if (Number.isFinite(n)) {
-                  if (n >= 0 && n < opts.length) { backendCorrectIdx = clamp(n); break; }
-                  if (n >= 1 && n <= opts.length) { backendCorrectIdx = clamp(n - 1); break; }
-                }
-              }
-            }
-            // 3) 텍스트 매칭
-            if (backendCorrectIdx < 0) {
-              for (const t of textCandidates) {
-                if (typeof t === 'string' && t.trim()) { const i = toIdxByText(t); if (i >= 0) { backendCorrectIdx = i; break; } }
-              }
-            }
-            // 4) 레터(A/B/C/D) 매칭
-            if (backendCorrectIdx < 0) {
-              for (const L of letterCandidates) {
-                if (typeof L === 'string' && L.trim()) {
-                  const s = L.trim().toUpperCase();
-                  if (/^[A-Z]$/.test(s)) { backendCorrectIdx = clamp(s.charCodeAt(0) - 'A'.charCodeAt(0)); break; }
-                  const n = asNum(s);
-                  if (Number.isFinite(n)) {
-                    if (n >= 1 && n <= opts.length) { backendCorrectIdx = clamp(n - 1); break; }
-                    if (n >= 0 && n < opts.length) { backendCorrectIdx = clamp(n); break; }
-                  }
-                }
-              }
-            }
-
-            // [정답 옵션 반영] - 서버 기준 정답을 옵션에 반영
-            if (opts.length && backendCorrectIdx >= 0) {
-              const updatedOptions = opts.map((o, i) => ({ ...o, isCorrect: i === backendCorrectIdx }));
-              const updatedQuestions = qList.slice();
-              updatedQuestions[current] = { ...question, options: updatedOptions };
-              setQuestions(updatedQuestions);
-            }
-
-            const localIdx = opts.findIndex(o => o.isCorrect);
-            const finalCorrectIdx = backendCorrectIdx >= 0 ? backendCorrectIdx : localIdx;
-            // 우선순위: 백엔드 인덱스 > 로컬 isCorrect > r.correct(boolean)
-            let isCorrect = false;
-            if (Number.isInteger(finalCorrectIdx) && finalCorrectIdx >= 0) {
-              isCorrect = (Number.isInteger(selectedIdx) && selectedIdx === finalCorrectIdx);
-            } else if (typeof r?.correct === 'boolean') {
-              isCorrect = r.correct;
-            }
-
-            const newResults = [...results];
-            newResults[current] = { ...currentResult, checked: true, correct: isCorrect };
-            setResults(newResults);
-            // [진행도 저장] - 로컬에도 반영 (ExploreMain의 useProgress에서 읽어 반영)
-            persistProgress(level, question, selectedOptionId, isCorrect, current);
-            // [오답노트 기록] - 오답일 경우 즉시 로컬+백엔드 기록
-            if (!isCorrect) {
-              try {
-                // 로컬 즉시 반영
-                const correctOpt = (opts && opts.length) ? opts[backendCorrectIdx >= 0 ? backendCorrectIdx : opts.findIndex(o=>o.isCorrect)] : null;
-                addWrongNoteImmediate({
-                  question,
-                  userAnswer: selectedOption?.text ?? String(selectedOptionId),
-                  correctAnswer: correctOpt?.text ?? null,
-                  category: question?.category || subTopic || mainTopic || '기타',
-                  meta: { quizId: quizId ?? undefined, questionId: question.id }
-                });
-                // 백엔드 저장 시도
-                const token = localStorage.getItem('accessToken');
-                const userId = localStorage.getItem('userId') || undefined;
-                await createWrongNote({
-                  userId,
-                  quizId: quizId ?? undefined,
-                  questionId: question.id,
-                  selectedOptionId,
-                  correctOptionId: correctOpt?.id ?? undefined,
-                  category: question?.category || undefined,
-                  meta: { topic: mainTopic, subTopic }
-                }, token);
-              } catch (_) { /* ignore */ }
+            // 정상화된 응답 필드 사용 (api.submitAnswer가 isCorrect/feedback/correctOptionId로 반환)
+            if (resp) {
+              if (typeof resp.isCorrect === 'boolean') serverIsCorrect = resp.isCorrect;
+              else if (typeof resp.is_correct === 'boolean') serverIsCorrect = resp.is_correct;
+              serverFeedback = resp.feedback ?? resp.explanation ?? resp.message ?? null;
+              serverCorrectOptionId = resp.correctOptionId ?? resp.correct_option_id ?? null;
             }
           } catch (e) {
-            // [백엔드 채점 실패] - 로컬 판정으로 폴백
-            console.warn('⚠️ 백엔드 채점 실패, 로컬 판정으로 폴백:', e);
-            const correctOption = question.options?.find(o => o.isCorrect);
-            const localCorrectIdx = correctOption ? question.options.indexOf(correctOption) : -1;
-            const isCorrect = selectedIdx === localCorrectIdx;
-            const newResults = [...results];
-            newResults[current] = { ...currentResult, checked: true, correct: isCorrect };
-            setResults(newResults);
-            // 백엔드 실패 시에도 로컬 진행도 저장
-            persistProgress(level, question, selectedOptionId, isCorrect, current);
-            // 오답 로컬 기록 (백엔드 실패 케이스)
-            if (!isCorrect) {
-              try {
-                const correctOption = question.options?.find(o => o.isCorrect);
-                addWrongNoteImmediate({
-                  question,
-                  userAnswer: selectedOption?.text ?? String(selectedOptionId),
-                  correctAnswer: correctOption?.text ?? null,
-                  category: question?.category || subTopic || mainTopic || '기타',
-                  meta: { quizId: quizId ?? undefined, questionId: question.id }
-                });
-              } catch (_) { /* ignore */ }
-            }
+            console.warn('⚠️ postAttempt 기록/채점 실패, 로컬 판정으로 진행:', e?.message || e);
+          }
+
+          // 3) 최종 정오 판정
+          const localIsCorrect = Number.isInteger(localCorrectIdx) && localCorrectIdx >= 0 && selectedIdx === localCorrectIdx;
+          const isCorrect = (serverIsCorrect === null ? localIsCorrect : serverIsCorrect);
+
+          // 4) UI 상태/진행도 반영 (서버 피드백/정답ID 보존)
+          const newResults = [...results];
+          newResults[current] = {
+            ...currentResult,
+            checked: true,
+            correct: isCorrect,
+            serverCorrect: serverIsCorrect,
+            serverCorrectOptionId,
+            serverFeedback,
+          };
+          setResults(newResults);
+          persistProgress(level, question, selectedOptionId, isCorrect, current);
+
+          // 5) 오답노트 기록 (로컬/백엔드)
+          if (!isCorrect) {
+            try {
+              const correctOpt = localCorrectIdx >= 0 ? opts[localCorrectIdx] : null;
+              addWrongNoteImmediate({
+                question,
+                userAnswer: selectedOption?.text ?? String(selectedOptionId),
+                correctAnswer: correctOpt?.text ?? null,
+                category: question?.category || subTopic || mainTopic || '기타',
+                meta: { quizId: quizId ?? undefined, questionId: question.id }
+              });
+              const token = localStorage.getItem('accessToken');
+              const userId = localStorage.getItem('userId') || undefined;
+              await createWrongNote({
+                userId,
+                quizId: quizId ?? undefined,
+                questionId: question.id,
+                selectedOptionId,
+                correctOptionId: correctOpt?.id ?? undefined,
+                category: question?.category || undefined,
+                meta: { topic: mainTopic, subTopic }
+              }, token);
+            } catch (_) { /* ignore */ }
           }
         }}
-        onComplete={() => setStep(5)}
+        answerResult={currentResult}
+        onComplete={async () => {
+          // 퀴즈 완료 POST를 즉시 실행
+          const userId = localStorage.getItem('userId') || undefined;
+          try {
+            const res = await fetch(`/api/quizzes/${quizId}/complete?userId=${userId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+            });
+            const data = await res.json();
+            setQuizCompleteResult(data);
+          } catch (e) {
+            setQuizCompleteResult({ error: e?.message || '퀴즈 완료 처리 실패' });
+          }
+          setStep(5);
+        }}
         onBack={handleBack}
       />
     );
   }
 
   // [5단계] 완료 화면 (정답 개수/결과 표시, 재도전/탐험 재시작)
+  // 퀴즈 완료 POST 결과 상태 추가
+  const [quizCompleteResult, setQuizCompleteResult] = useState(null);
+  useEffect(() => {
+    if (step === 5 && quizId && !quizCompleteResult) {
+      // 퀴즈 완료 POST
+      const userId = localStorage.getItem('userId') || undefined;
+      fetch(`/api/quizzes/${quizId}/complete?userId=${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+        .then(res => res.json())
+        .then(data => setQuizCompleteResult(data))
+        .catch(e => setQuizCompleteResult({ error: e?.message || '퀴즈 완료 처리 실패' }));
+    }
+    if (step !== 5 && quizCompleteResult) {
+      setQuizCompleteResult(null); // 단계 이동 시 초기화
+    }
+  }, [step, quizId]);
+
   if (step === 5) {
     const questionList = questions && questions.length > 0 ? questions : [];
     const fixedResults = Array.from({ length: questionList.length }, (_, idx) =>
       results[idx] ? results[idx] : { selected: null, checked: false }
     );
-    
-    // 결과 계산: 백엔드 판정 우선, 없으면 옵션의 isCorrect 사용
-    const correctCount = fixedResults.filter((r, idx) => {
-      if (r && r.checked && typeof r.correct === 'boolean') return r.correct;
-      const question = questionList[idx];
-      const correctOption = question?.options?.find(o => o.isCorrect);
-      const correctIdx = correctOption ? question.options.indexOf(correctOption) : -1;
-      return r?.selected === correctIdx;
-    }).length;
-    
+    // 서버 결과 우선, 없으면 기존 로컬 계산
+    const correctCount = quizCompleteResult && typeof quizCompleteResult.correctAnswers === 'number'
+      ? quizCompleteResult.correctAnswers
+      : fixedResults.filter((r, idx) => {
+          if (r && r.checked && typeof r.correct === 'boolean') return r.correct;
+          const question = questionList[idx];
+          const correctOption = question?.options?.find(o => o.isCorrect);
+          const correctIdx = correctOption ? question.options.indexOf(correctOption) : -1;
+          return r?.selected === correctIdx;
+        }).length;
     content = (
       <CompletionScreen
         score={correctCount}
         total={questionList.length}
         results={fixedResults}
         questions={questionList}
+        completeResult={quizCompleteResult}
         onRetry={() => {
           setQid(0);
           setResults(

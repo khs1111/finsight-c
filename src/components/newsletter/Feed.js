@@ -3,20 +3,21 @@ import React, { useState, useEffect } from 'react';
 import Logo from './Logo';
 import { useNavigate } from 'react-router-dom';
 import { SAMPLE_ARTICLES } from './feedData';
+import './Feed.css';
 import newsIcon from '../../assets/news-icon.png';
 import targetIcon from '../../assets/target-icon.png';
 import financeIcon from '../../assets/finance-icon.png';
 import bellIcon from '../../assets/bell-icon.png';
 
-const CANVAS_W = 412;
-const CONTENT_W = 380;
+// widths are now handled via CSS classes
 
 const TABS = ['HOT','주제별','My news'];
 
 export default function Feed() {
   const [activeTab, setActiveTab] = useState('HOT');
   const [topics, setTopics] = useState([]);
-  const categories = ['오늘의 뉴스','금융','부동산','해외 경제','테크'];
+  // Keep categories aligned with current data taxonomy
+  const categories = ['오늘의 뉴스', '금융', '부동산', '해외 경제', '테크'];
   const [selectedCategory, setSelectedCategory] = useState('오늘의 뉴스');
   const navigate = useNavigate();
 
@@ -35,82 +36,90 @@ export default function Feed() {
   });
 
   return (
-    <div style={pageOuter}>
-      <div style={canvas}> 
+    <div className="nl-page-outer">
+      <div className="nl-canvas"> 
         <TopBar />
         <Tabs active={activeTab} onChange={setActiveTab} />
-        {activeTab === 'HOT' && <>
-          <Banner />
-          <div style={countText}>{filtered.length}개의 소식이 있어요</div>
-          <div style={cardsColumn}>
+  {activeTab === 'HOT' && <>
+          <div className="nl-banner-box">
+            <div className="nl-banner-inner">
+              <div className="nl-banner-img" />
+              <div className="nl-banner-text-col">
+                <div className="nl-banner-title">이번 주 핫 토픽</div>
+                <div className="nl-banner-sub">이번 주 핫한 뉴스 토픽을 모아봤어요. 가장 많이 읽힌 이슈만 엄선했어요.</div>
+              </div>
+            </div>
+          </div>
+          <div className="nl-count-text">{filtered.length}개의 소식이 있어요</div>
+          <div className="nl-cards-col">
             {filtered.filter(a => ['부동산','테크'].includes(a.category)).slice(0,3).map(a => (
               <ArticleCard key={a.id} data={a} onClick={() => navigate(`/newsletter/${a.id}`)} />
             ))}
           </div>
         </>}
-        {activeTab === '주제별' && <>
-          <div style={topicDivider} />
-          <div style={topicFlow}> 
-            <div style={topicSectionHeader}>
-              <div style={topicCategoryRow}>{categories.map(cat => (
-                <button key={cat} onClick={() => setSelectedCategory(cat)} style={cat === selectedCategory}>{cat}</button>
+  {activeTab === '주제별' && <>
+          <div className="nl-topic-divider" />
+          <div className="nl-topic-flow"> 
+              <div className="nl-topic-header">
+              <div className="nl-topic-cat-row">{categories.map(cat => (
+                <button key={cat} onClick={() => setSelectedCategory(cat)} className={`nl-topic-cat ${cat === selectedCategory ? 'active' : ''}`}>{cat}</button>
               ))}</div>
-              <div style={topicBannerBox}><div style={topicBannerInner} onClick={() => navigate('/newsletter/subscribe')}> <div style={bannerImg} /> <div style={topicBannerTextCol}> <div style={topicBannerTitle}>My news 로 맞춤 뉴스 보자!</div><div style={topicBannerSub}>핀래터에서 나의 관심사에 딱 맞는 정보들만 확인해요</div></div></div></div>
-              <div style={topicCountRow}><span style={topicCountText}>{filtered.length}개의 소식이 있어요</span></div>
+              <div className="nl-topic-banner-box"><div className="nl-topic-banner-inner" onClick={() => navigate('/newsletter/subscribe')}> <div className="nl-banner-img" /> <div className="nl-topic-banner-text-col"> <div className="nl-topic-banner-title">My news 로 맞춤 뉴스 보자!</div><div className="nl-topic-banner-sub">핀래터에서 나의 관심사에 딱 맞는 정보들만 확인해요</div></div></div></div>
+              <div className="nl-topic-count-row"><span className="nl-topic-count-text">{filtered.length}개의 소식이 있어요</span></div>
             </div>
-            <div style={topicCardsWrap}>
-              <div style={topicCardsCol}>
+            <div className="nl-topic-cards-wrap">
+              <div className="nl-topic-cards-col">
                 {filtered.map(a => (
                   <ArticleCard key={a.id} data={a} onClick={() => navigate(`/newsletter/${a.id}`)} />
                 ))}
-                {!filtered.length && <div style={emptyState}>해당 카테고리 소식이 아직 없어요.</div>}
+                {!filtered.length && <div className="nl-empty">해당 카테고리 소식이 아직 없어요.</div>}
               </div>
             </div>
           </div>
         </>}
-        {activeTab === 'My news' && <>
-          <div style={myHeroArea}>
-            <div style={myHeroImage}>
-              <img src={newsIcon} alt="뉴스 아이콘" style={{ width: 120, height: 120 }} />
+  {activeTab === 'My news' && <>
+          <div className="nl-my-hero">
+            <div className="nl-my-img">
+              <img src={newsIcon} alt="뉴스 아이콘" style={{ width: '100%', height: '100%' }} />
             </div>
-            <h1 style={myHeadline}>나만의 뉴스레터를 만나보세요</h1>
-            <p style={mySubCopy}>관심 분야와 투자 성향에 맞는 맞춤형 뉴스레터를 구독하고 더 스마트한 투자자가 되어보세요!</p>
-            <div style={myCardsWrap}>
-              <div style={myFeatureCard}>
-                <div style={myFeatureInnerRow}>
-                  <div style={myIconBox}>
+            <h2 className="nl-my-headline">내 관심사에 맞는 뉴스레터</h2>
+            <p className="nl-my-subcopy">관심 있는 카테고리와 키워드를 선택하면, 딱 맞는 뉴스만 골라드릴게요</p>
+            <div className="nl-my-cards-wrap">
+              <div className="nl-my-feature-card">
+                <div className="nl-my-feature-row">
+                  <div className="nl-my-icon-box">
                     <img src={targetIcon} alt="타겟 아이콘" style={{ width: 48, height: 48 }} />
                   </div>
-                  <div style={myFeatureTextCol}>
-                    <div style={myFeatureTitle}>맞춤형 콘텐츠</div>
-                    <div style={myFeatureDesc} title="나에게 필요한 정보만 받을 수 있어요.">나에게 필요한 정보만 받을 수 있어요.</div>
+                  <div className="nl-my-text-col">
+                    <div className="nl-my-title">맞춤형 콘텐츠</div>
+                    <div className="nl-my-desc">나에게 필요한 정보만 받을 수 있어요.</div>
                   </div>
                 </div>
               </div>
-              <div style={myFeatureCard}>
-                <div style={myFeatureInnerRow}>
-                  <div style={myIconBox}>
+              <div className="nl-my-feature-card">
+                <div className="nl-my-feature-row">
+                  <div className="nl-my-icon-box">
                     <img src={financeIcon} alt="금융 아이콘" style={{ width: 48, height: 48 }} />
                   </div>
-                  <div style={myFeatureTextCol}>
-                    <div style={myFeatureTitle}>무제한 퀴즈</div>
-                    <div style={myFeatureDesc} title="재미있게 경제 공부를 핀사이트에서 시작하세요.">재미있게 경제 공부를 핀사이트에서 시작하세요.</div>
+                  <div className="nl-my-text-col">
+                    <div className="nl-my-title">무제한 퀴즈</div>
+                    <div className="nl-my-desc">재미있게 경제 공부를 핀사이트에서 시작하세요.</div>
                   </div>
                 </div>
               </div>
-              <div style={myFeatureCard}>
-                <div style={myFeatureInnerRow}>
-                  <div style={myIconBox}>
+              <div className="nl-my-feature-card">
+                <div className="nl-my-feature-row">
+                  <div className="nl-my-icon-box">
                     <img src={bellIcon} alt="벨 아이콘" style={{ width: 48, height: 48 }} />
                   </div>
-                  <div style={myFeatureTextCol}>
-                    <div style={myFeatureTitle}>카카오톡 알림</div>
-                    <div style={myFeatureDesc} title="실시간 맞춤 알림 서비스 제공해요.">실시간 맞춤 알림 서비스 제공해요.</div>
+                  <div className="nl-my-text-col">
+                    <div className="nl-my-title">카카오톡 알림</div>
+                    <div className="nl-my-desc">실시간 맞춤 알림 서비스 제공해요.</div>
                   </div>
                 </div>
               </div>
             </div>
-            <button style={myCTAButton} onClick={() => navigate('/newsletter/subscribe')}>구독하기</button>
+            <button className="nl-my-cta" onClick={() => navigate('/newsletter/subscribe')}>구독하기</button>
           </div>
         </>}
       </div>
@@ -120,20 +129,20 @@ export default function Feed() {
 
 function TopBar() {
   return (
-    <div style={topBar}>
+    <div className="nl-top-bar">
       <Logo />
-      <div style={searchIcon} />
+      <div className="nl-search-icon" />
     </div>
   );
 }
 
 function Tabs({ active, onChange }) {
   return (
-    <div style={tabsWrap}>
+    <div className="nl-tabs">
       {TABS.map(tab => (
-        <div key={tab} style={tabCol} onClick={() => onChange(tab)}>
-          <div style={tabLabel(tab===active)}>{tab}</div>
-          <div style={underline(tab===active)} />
+        <div key={tab} className="nl-tab-col" onClick={() => onChange(tab)}>
+          <div className={`nl-tab-label ${tab === active ? 'active' : ''}`}>{tab}</div>
+          <div className={`nl-underline ${tab === active ? 'active' : ''}`} />
         </div>
       ))}
     </div>
@@ -141,20 +150,7 @@ function Tabs({ active, onChange }) {
 }
 
 
-function Banner() {
-  const navigate = useNavigate();
-  return (
-    <div style={bannerBox} onClick={() => navigate('/newsletter/subscribe')}>
-      <div style={bannerInner}>
-        <div style={bannerImg} />
-        <div style={bannerTextCol}>
-          <div style={bannerTitle}>My news 로 맞춤 뉴스 보자!</div>
-          <div style={bannerSub}>핀래터에서 나의 관심사에 딱 맞는 정보들만 확인해요</div>
-        </div>
-      </div>
-    </div>
-  );
-}
+// Banner inlined in JSX using CSS classes
 
 function ArticleCard({ data, onClick }) {
   const [step, setStep] = useState(0);
@@ -166,60 +162,17 @@ function ArticleCard({ data, onClick }) {
   ]) : [];
   const src = candidates[step] || null;
   return (
-    <div style={imgCard} onClick={onClick}>
+    <div className="nl-img-card" onClick={onClick}>
       {src && (
         <img
           src={src}
           alt=""
           onError={() => setStep(s => s + 1)}
-          style={{ display:'block', width:'100%', height:'auto' }}
+          className="nl-article-img"
         />
       )}
     </div>
   );
 }
 
-const pageOuter = { width: '100%', display: 'flex', justifyContent: 'center', background: '#F4F6FA', minHeight: '100vh', paddingBottom: 120 };
-const canvas = { position: 'relative', width: CANVAS_W, maxWidth: '100%', background: '#F4F6FA', minHeight: 917, fontFamily: 'Roboto, sans-serif' };
-const topBar = { position: 'absolute', top: 64, left: 16, width: CONTENT_W, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 };
-const searchIcon = { width:24, height:24, borderRadius:4, border:'1px solid #474747', background:'#fff', position:'relative' };
-const tabsWrap = { position:'absolute', top:108, left:16, width:CONTENT_W, height:38, display:'flex', gap:16, zIndex: 10 };
-const tabCol = { flex:1, display:'flex', flexDirection:'column', alignItems:'center', cursor:'pointer' };
-const tabLabel = active => ({ fontSize:20, fontWeight: active?700:400, color: active?'#1B1B1B':'#9B9B9B', lineHeight:'34px', letterSpacing:'-0.04em' });
-const underline = active => ({ width:'100%', height:2, background: active?'#1B1B1B':'transparent' });
-const bannerBox = { position:'absolute', top:162, left:16, width:CONTENT_W, height:80, background:'#B8D4FF', borderRadius:8, padding:'10px 16px', display:'flex', alignItems:'center' };
-const bannerInner = { display:'flex', flexDirection:'row', alignItems:'center', gap:20 };
-const bannerImg = { width:60, height:60, background:'#D9D9D9', borderRadius:8 };
-const bannerTextCol = { display:'flex', flexDirection:'column', gap:8 };
-const bannerTitle = { fontSize:18, fontWeight:700, color:'#10274A', letterSpacing:'-0.02em', lineHeight:'21px' };
-const bannerSub = { fontSize:12, fontWeight:400, color:'#122C54', letterSpacing:'-0.02em', lineHeight:'14px', maxWidth:255 };
-const countText = { position:'absolute', top:258, left:16, fontSize:14, fontWeight:500, color:'#616161', letterSpacing:'-0.04em' };
-const cardsColumn = { position:'absolute', top:290, left:32, width:348, display:'flex', flexDirection:'column', gap:16 };
-// 주제별 전용 레이아웃
-const topicDivider = { position:'absolute', top:144, left:0, width:CANVAS_W, height:2, background:'#E6EBF2' };
-const topicFlow = { position:'absolute', top:146, left:0, width:CANVAS_W, height:768, display:'flex', flexDirection:'column' };
-const topicSectionHeader = { width:CANVAS_W, display:'flex', flexDirection:'column', alignItems:'flex-start' };
-const topicCategoryRow = { width:CANVAS_W, height:64, display:'flex', flexDirection:'row', alignItems:'flex-start', padding:16, gap:8, boxSizing:'border-box', overflowX:'auto' };
-const topicBannerBox = { width:CANVAS_W, height:96, display:'flex', flexDirection:'column', padding:'0 16px 16px', boxSizing:'border-box' };
-const topicBannerInner = { width:380, height:80, background:'#B8D4FF', borderRadius:8, padding:10, display:'flex', flexDirection:'row', alignItems:'center', gap:20 };
-const topicBannerTextCol = { display:'flex', flexDirection:'column', gap:8, width:174 };
-const topicBannerTitle = { fontSize:18, fontWeight:700, color:'#10274A', letterSpacing:'-0.02em', lineHeight:'21px' };
-const topicBannerSub = { fontSize:12, fontWeight:400, color:'#122C54', letterSpacing:'-0.02em', lineHeight:'14px', width:255 };
-const topicCountRow = { width:CANVAS_W, height:32, padding:'0 16px 16px', display:'flex', alignItems:'center', boxSizing:'border-box' };
-const topicCountText = { fontSize:14, fontWeight:500, color:'#616161', letterSpacing:'-0.04em' };
-const topicCardsWrap = { width:CANVAS_W, height:576, display:'flex', flexDirection:'row', justifyContent:'center', padding:'0 32px', boxSizing:'border-box' };
-const topicCardsCol = { width:348, display:'flex', flexDirection:'column', gap:16 };
-const imgCard = { width:348, background:'#FFFFFF', boxShadow:'0 0 8px rgba(10,26,51,0.18)', borderRadius:16, overflow:'hidden', cursor:'pointer' };
-const emptyState = { width:348, padding:40, textAlign:'center', color:'#64748B', background:'#fff', borderRadius:16 };
-const myHeroArea = { position: 'relative', width: CANVAS_W, height: 917, zIndex: 1 };
-const myHeroImage = { position: 'absolute', width: 120, height: 120, left: 'calc(50% - 60px)', top: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const myHeadline = { position: 'absolute', width: 244, height: 24, left: 'calc(50% - 122px)', top: 432, textAlign: 'center', fontFamily: 'Roboto, sans-serif', fontWeight: 700, fontSize: 20, lineHeight: '24px', letterSpacing: '-0.02em', color: '#000000', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const mySubCopy = { position: 'absolute', width: 256, height: 44, left: 'calc(50% - 128px)', top: 476, textAlign: 'center', fontFamily: 'Roboto, sans-serif', fontWeight: 400, fontSize: 14, lineHeight: '22px', letterSpacing: '-0.02em', color: '#4D4D4D', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const myCardsWrap = { position: 'absolute', width: 380, height: 272, left: 16, top: 589, display: 'flex', flexDirection: 'column', gap: 16 };
-const myFeatureCard = { boxSizing:'border-box', background:'linear-gradient(#FFFFFF,#FFFFFF) padding-box, linear-gradient(90deg,#448FFF 0%,#4833D0 100%) border-box', border:'1px solid transparent', borderRadius:16, padding:'11px 16px', width:380, height:72, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'flex-start', gap:10, boxShadow:'0 4px 10px -2px rgba(56,111,255,0.12)' };
-const myFeatureInnerRow = { display:'flex', flexDirection:'row', alignItems:'center', gap:16, width:'100%', height:48 };
-const myIconBox = { width:48, height:48, display:'flex', alignItems:'center', justifyContent:'center' };
-const myFeatureTextCol = { display:'flex', flexDirection:'column', gap:4, width:300, height:48 };
-const myFeatureTitle = { width:'100%', height:22, fontFamily:'Roboto, sans-serif', fontWeight:700, fontSize:14, lineHeight:'22px', letterSpacing:'-0.02em', color:'#000', display:'flex', alignItems:'center' };
-const myFeatureDesc = { width:'100%', height:22, fontFamily:'Roboto, sans-serif', fontWeight:400, fontSize:14, lineHeight:'22px', letterSpacing:'-0.02em', color:'#474747', display:'flex', alignItems:'center', wordBreak:'keep-all', overflowWrap:'break-word' };
-const myCTAButton = { position:'absolute', left:'50%', transform:'translateX(-50%)', top: 881, width:380, maxWidth:'90%', height:60, background:'linear-gradient(91.43deg,#448FFF 0%,#4833D0 100%)', borderRadius:8, border:'none', color:'#FFFFFF', fontFamily:'Roboto, sans-serif', fontWeight:700, fontSize:18, cursor:'pointer', letterSpacing:'-0.02em' };
+// Inline style constants removed in favor of CSS classes

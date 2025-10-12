@@ -7,10 +7,14 @@
   box-sizing: border-box;
   overflow-y: auto;
   position: relative;
+  /* no side padding here! */
 }
 
 .quiz-question-header {
-  padding: 16px;
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-top: 16px;
+  padding-bottom: 16px;
 }
 
 .quiz-question-title {
@@ -37,7 +41,6 @@
 
 .quiz-question-article-img-placeholder {
   width: 100%;
-  margin-bottom: 16px; /* 16px gap to options */
   min-height: 120px;
   border: 2px dashed #C2CBD6;
   border-radius: 12px;
@@ -49,19 +52,22 @@
   color: #647184;
   font-size: 13px;
   gap: 8px;
-  padding: 24px 12px;
+  padding: 0;
+  margin: 0 0 12px 0;
   box-sizing: border-box;
 }
 
 /* Article text block (title + body) */
 .quiz-question-article-text-block {
   width: 100%;
-  background: #FFFFFF;
-  border-radius: 12px;
-  box-shadow: 0 0 2px rgba(0,0,0,0.08);
-  padding: 12px;
-  margin-bottom: 12px;
+  background: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 0 12px 0 !important;
   box-sizing: border-box;
+  align-self: stretch;
 }
 .quiz-question-article-title {
   font-family: 'Roboto', sans-serif;
@@ -77,37 +83,56 @@
   font-size: 13px;
   line-height: 18px;
   color: #474747;
-  white-space: pre-line;
+  padding: 12px;
 }
 
 /* Article image wrapper and image */
+/* 기사 이미지 래퍼: 좌우 16px 패딩, 와이드 100% */
+/* 기사 이미지 래퍼: 전체화면에서 양옆 16px 마진, 와이드 100% */
+/* Article image wrapper: full width, no side margin, spacing below */
+/* 기사 이미지 전체 래퍼 */
 .article-image-wrap {
-  position: relative;
   width: 100%;
-  /* match card width exactly; crop 4px per side via overflow clipping */
-  overflow: hidden;
-  border-radius: 12px;
+  padding: 0 16px; /* 좌우 16px 여백 */
+  margin: 0 0 12px 0;
   box-sizing: border-box;
+  background: none;
 }
+
+/* 실제 기사 이미지 */
+.article-image-wrap img,
 .quiz-question-article-img {
   display: block;
-  /* crop 4px each side by oversizing image and shifting */
-  width: calc(100% + 16px);
-  margin-left: -8px;
+  width: 100%;
   height: auto;
-  object-fit: cover; /* horizontal crop behavior with overflow hidden */
   border-radius: 12px;
-  margin-bottom: 16px; /* 16px gap to options */
+  object-fit: cover;
+  background: #f4f6fa;
+}
+
+
+/* Article card: full width, spacing below, padding for text */
+.quiz-question-article-text-block {
+  width: 100%;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+  box-sizing: border-box;
+  align-self: stretch;
+}
+
+/* Add spacing between article card and options */
+.quiz-question-options-block {
+  margin-top: 12px;
 }
 /* gradient removed */
 
 .quiz-question-option-card {
   width: 100%;
   margin-bottom: 16px;
-  padding-left: 16px;
-  padding-right: 16px;
-  padding-top: 19px;
-  padding-bottom: 19px;
+  padding: 19px 16px;
   border-radius: 8px;
   background: #fff;
   cursor: pointer;
@@ -184,10 +209,14 @@
 }
 .quiz-question-explanation-label {
   font-family: 'Roboto', sans-serif;
-  font-weight: 700;
-  font-size: 12px;
-  line-height: 14px;
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 18px;
   color: #474747;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 .quiz-question-explanation-badge {
   width: 24px;
@@ -265,7 +294,6 @@
 .quiz-question-learning-svg-inner {
   flex: 1;
   min-width: 0;
-  height: 38px;
   box-sizing: border-box;
 }
 
@@ -276,26 +304,44 @@
   flex-shrink: 0;
 }
 
+/* Flexible speech bubble styles */
+.quiz-question-learning-bubble {
+  position: relative;
+  display: block;
+  max-width: calc(100% - 88px); /* leave space for ant (72) + gap(16) */
+  background: #448FFF;
+  border-radius: 14px;
+  padding: 10px 12px;
+  color: #fff;
+  min-height: 38px;
+}
+.quiz-question-learning-bubble::after {
+  /* tail toward the ant at the right side */
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 10px;
+  width: 0; height: 0;
+  border-left: 10px solid #448FFF;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+}
+
 
 /* Ant character */
 /* 원래 코드로 복원: 개미 스타일 제거 (컴포넌트에서 직접 inline style 또는 기존 방식 사용) */
 
 
 .quiz-question-learning-svg-label {
-  position: absolute;
-  left: 15px;
-  top: 12px;
-  height: 14px;
-  display: flex;
-  align-items: center;
+  position: relative;
+  display: block;
   font-family: 'Roboto', sans-serif;
   font-weight: 700;
   font-size: 12px;
-  line-height: 14px;
+  line-height: 16px;
   color: #FFFFFF;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 .quiz-question-learning-chalkboard-wrap {
   position: relative;
@@ -355,8 +401,8 @@
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
   line-height: 20px;
-  letter-spacing: -0.03em;
-  color: #000;
+  padding-left: 0;
+  padding-right: 0;
 }
 .quiz-question-point-content-pre {
   white-space: pre-line;
@@ -436,7 +482,22 @@
   }
   .quiz-question-point-content {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    position: static;
+    margin: 0 0 20px 0;
+    padding: 0;
   }
+/* 개미 캐릭터 말풍선 오른쪽 마진 */
+.quiz-question-learning-bubble {
+  margin-right: 40px;
+  min-width: 120px;
+  max-width: 90vw;
+  width: auto;
+  word-break: break-word;
+  white-space: pre-line;
+  display: inline-block;
+}
   .quiz-question-learning-svg-wrap {
     gap: 10px;
     padding-left: 24px;

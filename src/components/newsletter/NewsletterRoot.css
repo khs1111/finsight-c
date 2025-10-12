@@ -1,0 +1,2 @@
+.nl-root-outer { width: 100%; display: flex; justify-content: center; background: #ffffff; min-height: 100vh; }
+.nl-root-canvas { position: relative; width: 412px; max-width: 100%; background: #F4F6FA; min-height: 917px; font-family: Roboto, sans-serif; }

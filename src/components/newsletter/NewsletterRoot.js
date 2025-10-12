@@ -9,6 +9,7 @@ import StepEconomyTopics from './StepEconomyTopics';
 import StepCompanyInterest from './StepCompanyInterest';
 import PostSubscribe from './PostSubscribe';
 import { NewsletterWizardProvider } from './NewsletterWizardContext';
+import './NewsletterRoot.css';
 
 export default function NewsletterRoot() {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ export default function NewsletterRoot() {
   }, [location.pathname, navigate]);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#ffffff', display: 'flex', flexDirection: 'column' }}>
+    <div className="nl-root-outer">
       <NewsletterWizardProvider>
         <Routes>
           <Route index element={<Feed />} />
