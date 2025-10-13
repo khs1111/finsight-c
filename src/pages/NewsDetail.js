@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getArticleDetail } from '../api/news';
 import './NewsDetail.css';
-import BookmarkIcon from '../assets/newspng/Bookmark.svg';
-import LinkAltIcon from '../assets/newspng/link_alt.svg';
-import EllipsePoint from '../assets/newspng/Ellipse 212.svg';
+import { ReactComponent as BookmarkIcon } from '../assets/newspng/Bookmark.svg';
+import { ReactComponent as LinkAltIcon } from '../assets/newspng/link_alt.svg';
+import { ReactComponent as EllipsePoint } from '../assets/newspng/ellipse-212.svg';
 
 // --- 1단계: 단위(Unit) 매핑 객체 및 함수 추가 ---
 const INDICATOR_UNITS = {
@@ -160,11 +160,11 @@ const LineChart = ({ title, description, data }) => {
                 </div>
               )}
               
-              <img
-                src={EllipsePoint}
-                alt=""
+              <EllipsePoint
                 className="line-point-img"
                 style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                aria-hidden="true"
+                focusable="false"
               />
             </React.Fragment>
           );
@@ -443,7 +443,7 @@ export default function NewsDetail() {
                   <div className="glossary-card-header">
                     <div className="glossary-term-title">{keyword.term}</div>
                     <button type="button" className="bookmark-btn" aria-label="북마크">
-                      <img src={BookmarkIcon} alt="" className="bookmark-icon" />
+                      <BookmarkIcon className="bookmark-icon" aria-hidden="true" focusable="false" />
                     </button>
                   </div>
                   <div className="glossary-term-desc">{keyword.description}</div>
@@ -461,7 +461,7 @@ export default function NewsDetail() {
             className="primary-button"
             style={{ gap: '4px' }}
           >
-            <img src={LinkAltIcon} alt="" style={{ width: 22, height: 22 }} />
+            <LinkAltIcon width={22} height={22} aria-hidden="true" focusable="false" />
             기사 원문 보기
           </button>
         </div>

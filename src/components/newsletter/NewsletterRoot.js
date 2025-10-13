@@ -4,15 +4,17 @@ import './Newsletter.css';
 
 
 // 아이콘 및 데이터 import
-import finletterIcon from '../../assets/newsletter/finletter.svg'
+import { ReactComponent as FinletterIcon } from '../../assets/newsletter/finletter.svg';
 import newsIcon from '../../assets/newsletter/news-icon.png';
 import newsData from './NewsletterData';
-import newsDate from '../../assets/newsletter/Calendar.svg';
+import { ReactComponent as NewsDateIcon } from '../../assets/newsletter/Calendar.svg';
 
 function TopBar() {
   return (
     <div className="nl-topbar">
-      <div className="nl-title"> <img src={finletterIcon} alt="핀레터 아이콘" /></div>
+      <div className="nl-title">
+        <FinletterIcon aria-hidden="true" focusable="false" style={{ height: 24 }} />
+      </div>
     </div>
   );
 }
@@ -70,7 +72,10 @@ function Card({ title, subtitle, date, readTime, category, tags, imageUrl, url }
           <h3 className="nl-card-title">{title}</h3>
           {subtitle && <p className="nl-card-sub">{subtitle}</p>}
           <div className="nl-card-meta">
-            <span> <img src={newsDate} alt="날짜 아이콘" /> {date}</span>
+            <span>
+              <NewsDateIcon aria-hidden="true" focusable="false" width={16} height={16} style={{ marginRight: 4 }} />
+              {date}
+            </span>
             {readTime && <span>🕔 {readTime}</span>}
           </div>
         </div>
