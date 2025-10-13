@@ -67,7 +67,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/search" element={<Search />} />
           <Route path="/" element={
-            (sessionStorage.getItem('accessToken'))
+            (sessionStorage.getItem('guest') === '1' || localStorage.getItem('accessToken'))
               ? <Home />
               : <Navigate to="/login" replace />
           } />
