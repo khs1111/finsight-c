@@ -27,7 +27,7 @@
 /* Bubble (speech) */
 .completion-bubble-wrap {
   position: absolute;
-  left: 24px;
+  left: 0;
   right: 24px;
   width: calc(100% - 48px);
   height: 88px;

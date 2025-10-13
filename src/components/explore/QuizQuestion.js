@@ -42,7 +42,10 @@ export default function QuizQuestion({ current,
   onComplete,
   onBack,
   answerResult,
-  quizCompletionArr = [] }) {
+  quizCompletionArr = [],
+  // NEW: 정답 아이콘 주입용 (A/B/C/D 각각 문자열 URL 또는 SVGR 컴포넌트)
+  correctIcons = {}
+}) {
   
   // 🎓 학습 모드 관련 상태
   const [showLearning, setShowLearning] = useState(false);        // 학습 모드 표시 여부
@@ -87,6 +90,39 @@ export default function QuizQuestion({ current,
       }
     }
   }
+
+  // NEW: 서버 채점 응답의 정답 인덱스를 “%4 매핑”으로 계산 (1→A(0), 2→B(1), 3→C(2), 0→D(3))
+  const mapServerCorrectToIdx = (scid) => {
+    const n = Number(scid);
+    if (!Number.isFinite(n)) return -1;
+    const r = n % 4;
+    return r === 0 ? 3 : r - 1;
+  };
+  const idxToLetter = (idx) => (idx >= 0 ? String.fromCharCode(65 + idx) : '');
+  const serverCorrectIdx = (answerResult?.serverCorrectOptionId != null)
+    ? mapServerCorrectToIdx(answerResult.serverCorrectOptionId)
+    : -1;
+  const finalCorrectIdx = (serverCorrectIdx >= 0 ? serverCorrectIdx : correctIdx);
+  const correctLetter = idxToLetter(finalCorrectIdx);
+
+  // 정답 아이콘 렌더러: 문자열(URL) 또는 컴포넌트 지원
+  const renderCorrectIcon = (letter) => {
+    const Icon = correctIcons?.[letter];
+    if (!Icon) return null;
+    if (typeof Icon === 'string') {
+      return (
+        <img
+          src={Icon}
+          alt={`정답 ${letter}`}
+          className="quiz-question-explanation-badge-icon"
+          width={24}
+          height={24}
+        />
+      );
+    }
+    const Cmp = Icon;
+    return <Cmp width={24} height={24} className="quiz-question-explanation-badge-icon" aria-label={`정답 ${letter}`} />;
+  };
   
   // 🎨 UI 관련 참조 및 상태
   const chalkTextRef = useRef(null);
@@ -765,17 +801,25 @@ export default function QuizQuestion({ current,
 
         {question?.options?.map((opt, idx) => {
           const isSelected = selected === idx;
-          // 서버 판정이 있으면 우선 적용
-          const serverSaysCorrect = showResult && isSelected && typeof answerResult?.serverCorrect === 'boolean' ? answerResult.serverCorrect : null;
-          const isCorrect = showResult && isSelected && (serverSaysCorrect === null ? idx === correctIdx : serverSaysCorrect);
-          const isWrong = showResult && isSelected && !isCorrect;
+          // 요구사항: 결과 표시 후에는 선택한 카드만 강조
+          // - 선택했고 정답이면 green(correct)
+          // - 선택했고 오답이면 red(wrong)
+          // - 선택하지 않은 카드는 어떤 경우에도 강조하지 않음
           let cardClass = "quiz-question-option-card";
-          if (isCorrect) cardClass += " correct";
-          else if (isWrong) cardClass += " wrong";
-          else if (isSelected) cardClass += " selected";
           let badgeClass = "quiz-question-option-badge";
-          if (isCorrect) badgeClass += " correct";
-          else if (isWrong) badgeClass += " wrong";
+          if (showResult) {
+            if (isSelected) {
+              if (finalCorrectIdx >= 0 && idx === finalCorrectIdx) {
+                cardClass += " correct";
+                badgeClass += " correct";
+              } else {
+                cardClass += " wrong";
+                badgeClass += " wrong";
+              }
+            }
+          } else {
+            if (isSelected) cardClass += " selected";
+          }
           const badgeLetter = String.fromCharCode(65 + idx);
           return (
             <div
@@ -794,15 +838,27 @@ export default function QuizQuestion({ current,
           );
         })}
 
-        {/* 정답/피드백 */}
+        {/* 정답/해설 영역: 항상 '정답' 라벨과 24x24 아이콘(A/B/C/D) 표시 */}
         {showResult && selected != null && (
           <div className="quiz-question-explanation">
             <div className="quiz-question-explanation-header">
-              <span className="quiz-question-explanation-label">{(answerResult?.serverCorrect === false) ? '피드백' : '정답'}</span>
-              {Number.isInteger(correctIdx) && correctIdx >= 0 && (
-                <div className="quiz-question-explanation-badge">
-                  <span className="quiz-question-explanation-badge-text">{String.fromCharCode(65 + correctIdx)}</span>
-                </div>
+              <span className="quiz-question-explanation-label">정답</span>
+              {Number.isInteger(finalCorrectIdx) && finalCorrectIdx >= 0 && (
+                (() => {
+                  const iconEl = renderCorrectIcon(correctLetter);
+                  if (iconEl) {
+                    return (
+                      <div className="quiz-question-explanation-badge icon">
+                        {iconEl}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="quiz-question-explanation-badge">
+                      <span className="quiz-question-explanation-badge-text">{correctLetter}</span>
+                    </div>
+                  );
+                })()
               )}
             </div>
             <div className="quiz-question-explanation-text" style={{ whiteSpace: 'pre-wrap' }}>
