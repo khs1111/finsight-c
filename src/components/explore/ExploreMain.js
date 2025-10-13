@@ -3,7 +3,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 
 import FloatingQuizCTA from './FloatingQuizCTA';
-import { getQuestions as apiGetQuestions, getSectorsWithSubsectors, getQuizIdForSelection, getLevelProgress, getUserProgress, getSubsectorProgress } from '../../api/explore';
+import { getQuestions as apiGetQuestions, getSectorsWithSubsectors, getQuizIdForSelection, getUserProgress, getSubsectorProgress } from '../../api/explore';
+import { getProgress as getLevelProgress } from '../../api/levels';
 import antCharacter from '../../assets/explore/stepant.png';
 import './ExploreMain.css';
 
@@ -405,6 +406,36 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     window.addEventListener('fin:answer-submitted', handler);
     return () => window.removeEventListener('fin:answer-submitted', handler);
   }, [selection]);
+
+  // 레벨 완료 낙관적 UI 처리: fin:level-completed 발생 시 즉시 100%로 표시 후 백엔드 재조회
+  useEffect(() => {
+    const handler = async () => {
+      try {
+        // 즉시 100% 반영 (문제 수를 기준으로 answeredCount = total)
+        if (totalProblems > 0) {
+          setTempProgress({ answeredCount: totalProblems, total: totalProblems });
+        }
+        // 백엔드 진행도/유저 진행도 최신화
+        const { levelId } = selection || {};
+        const userId = localStorage.getItem('userId') || undefined;
+        if (levelId && userId) {
+          try {
+            const [lp, up] = await Promise.all([
+              getLevelProgress(levelId, userId).catch(() => null),
+              getUserProgress(userId).catch(() => null),
+            ]);
+            if (lp) setBackendProgress(lp);
+            if (up) setUserProgress(up);
+          } catch (_) { /* ignore */ }
+        }
+      } finally {
+        // 약간의 시간 후 임시 진행도 제거 (백엔드 값으로 대체)
+        setTimeout(() => setTempProgress(null), 500);
+      }
+    };
+    window.addEventListener('fin:level-completed', handler);
+    return () => window.removeEventListener('fin:level-completed', handler);
+  }, [selection, totalProblems]);
 
   return (
     <div

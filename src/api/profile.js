@@ -31,7 +31,7 @@ export async function fetchProfile() {
     const userId = Number(localStorage.getItem('userId')) || undefined;
     if (userId) {
       const dash = await http(`/dashboard?userId=${userId}`);
-      const nickname = dash?.userInfo?.nickname || localStorage.getItem('username') || '퍼니의 동료';
+  const nickname = dash?.userInfo?.nickname || localStorage.getItem('username') || '퍼니의 동료';
       // 가능한 위치에서 티어 문자열 추출 시도
       const fromObj = (obj) => {
         if (!obj || typeof obj !== 'object') return undefined;
@@ -46,8 +46,10 @@ export async function fetchProfile() {
         return undefined;
       };
       const tierRaw = fromObj(dash?.userInfo) || fromObj(dash) || fromObj(dash?.profile) || 'EMERALD';
-      const tierImageUrl = dash?.userInfo?.tierImageUrl || dash?.tierImageUrl || dash?.profile?.tierImageUrl || '';
-      return { data: { nickname, tier: tierRaw, tierImageUrl }, isFallback: true };
+  // Prefer badge icon from userInfo.badge.iconUrl if present
+  const badgeIconUrl = dash?.userInfo?.badge?.iconUrl || dash?.userInfo?.badge_icon_url || dash?.badgeIconUrl || dash?.badge_icon_url;
+  const tierImageUrl = badgeIconUrl || dash?.userInfo?.tierImageUrl || dash?.tierImageUrl || dash?.profile?.tierImageUrl || '';
+  return { data: { nickname, tier: tierRaw, tierImageUrl }, isFallback: true };
     }
   } catch (_) {}
 

@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import TierDummy from '../assets/tier/gold.png';
 import TierMaster from '../assets/tier/master.png';
 import TierDiamond from '../assets/tier/diamond.png';
 import TierGold from '../assets/tier/gold.png';
@@ -241,18 +240,57 @@ export default function Profile() {
       case 'GOLD': return TierGold;
       case 'SILVER': return TierSilver;
       case 'BRONZE': return TierBronze;
-      default: return TierDummy;
+      default: return null;
     }
   };
   useEffect(() => {
     (async () => {
       try {
         const res = await fetchProfile();
+        const hasUserId = !!Number(localStorage.getItem('userId'));
+        const hasToken = !!localStorage.getItem('accessToken');
+        try {
+          // eslint-disable-next-line no-console
+          console.log('[Profile] source:', res?.isDummy ? 'dummy' : (res?.isFallback ? 'dashboard' : 'profile API'), '| hasUserId:', hasUserId, '| hasToken:', hasToken);
+        } catch (_) {}
+        const rawTier = (
+          res?.data?.tier ??
+          res?.data?.tierName ?? res?.data?.tier_name ??
+          res?.data?.rank ?? res?.data?.levelName ?? res?.data?.level_name ??
+          res?.data?.grade ?? ''
+        );
+        // Log the exact backend-provided tier for debugging/verification
+        
         const base = {
-          nickname: res.data.nickname || '',
-          tier: res.data.tier || '',
-          tierImageUrl: res.data.tierImageUrl || res.data.tier_image_url || '',
+          nickname: res?.data?.nickname || '',
+          tier: rawTier || '',
+          tierImageUrl: res?.data?.tierImageUrl || res?.data?.tier_image_url || '',
         };
+        // 추가 진단: 대시보드 경로일 때 실제 tier 관련 필드 후보를 콘솔에 덤프
+        if (res?.isFallback) {
+          try {
+            const userId = Number(localStorage.getItem('userId')) || undefined;
+            const token = localStorage.getItem('accessToken') || undefined;
+            if (userId) {
+              const dashRes = await fetchDashboard(userId, token);
+              const dash = dashRes?.data || {};
+              const ui = dash.userInfo || dash.profile || dash;
+              // eslint-disable-next-line no-console
+              console.log('[Profile][dash] userInfo keys:', ui && typeof ui === 'object' ? Object.keys(ui) : []);
+              // eslint-disable-next-line no-console
+              console.log('[Profile][dash] tier candidates:', {
+                tier: ui?.tier,
+                tierName: ui?.tierName,
+                rank: ui?.rank,
+                level: ui?.level,
+                grade: ui?.grade,
+                badge: ui?.badge,
+              });
+              // 폴백: tier가 비어있고 currentLevelTitle이 있으면 이를 tier로 사용
+              
+            }
+          } catch (_) {}
+        }
         // 배지 아이콘 보강 1순위: 대시보드에서 badgeId 계열 필드 발견 시 단건 조회
         try {
           const userId = Number(localStorage.getItem('userId')) || undefined;
@@ -294,8 +332,9 @@ export default function Profile() {
       }
     })();
   }, []);
-  const displayTier = (profile && profile.tier) ? normalizeTier(profile.tier) : 'Bronze';
-  const displayNickname = (profile && profile.nickname) ? profile.nickname : '퍼니의 동료';
+  // 화면 표시용 닉네임/티어: 백엔드 값을 그대로 사용하되, 닉네임은 비어있을 때만 안전하게 기본값 처리
+  const displayNickname = '피니';
+  const displayTier = normalizeTier(profile.tier);
   return (
     <>
       <div className="p-topbar" aria-label="상단 제목">
@@ -319,7 +358,7 @@ export default function Profile() {
                 alt={displayTier}
                 width={32}
                 height={32}
-                onError={(e) => { e.currentTarget.src = TierDummy; }}
+                onError={(e) => { e.currentTarget.src = null; }}
               />
               <span className="nickname-inline">{displayNickname}</span>
             </div>

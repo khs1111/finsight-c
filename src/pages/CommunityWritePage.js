@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createCommunityPost } from '../api/community';
+import { updateBadges } from '../api/profile';
 import { useNavigate } from 'react-router-dom';
 import './CommunityPage.css';
 import './CommunityWritePage.css';
@@ -48,6 +49,13 @@ export default function CommunityWritePage() {
   const tags = category ? [category] : [];
   const categoryCode = category ? (CATEGORY_CODE[category] || category) : undefined;
   await createCommunityPost({ body, tags, category: categoryCode }, token);
+  // 배지 진행 상황 업데이트: POST /api/badges/update/{userId}
+  try {
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      await updateBadges(userId, token);
+    }
+  } catch (_) { /* 배지 업데이트 실패는 화면 흐름에 영향 주지 않음 */ }
       navigate(-1);
     } catch (e) {
       // Try to surface server message if available

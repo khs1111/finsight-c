@@ -498,6 +498,18 @@ export default function QuizQuestion({ current,
     }
   }, [showLearning, question, current]); // 학습 모드 토글 또는 문제 변경 시 실행
 
+  // '**' 볼드 처리 + 남는 '**' 제거 렌더러 (인라인)
+  const renderMdInlineBoldAndStrip = (text) => {
+    if (!text || typeof text !== 'string') return null;
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((p, i) => {
+      const m = /^\*\*(.*?)\*\*$/.exec(p);
+      if (m) return <strong key={i}>{m[1]}</strong>;
+      // 남는 '**'는 보여주지 않도록 제거
+      return <span key={i}>{p.replace(/\*\*/g, '')}</span>;
+    });
+  };
+
   /**
    * 📱 칠판 레이아웃 반응형 계산 useEffect
    * 
@@ -801,7 +813,9 @@ export default function QuizQuestion({ current,
           <div className="quiz-question-learning-svg-wrap">
             {/* Flexible speech bubble */}
             <div className="quiz-question-learning-svg-inner quiz-question-learning-bubble">
-              <div className="quiz-question-learning-svg-label">{normalizePlain(question?.hintMd) || '이 문제는 말 그대로 용어의 정의를 묻고 있어요!'}</div>
+              <div className="quiz-question-learning-svg-label">
+                {renderMdInlineBoldAndStrip(normalizePlain(question?.hintMd) || '이 문제는 말 그대로 용어의 정의를 묻고 있어요!')}
+              </div>
             </div>
             <div className="quiz-question-learning-ant"> 
               <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" style={{ filter:'drop-shadow(0 2px 4px rgba(0,0,0,0.25))' }}>
@@ -843,18 +857,9 @@ export default function QuizQuestion({ current,
           const hintContent = normalizePlain(
             question?.solvingKeypointsMd || question?.keyPointsMd || question?.hintMd || "힌트가 준비되지 않았습니다."
           );
-          const renderMdInlineBold = (text) => {
-            if (!text || typeof text !== 'string') return null;
-            const parts = text.split(/(\*\*.*?\*\*)/g);
-            return parts.map((p, i) => {
-              const m = /^\*\*(.*?)\*\*$/.exec(p);
-              if (m) return <strong key={i}>{m[1]}</strong>;
-              return <span key={i}>{p}</span>;
-            });
-          };
           return (
             <div className="quiz-question-point-content">
-              <div className="quiz-question-point-content-pre" style={{ whiteSpace: 'pre-wrap' }}>{renderMdInlineBold(hintContent)}</div>
+              <div className="quiz-question-point-content-pre" style={{ whiteSpace: 'pre-wrap' }}>{renderMdInlineBoldAndStrip(hintContent)}</div>
             </div>
           );
         })()}

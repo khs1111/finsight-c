@@ -972,69 +972,12 @@ export const getQuizById = async (quizId, userId) => {
   return { questions: [], totalCount: 0, quizId: id, error: '퀴즈 상세를 불러오지 못했습니다.' };
 };
 
-export const getQuestions = async ({ quizId, userId, topicId, subTopicId, levelId }) => {
-  // quizId가 주어지면 quizId를 3자리 article_id(1_1_1 등)로 변환해서 기사 fetch
-  if (quizId) {
-    // ✅ quizId → article_id 직접 매핑
-    const quizToArticleMap = {
-      1: '1_1_1', // 금융권1
-      2: '1_1_2', // 금융권2
-      3: '1_1_3', // 금융권3
-      4: '1_2_1', // 예금/적금1
-      5: '1_2_2', // 예금/적금2
-      6: '1_2_3', // 예금/적금3
-      7: '1_3_1', // 계좌1
-      8: '1_3_2', // 계좌2
-      9: '1_3_3', // 계좌3
-      10: '1_4_1', // 대출1
-      11: '1_4_2', // 대출2
-      12: '1_4_3', // 대출3
-      13: '2_1_1', // 카드1
-      14: '2_1_2', // 카드2
-      15: '2_1_3', // 카드3
-      16: '3_1_1', // 투자1
-      17: '3_1_2', // 투자2
-      18: '3_1_3', // 투자3
-      19: '4_1_1', // 세금1
-      20: '4_1_2', // 세금2
-      21: '4_1_3', // 세금3
-    };
-
-    const article_id = quizToArticleMap[quizId] || '1_1_1';
-    console.log('[ARTICLE_ID 매핑]', { quizId, article_id });
-
-    // ✅ 퀴즈 데이터 호출
-    const quizDetail = await getQuizById(quizId, userId);
-
-    // ✅ 기사 데이터 호출 (API 경로 보정: http() 유틸 사용)
-    let articleData = null;
-    try {
-      articleData = await http(`/articles/${article_id}`);
-    } catch (err) {
-      console.warn('[ARTICLE 매핑 오류]', err);
-    }
-
-    // ✅ ARTICLE 문제 병합
-    let questions = Array.isArray(quizDetail?.questions)
-      ? quizDetail.questions.map((q) => {
-          if (String(q.type).toLowerCase() !== 'article') return q;
-          if (!articleData) return q;
-          return {
-            ...q,
-            articleId: article_id,
-            article: articleData,
-            imageUrl: articleData.imageUrl,
-            articleTitleMd: articleData.title,
-            articleBodyMd: articleData.body,
-            articleImageUrl: articleData.imageUrl,
-          };
-        })
-      : [];
-
-    return { questions, totalCount: questions.length, quizId };
-  }
-
-  return { questions: [], totalCount: 0, quizId: null, error: 'quizId is required' };
+export const getQuestions = async ({ quizId, userId /* topicId, subTopicId, levelId intentionally unused here */ }) => {
+  // Spec: GET /api/quizzes/{id} should return full question set, including ARTICLE content when applicable.
+  if (!quizId) return { questions: [], totalCount: 0, quizId: null, error: 'quizId is required' };
+  const detail = await getQuizById(quizId, userId);
+  const questions = Array.isArray(detail?.questions) ? detail.questions : [];
+  return { questions, totalCount: questions.length, quizId };
 };
 // =========================================================
 export const getLevelsBySubsector = async (subsectorId) => {
@@ -1132,14 +1075,25 @@ export const getQuizIdForSelection = async ({ subTopicId, levelId, userId }) => 
     const resolvedLevelEntityId = await resolveLevelEntityId({ subTopicId, level: levelId });
     if (!resolvedLevelEntityId) return null;
     const list = await http(`/levels/${resolvedLevelEntityId}/quizzes${uid ? `?userId=${encodeURIComponent(uid)}` : ''}`);
-    const arr = Array.isArray(list?.quizzes) ? list.quizzes : (Array.isArray(list) ? list : []);
+    let arr = Array.isArray(list?.quizzes) ? list.quizzes : (Array.isArray(list) ? list : []);
     if (!arr.length) return null;
+    // 1) subsector 우선 매칭 (가능한 경우)
     const toNum = (v) => (v == null ? undefined : Number(v));
-    const matched = arr.find((qz) => {
+    const subMatched = arr.filter((qz) => {
       const ss = toNum(qz.subsectorId ?? qz.subsector_id ?? qz.subsector?.id ?? qz.subTopicId ?? qz.topicId);
       return Number(ss) === Number(subTopicId);
     });
-    const chosen = matched || arr[0];
+    if (subMatched.length) arr = subMatched;
+    // 2) sortOrder 기준 정렬
+    const sorted = arr.slice().sort((a,b) => Number(a.sortOrder ?? a.order ?? a.sort_order ?? 0) - Number(b.sortOrder ?? b.order ?? b.sort_order ?? 0));
+    // 3) 상태 기반 선호도: IN_PROGRESS > not COMPLETED > fallback first
+    const statusStr = (s) => (s ? String(s).toUpperCase() : '');
+    const inProgress = sorted.find(q => statusStr(q.status) === 'IN_PROGRESS');
+    const notCompleted = sorted.find(q => {
+      const st = statusStr(q.status);
+      return st && st !== 'COMPLETED' && st !== 'LOCKED';
+    });
+    const chosen = inProgress || notCompleted || sorted[0];
     const qid = chosen?.id ?? chosen?.quizId ?? chosen?.quiz_id ?? chosen?.quiz?.id ?? chosen?.quiz?.quizId;
     const finalQid = Number.isFinite(Number(qid)) ? Number(qid) : null;
     try { console.log('[getQuizIdForSelection]', { subTopicId, inputLevel: levelId, resolvedLevelEntityId, quizId: finalQid }); } catch (_) {}
