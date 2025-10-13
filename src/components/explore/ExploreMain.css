@@ -570,7 +570,7 @@
   position: relative; /* 추가 */
   z-index: 0; /* 기본 계층 */
   width: 100%;
-  max-width: 420px;
+  max-width: 100%;
   min-height: 100vh;
   margin: 0 auto;
   background: #F4F6FA;

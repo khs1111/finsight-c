@@ -116,8 +116,20 @@ function coerceLevelId(levelId) {
 async function ensureAuth() {
   if (authInitialized) return;
   const hasToken = !!localStorage.getItem('accessToken');
-  if (!hasToken) {
-    // 게스트 로그인 시도 (실패해도 진행)
+  const isGuestSession = sessionStorage.getItem('guest') === '1';
+  // TTL(24h) 만료 여부
+  let ttlExpired = false;
+  try {
+    const at = Number(localStorage.getItem('guestLoginAt')) || 0;
+    if (at > 0) {
+      const elapsedMs = Date.now() - at;
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      ttlExpired = elapsedMs >= DAY_MS;
+    }
+  } catch (_) {}
+
+  // 게스트 세션이면 매 진입 시 갱신, 아니면 토큰 없거나 TTL 만료 시 로그인
+  if (isGuestSession || !hasToken || ttlExpired) {
     try { await guestLogin(API_BASE); } catch (_) {}
   }
   authInitialized = true;
@@ -127,6 +139,7 @@ async function http(path, opts = {}, token) {
   // 게스트 로그인 토큰 확보 (최초 1회)
   await ensureAuth();
   const jwt = opts.token || token || localStorage.getItem('accessToken');
+  const silent = !!opts.silent;
 
   // 경로 보정: API_BASE(/api 여부)와 path(/api 여부) 중복/누락 없이 합치기
   // 끝 슬래시 제거 (윈도우/리눅스 모두 호환)
@@ -152,13 +165,15 @@ async function http(path, opts = {}, token) {
 
   // 콘솔에 모든 요청 정보 출력
   try {
-    console.log('[API 요청]', {
-      url: `${base}${p}`,
-      method: opts.method || 'GET',
-      body: opts.body ? (typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)) : undefined,
-      headers,
-      token: jwt ? '***' : undefined
-    });
+    if (!silent) {
+      console.log('[API 요청]', {
+        url: `${base}${p}`,
+        method: opts.method || 'GET',
+        body: opts.body ? (typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)) : undefined,
+        headers,
+        token: jwt ? '***' : undefined
+      });
+    }
   } catch (_) {}
 
   let res;
@@ -169,33 +184,37 @@ async function http(path, opts = {}, token) {
       ...opts,
     });
     // 응답 상태 출력
-    console.log('[API 응답]', {
-      url: `${base}${p}`,
-      status: res.status,
-      ok: res.ok,
-      statusText: res.statusText
-    });
+    if (!silent) {
+      console.log('[API 응답]', {
+        url: `${base}${p}`,
+        status: res.status,
+        ok: res.ok,
+        statusText: res.statusText
+      });
+    }
     if (!res.ok) {
       let bodyText = '';
       try { bodyText = await res.text(); } catch (_) {}
       const msg = bodyText ? `${res.statusText} ${bodyText}` : res.statusText;
-      console.error('[API 에러]', {
-        url: `${base}${p}`,
-        status: res.status,
-        statusText: res.statusText,
-        body: bodyText
-      });
+      if (!silent) {
+        console.error('[API 에러]', {
+          url: `${base}${p}`,
+          status: res.status,
+          statusText: res.statusText,
+          body: bodyText
+        });
+      }
       throw new Error(`HTTP ${res.status}: ${msg}`);
     }
     // 응답 본문(json)도 출력
     let json;
     try {
       json = await res.clone().json();
-      console.log('[API 응답 본문]', json);
+      if (!silent) console.log('[API 응답 본문]', json);
     } catch (_) {}
     return await res.json();
   } catch (err) {
-    console.error('[API fetch 실패]', err);
+    if (!silent) console.error('[API fetch 실패]', err);
     throw err;
   }
 }
@@ -416,39 +435,32 @@ export const getUserProgress = async (userId, token) => {
 export const getLevelDetail = async (levelId) => {
   const id = coerceLevelId(levelId);
   if (!id) return null;
-  const tryPaths = [
-    `/levels/${id}`,
-    `/levels/${id}/detail`,
-    `/levels/detail/${id}`,
-    `/levels/detail?id=${encodeURIComponent(id)}`,
-  ];
-  for (const p of tryPaths) {
-    try {
-      const res = await http(p);
-      if (res && typeof res === 'object') {
-        const pick = (...keys) => {
-          for (const k of keys) {
-            const v = res?.[k];
-            if (v != null && v !== '') return v;
-          }
-          return undefined;
-        };
-        const entityId = res.id ?? res.levelId ?? id;
-        const levelNo = pick('level_number','levelNumber','level_no','levelNo','number','difficulty','rank');
-        const title = pick('title','name','levelTitle') ?? (levelNo ? `레벨 ${levelNo}` : `레벨 ${entityId}`);
-        const goal = pick('learning_goal','learningGoal','goal','objective','objective_md','objectiveMd','learningGoalMd');
-        const desc = pick('description','desc','summary','overview','description_md','desc_md','summary_md','overview_md','details','details_md');
-        return {
-          id: entityId,
-          title,
-          levelNumber: Number.isFinite(Number(levelNo)) ? Number(levelNo) : undefined,
-          goal: goal ?? '',
-          desc: desc ?? '',
-          raw: res,
-        };
-      }
-    } catch (_) { /* try next */ }
-  }
+  try {
+    const p = `/levels/${id}`;
+    const res = await http(p, { silent: true });
+    if (res && typeof res === 'object') {
+      const pick = (...keys) => {
+        for (const k of keys) {
+          const v = res?.[k];
+          if (v != null && v !== '') return v;
+        }
+        return undefined;
+      };
+      const entityId = res.id ?? res.levelId ?? id;
+      const levelNo = pick('level_number','levelNumber','level_no','levelNo','number','difficulty','rank');
+      const title = pick('title','name','levelTitle') ?? (levelNo ? `레벨 ${levelNo}` : `레벨 ${entityId}`);
+      const goal = pick('learning_goal','learningGoal','goal','objective','objective_md','objectiveMd','learningGoalMd');
+      const desc = pick('description','desc','summary','overview','description_md','desc_md','summary_md','overview_md','details','details_md');
+      return {
+        id: entityId,
+        title,
+        levelNumber: Number.isFinite(Number(levelNo)) ? Number(levelNo) : undefined,
+        goal: goal ?? '',
+        desc: desc ?? '',
+        raw: res,
+      };
+    }
+  } catch (_) { /* ignore */ }
   return null;
 };
 
@@ -1200,14 +1212,27 @@ export const submitAnswer = async ({ quizId, questionId, selectedOptionId, userI
     }
   }
 
+  const num = (v) => (v == null ? v : (Number.isFinite(Number(v)) ? Number(v) : v));
+  const qzIdNum = num(quizId);
+  const qIdNum = num(questionId);
+  const selIdNum = num(selectedOptionId);
+  const uidNum = num(uid);
+
   const payload = {
-    quizId, // 일부 백엔드에서 필요
-    questionId,
-    selectedOptionId,
-    // 호환 별칭
-    optionId: selectedOptionId,
-    answerId: selectedOptionId,
-    userId: uid,
+    // camelCase 기본
+    quizId: qzIdNum,
+    questionId: qIdNum,
+    selectedOptionId: selIdNum,
+    userId: uidNum,
+    // 호환 별칭 (다양한 백엔드 매핑 고려)
+    optionId: selIdNum,
+    answerId: selIdNum,
+    // snake_case 중복 제공 (ORM/매퍼 호환)
+    user_id: uidNum,
+    question_id: qIdNum,
+    selected_option_id: selIdNum,
+    // answered_at은 서버에서 기록하도록 두되, 필요시 주석 해제
+    // answered_at: new Date().toISOString(),
   };
 
   const headers = {
@@ -1218,11 +1243,30 @@ export const submitAnswer = async ({ quizId, questionId, selectedOptionId, userI
   console.log('[submitAnswer] Sending payload:', payload);
 
   try {
-    const response = await http('/quizzes/submit-answer', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      headers,
-    }, jwt);
+    const uid = withUserId(uidNum);
+    const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
+    let response;
+    // 1) Preferred: quiz path + submit-answer
+    try {
+      response = await http(`/quizzes/${qzIdNum}/submit-answer${qs}`,
+        { method: 'POST', body: JSON.stringify(payload), headers }, jwt);
+    } catch (e1) {
+      // 2) Alternative: quiz path + attempt
+      try {
+        response = await http(`/quizzes/${qzIdNum}/attempt${qs}`,
+          { method: 'POST', body: JSON.stringify(payload), headers }, jwt);
+      } catch (e2) {
+        // 3) Body-driven endpoint
+        try {
+          response = await http('/quizzes/submit-answer',
+            { method: 'POST', body: JSON.stringify(payload), headers }, jwt);
+        } catch (e3) {
+          // 4) Generic attempts endpoint
+          response = await http('/attempts',
+            { method: 'POST', body: JSON.stringify(payload), headers }, jwt);
+        }
+      }
+    }
 
     console.log('[submitAnswer] Raw response:', response);
 
@@ -1295,14 +1339,109 @@ export const getLevels = async () => {
 export const postAttempt = ({ quizId, questionId, selectedOptionId, userId, token }) =>
   submitAnswer({ quizId, questionId, selectedOptionId, userId, token });
 
+// 레벨 시작 처리: POST /api/levels/{id}/start?userId=...
+export const startLevel = async (levelId, userId, token) => {
+  const lid = coerceLevelId(levelId);
+  if (!Number.isFinite(lid)) throw new Error('Invalid levelId for startLevel');
+  const uid = withUserId(userId);
+  const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
+  return http(`/levels/${lid}/start${qs}`, { method: 'POST' }, token);
+};
+
+// 레벨 완료 처리: POST /api/levels/{id}/complete?userId=...
+export const completeLevel = async (levelId, userId, token) => {
+  const lid = coerceLevelId(levelId);
+  if (!Number.isFinite(lid)) throw new Error('Invalid levelId for completeLevel');
+  const uid = withUserId(userId);
+  const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
+  return http(`/levels/${lid}/complete${qs}`, { method: 'POST' }, token);
+};
+
 // 퀴즈 완료 처리 (인증 포함): POST /api/quizzes/{id}/complete?userId=...
 export const completeQuiz = async (quizId, userId, token) => {
   const id = Number(quizId);
   if (!Number.isFinite(id)) throw new Error('Invalid quizId for completeQuiz');
   const uid = withUserId(userId);
   const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
-  // http()가 JWT를 자동 첨부하므로 인증 요구 환경에서도 동작
-  return http(`/quizzes/${id}/complete${qs}`, { method: 'POST' }, token);
+
+  const jwt = token ?? localStorage.getItem('accessToken') ?? undefined;
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(jwt ? { Authorization: `Bearer ${jwt}` } : {})
+  };
+  const body = JSON.stringify({ quizId: id, userId: uid, user_id: uid });
+
+  // 1) 스펙: POST /quizzes/{id}/complete?userId=
+  try {
+    return await http(`/quizzes/${id}/complete${qs}`, { method: 'POST', headers }, jwt);
+  } catch (e1) {
+    // 2) 변형: POST /quizzes/{id}/complete (body에 userId 포함)
+    try {
+      return await http(`/quizzes/${id}/complete`, { method: 'POST', headers, body }, jwt);
+    } catch (e2) {
+      // 3) 변형: POST /quizzes/complete (body에 quizId,userId)
+      try {
+        return await http(`/quizzes/complete`, { method: 'POST', headers, body }, jwt);
+      } catch (e3) {
+        // 4) 구버전: POST /quizzes/{id}/done
+        try {
+          return await http(`/quizzes/${id}/done${qs}`, { method: 'POST', headers }, jwt);
+        } catch (e4) {
+          // 마지막 실패 시 최초 에러 전달
+          throw e1;
+        }
+      }
+    }
+  }
+};
+
+// 사용자 퀴즈 시도 이력 조회: 서버에 저장된 정오답/선택지를 가져와 UI에 반영
+export const fetchQuizAttempts = async (quizId, userId, token) => {
+  const id = Number(quizId);
+  if (!Number.isFinite(id)) return [];
+  const uid = withUserId(userId);
+  const qsUid = uid ? `userId=${encodeURIComponent(uid)}` : '';
+  const qsQuiz = `quizId=${encodeURIComponent(id)}`;
+  const candidates = [
+    `/quizzes/${id}/attempts${uid ? `?${qsUid}` : ''}`,
+    `/quizzes/${id}/answers${uid ? `?${qsUid}` : ''}`,
+    `/attempts?${qsQuiz}${uid ? `&${qsUid}` : ''}`,
+    uid ? `/users/${uid}/attempts?${qsQuiz}` : null,
+  ].filter(Boolean);
+  for (const p of candidates) {
+    try {
+      const res = await http(p, {}, token);
+      const list = Array.isArray(res?.items) ? res.items : (Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : null));
+      if (!Array.isArray(list)) continue;
+      const norm = list.map((it) => {
+        const qid = it.questionId ?? it.question_id ?? it.question?.id ?? it.qid ?? it.problemId;
+        const sel = it.selectedOptionId ?? it.selected_option_id ?? it.optionId ?? it.answerId ?? it.answer_id ?? it.chosenOptionId;
+        const raw = it.isCorrect ?? it.is_correct ?? it.correct ?? it.result ?? it.status;
+        let isCorrect = null;
+        if (typeof raw === 'boolean') isCorrect = raw;
+        else if (typeof raw === 'number') isCorrect = raw === 1;
+        else if (typeof raw === 'string') {
+          const s = raw.trim().toLowerCase();
+          if (['true','y','yes','1','correct','right','ok','pass','passed','success'].includes(s)) isCorrect = true;
+          if (['false','n','no','0','wrong','fail','failed','error'].includes(s)) isCorrect = false;
+        }
+        const corr = it.correctOptionId ?? it.correct_option_id ?? it.correctId ?? it.answerKeyId ?? null;
+        const feedback = it.feedback ?? it.explanation ?? it.message ?? null;
+        return {
+          questionId: Number.isFinite(Number(qid)) ? Number(qid) : qid,
+          selectedOptionId: Number.isFinite(Number(sel)) ? Number(sel) : sel,
+          isCorrect,
+          correctOptionId: Number.isFinite(Number(corr)) ? Number(corr) : corr,
+          feedback,
+          createdAt: it.createdAt ?? it.created_at ?? it.answeredAt ?? it.answered_at ?? null,
+        };
+      });
+      return norm;
+    } catch (_) {
+      // try next
+    }
+  }
+  return [];
 };
 
 // 토픽별 통계 조회

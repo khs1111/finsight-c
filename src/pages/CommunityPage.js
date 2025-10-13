@@ -6,6 +6,7 @@ import './StudyPage.css';
 import './CommunityPage.css';
 import RankFilterDropdown from '../components/community/RankFilterDropdown';
 import { fetchCommunityPosts, likeCommunityPost, unlikeCommunityPost } from '../api/community';
+import { fetchBadgeById } from '../api/profile';
 import { useNavigate } from 'react-router-dom';
 import defaultAvatar from '../assets/community-default-avatar.svg';
 
@@ -54,13 +55,50 @@ export default function CommunityPage() {
   const apiTierCode = rank ? (RANK_CODE[rank] || rank) : undefined;
     const { data } = await fetchCommunityPosts({ category: apiCategoryCode, tier: apiTierCode }, token);
         if (!mounted) return;
-        // 서버 응답 배열 가정: [{ id, author:{nickname,profileImage,tier}, body, tags, likeCount, commentCount, createdAt }]
-        setPosts(Array.isArray(data) ? data : []);
+        // 서버 응답 배열 가정: [{ id, author_id, author_badge_id, body, like_count, comment_count, created_at, ... }]
+        // 또는 이미 camelCase 형태일 수도 있으므로 양쪽 모두 지원
+        const normalizePost = (p) => {
+          if (!p || typeof p !== 'object') return p;
+          const likeCount = p.likeCount ?? p.like_count;
+          const commentCount = p.commentCount ?? p.comment_count;
+          const createdAt = p.createdAt ?? p.created_at;
+          const updatedAt = p.updatedAt ?? p.updated_at;
+          // author 정보가 확장되어 오는 경우를 그대로 사용하되, 없으면 최소 정보 구성
+          const author = p.author || (p.author_id ? { id: p.author_id } : undefined) || undefined;
+          return {
+            ...p,
+            likeCount,
+            commentCount,
+            createdAt,
+            updatedAt,
+            author,
+          };
+        };
+        let list = Array.isArray(data) ? data.map(normalizePost) : [];
+        // author_badge_id -> badge icon 보강 (병렬 최소화)
+        try {
+          const token = localStorage.getItem('accessToken');
+          const needBadge = list.filter(p => !p.author?.badge?.iconUrl && (p.author_badge_id || p.authorBadgeId));
+          const uniqueIds = Array.from(new Set(needBadge.map(p => p.author_badge_id || p.authorBadgeId))).filter(Boolean);
+          const fetched = await Promise.all(uniqueIds.map(async (bid) => {
+            try { const { data } = await fetchBadgeById(bid, token); return { bid, data }; } catch { return { bid, data: null }; }
+          }));
+          const map = new Map(fetched.filter(f => f.data).map(f => [String(f.bid), f.data]));
+          list = list.map(p => {
+            const bid = p.author_badge_id || p.authorBadgeId;
+            if (!bid) return p;
+            const badge = map.get(String(bid));
+            if (!badge) return p;
+            const author = p.author || {};
+            return { ...p, author: { ...author, badge: { ...(author.badge||{}), iconUrl: author.badge?.iconUrl || badge.iconUrl, name: author.badge?.name || badge.name } } };
+          });
+        } catch (_) {}
+        setPosts(list);
         // 초기 likedMap 동기화 (서버에 liked 여부가 있다면 반영)
-        if (Array.isArray(data)) {
+        if (Array.isArray(list)) {
           setLikedMap(prev => {
             const next = new Map(prev);
-            data.forEach(p => {
+            list.forEach(p => {
               if (typeof p.liked === 'boolean') next.set(p.id, p.liked);
             });
             return next;

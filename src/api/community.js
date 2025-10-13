@@ -133,3 +133,21 @@ export function fetchAdminWrongNotesQuiz(quizId, token) {
 export function fetchAdminWrongNotesDashboard(token) {
 	return getAxios(token).get('/admin/wrong-notes/dashboard');
 }
+
+// --------------------
+// Badge APIs (for author_badge_id enrichment)
+// --------------------
+export async function fetchBadgeById(badgeId, token) {
+	const ax = getAxios(token);
+	try {
+		const { data } = await ax.get(`/badges/${badgeId}`);
+		return data;
+	} catch (_) {
+		try {
+			const { data } = await ax.get(`/badges`, { params: { id: badgeId } });
+			return Array.isArray(data) ? data[0] : data;
+		} catch (e) {
+			return null;
+		}
+	}
+}

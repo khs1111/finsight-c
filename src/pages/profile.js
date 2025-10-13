@@ -8,7 +8,7 @@ import TierBronze from '../assets/tier/bronze.png';
 import TierEmerald from '../assets/tier/emerald.png';
 import AntImg from '../assets/profile/ant.png';
 import BackImg from '../assets/profile/back.png';
-import { fetchProfile, fetchProfileActivity } from '../api/profile';
+import { fetchProfile, fetchProfileActivity, fetchDashboard, fetchBadgeById } from '../api/profile';
 import './Profile.css';
 
 const actionItems = [
@@ -245,16 +245,56 @@ export default function Profile() {
     }
   };
   useEffect(() => {
-    fetchProfile().then(res => {
-      setProfile({
-        nickname: res.data.nickname || '',
-        tier: res.data.tier || '',
-        // 서버에서 티어 이미지 URL을 내려주면 사용, 없으면 빈 문자열
-        tierImageUrl: res.data.tierImageUrl || res.data.tier_image_url || '',
-      });
-    }).catch(() => setProfile({ nickname: '', tier: '', tierImageUrl: '' }));
+    (async () => {
+      try {
+        const res = await fetchProfile();
+        const base = {
+          nickname: res.data.nickname || '',
+          tier: res.data.tier || '',
+          tierImageUrl: res.data.tierImageUrl || res.data.tier_image_url || '',
+        };
+        // 배지 아이콘 보강 1순위: 대시보드에서 badgeId 계열 필드 발견 시 단건 조회
+        try {
+          const userId = Number(localStorage.getItem('userId')) || undefined;
+          if (userId) {
+            const token = localStorage.getItem('accessToken') || undefined;
+            // 1) 대시보드에서 대표 배지 아이콘/ID 직접 사용 시도(백엔드별 구조 대응)
+            try {
+              const dashRes = await fetchDashboard(userId, token);
+              const dash = dashRes?.data || {};
+              const ui = dash.userInfo || dash.profile || dash;
+              // 아이콘이 바로 있으면 우선 사용
+              const directIcon = ui?.badgeIconUrl || ui?.badge_icon_url || dash?.badgeIconUrl || dash?.badge_icon_url || ui?.badge?.iconUrl || ui?.badge?.icon_url;
+              if (!base.tierImageUrl && directIcon && /^https?:\/\//i.test(directIcon)) {
+                base.tierImageUrl = directIcon;
+              }
+              const badgeId = (
+                // 대표 배지 우선
+                ui?.displayed_badge_id || ui?.displayedBadgeId || dash.displayed_badge_id || dash.displayedBadgeId ||
+                // 그 외 후보
+                ui?.current_badge_id || ui?.currentBadgeId || ui?.badge_id || ui?.badgeId ||
+                ui?.badge?.id || dash.current_badge_id || dash.currentBadgeId
+              );
+              if (badgeId) {
+                const bRes = await fetchBadgeById(badgeId, token);
+                const b = bRes?.data || bRes; // axios vs fetch 형태 대응
+                const icon = b?.iconUrl || b?.icon_url || b?.badge?.iconUrl || b?.badge?.icon_url;
+                if (icon && /^https?:\/\//i.test(icon)) {
+                  base.tierImageUrl = base.tierImageUrl || icon;
+                }
+              }
+            } catch (_) { /* ignore and fallback to list */ }
+
+            // 2) 리스트 기반 보강은 제거하여 404 소음과 과도한 호출을 방지합니다.
+          }
+        } catch (_) {}
+        setProfile(base);
+      } catch (_) {
+        setProfile({ nickname: '', tier: '', tierImageUrl: '' });
+      }
+    })();
   }, []);
-  const displayTier = (profile && profile.tier) ? normalizeTier(profile.tier) : 'EMERALD';
+  const displayTier = (profile && profile.tier) ? normalizeTier(profile.tier) : 'Bronze';
   const displayNickname = (profile && profile.nickname) ? profile.nickname : '퍼니의 동료';
   return (
     <>

@@ -1,15 +1,10 @@
 import { useEffect, useState } from 'react';
-import {
-  fetchWrongNoteStatistics,
-  fetchWrongNotes
-} from '../../api/community';
+import { fetchWrongNoteStatistics, fetchWrongNotes } from '../../api/community';
 
 // In-memory wrong note (틀린문제) store
 // Each item: { id, question, userAnswer, correctAnswer, explanation?, addedAt }
-let wrongState = [
-  { id: 'q1', category: '은행', question: 'PER가 의미하는 것은?', userAnswer: '주당 순이익 대비 배당', correctAnswer: '주가 / 주당순이익(EPS)', explanation: 'Price to Earnings Ratio = 현재 주가 / 주당순이익', addedAt: Date.now() - 86400000 },
-  { id: 'q2', category: '은행', question: '채권 금리가 오르면 일반적으로 채권 가격은?', userAnswer: '같아진다', correctAnswer: '하락한다', explanation: '금리와 가격은 반비례 관계', addedAt: Date.now() - 3600000 }
-];
+// Start empty; populate from server and/or immediate adds.
+let wrongState = [];
 
 const wrongListeners = new Set();
 
@@ -33,9 +28,9 @@ export function useWrongNoteStore() {
       try {
         const token = localStorage.getItem('accessToken');
         const userId = localStorage.getItem('userId') || undefined;
-        // 1) stats
+        // 1) stats (normalize to { total, byCategory: [{category, count}] })
         const { data: statData } = await fetchWrongNoteStatistics(userId, token);
-        if (mounted && statData) setStats(statData);
+        if (mounted && statData) setStats(normalizeStats(statData));
         // 2) list (first page)
         const { data: listResp } = await fetchWrongNotes({ userId, page: 0, size: 50, filter: 'all', token });
         const items = Array.isArray(listResp?.items) ? listResp.items : Array.isArray(listResp) ? listResp : [];
@@ -100,4 +95,28 @@ export function addWrongNoteImmediate({ question, userAnswer, correctAnswer, cat
     meta,
   };
   setWrongState(prev => [{ id: Date.now().toString(), addedAt: Date.now(), ...item }, ...prev]);
+}
+
+// Normalize various possible stats payload shapes
+function normalizeStats(sd) {
+  try {
+    if (!sd) return { total: 0, byCategory: [] };
+    const total = sd.total ?? sd.count ?? sd.overall ?? sd.overallCount ?? sd.totalWrong ?? 0;
+    let byCategory = sd.byCategory ?? sd.categories ?? sd.categoryStats ?? [];
+    if (byCategory && !Array.isArray(byCategory) && typeof byCategory === 'object') {
+      // Convert map/object to array
+      byCategory = Object.entries(byCategory).map(([category, count]) => ({ category, count }));
+    }
+    if (Array.isArray(byCategory)) {
+      byCategory = byCategory.map(x => ({
+        category: x.category ?? x.name ?? x.key ?? '기타',
+        count: x.count ?? x.value ?? x.total ?? 0,
+      }));
+    } else {
+      byCategory = [];
+    }
+    return { total, byCategory };
+  } catch {
+    return { total: 0, byCategory: [] };
+  }
 }

@@ -60,7 +60,10 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
   // 주간 출석(해당 주의 날짜 키)을 localStorage 'attendance'에서 읽어와 표시
   useEffect(() => {
     try {
-      const arr = JSON.parse(localStorage.getItem('attendance') || '[]');
+      // per-user attendance key
+      const uid = (() => { try { return localStorage.getItem('userId'); } catch (_) { return null; } })();
+      const attendanceKey = uid ? `attendance:${uid}` : 'attendance';
+      const arr = JSON.parse(localStorage.getItem(attendanceKey) || '[]');
       if (!Array.isArray(arr)) return;
       // 이번 주의 날짜 키 목록 생성
       const start = new Date(startOfWeek);

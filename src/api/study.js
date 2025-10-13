@@ -1,9 +1,16 @@
 // Study-related API (wrong notes)
 import { API_BASE } from './config';
 
-async function safeFetch(url, options) {
+async function safeFetch(url, options = {}) {
   try {
-    const res = await fetch(url, options);
+    const token = localStorage.getItem('accessToken');
+    const headers = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, { credentials: 'include', ...options, headers });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (e) {

@@ -39,7 +39,7 @@
   position: absolute;
   left: 16px;
   right: 16px;
-  top: 64px;
+  top: 24px;
   width: calc(100% - 32px);
   height: 24px;
   display: flex;

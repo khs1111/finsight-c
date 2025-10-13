@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
+import { guestLogin } from '../api/auth';
 
 // 간단한 게스트 로그인 UX: 백엔드 연결 전엔 즉시 홈으로, 연결되면 guestLogin API 호출
 export default function Login() {
@@ -13,9 +14,19 @@ export default function Login() {
     try {
       setLoading(true);
       setError('');
-      // TODO: backend ready 시 아래 주석 해제
-      // const ok = await guestLogin();
-      const ok = true; // 현재는 바로 통과
+      // 백엔드가 연결되어 있으면 게스트 로그인으로 토큰/유저ID를 세팅합니다.
+      // 실패해도 UX를 위해 세션 플래그는 유지합니다.
+      let ok = false;
+      try {
+        const res = await guestLogin();
+        ok = !!res;
+      } catch (_) {
+        ok = false;
+      }
+      if (!ok) {
+        // 폴백: 토큰 없이도 라우팅은 진행 (일부 기능은 제한될 수 있음)
+        ok = true;
+      }
       if (ok) {
         sessionStorage.setItem('guest', '1');
         navigate('/', { replace: true });
