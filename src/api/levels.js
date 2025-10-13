@@ -13,12 +13,12 @@ function buildUrl(path) {
 }
 
 function getAuthHeaders(token) {
-  const jwt = token || sessionStorage.getItem('accessToken');
+  const jwt = token || localStorage.getItem('accessToken');
   return jwt ? { Authorization: `Bearer ${jwt}` } : {};
 }
 
 function withUserId(userId) {
-  const stored = Number(sessionStorage.getItem('userId'));
+  const stored = Number(localStorage.getItem('userId'));
   return userId ?? (Number.isFinite(stored) ? stored : undefined);
 }
 

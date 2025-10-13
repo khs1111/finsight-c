@@ -3,7 +3,7 @@ import { API_BASE } from './config';
 
 async function safeFetch(url, options = {}) {
   try {
-  const token = sessionStorage.getItem('accessToken');
+    const token = localStorage.getItem('accessToken');
     const headers = {
       Accept: 'application/json',
       'Content-Type': 'application/json',
