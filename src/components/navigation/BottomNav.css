@@ -20,6 +20,21 @@
 
   /* 내부 아이템 정렬을 위해 flexbox 사용 */
   display: flex;
+
+  /* 하단 미세한 틈(배경색)이 비치지 않도록 바닥을 흰색으로 채움 */
+  background: #fff;
+}
+
+/* iOS 안전영역이 있는 기기에서 바닥까지 흰색으로 확실히 채우기 */
+.bottom-nav::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: env(safe-area-inset-bottom, 0px);
+  background: #fff;
+  pointer-events: none;
 }
 
 /* 네비게이션 바의 실제 디자인이 적용되는 내부 컨테이너 */

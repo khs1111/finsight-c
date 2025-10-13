@@ -75,9 +75,76 @@
   display: flex;
   flex-direction: column;
 }
-.section-title {
-  font-size: 14px; color: #6B7280; margin: 8px 0 12px;
-}
+.section-title { font-size: 14px; color: #6B7280; margin: 8px 0 12px; }
 .empty-recent {
   font-size: 16px; color: #9B9B9B;
 }
+
+/* 최근 검색어 헤더 */
+.recent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 0 8px;
+}
+.recent-header .title {
+  color: #626262;
+  font-family: Roboto, system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  letter-spacing: -0.24px;
+}
+.recent-header .clear-btn {
+  background: none;
+  border: none;
+  color: #999;
+  font-family: Roboto, system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+/* 최근 검색어 리스트 스타일 (피그마 규격) */
+.recent-list { display: flex; flex-direction: column; gap: 0; }
+.recent-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+  padding: 12px 0;
+  color: #999; /* 텍스트+아이콘 컬러 */
+}
+.recent-row .left { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.recent-row .right { display: inline-flex; align-items: center; gap: 16px; }
+.recent-row .icon { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; color: #999; }
+.recent-row .svg-icon { width: 24px; height: 24px; display: block; }
+
+
+/* 시계/닫기 별도 사이즈/스트로크 보정 */
+.recent-row .icon-clock .svg-icon { width: 24px; height: 24px; }
+.recent-row .icon-close .svg-icon { width: 24px; height: 24px; }
+.recent-row .icon-clock .svg-icon *,
+.recent-row .icon-clock .svg-icon path,
+.recent-row .icon-clock .svg-icon circle,
+.recent-row .icon-close .svg-icon *,
+.recent-row .icon-close .svg-icon path,
+
+/* 날짜 타이포 (Body_Roboto_M_14) */
+.recent-row .date {
+  color: var(--Text-color_disable, #999);
+  font-family: Roboto, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: normal;
+}
+.recent-row .term { font-size: 16px; color: inherit; background: none; border: none; padding: 0; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.recent-row .date { font-size: 13px; color: inherit; }
+.recent-row .del { background: none; border: none; width: 24px; height: 24px; color: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.recent-row svg { width: 20px; height: 20px; }
+.recent-row svg path, .recent-row svg circle, .recent-row svg rect, .recent-row svg line { stroke: currentColor; fill: currentColor; }

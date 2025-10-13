@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import './Search.css';
 import SearchTopbar from '../components/search/SearchTopbar';
 import useRecentSearches from '../hooks/useRecentSearches';
+import { ReactComponent as AlarmIcon } from '../assets/newspng/Alarm.svg';
+import { ReactComponent as CloseIcon } from '../assets/newspng/Close.svg';
 import { searchArticles } from '../api/news';
 import NewsCard from '../components/news/NewsCard';
 
 export default function Search() {
   const navigate = useNavigate();
   const [text, setText] = useState('');
+  const [showRecents, setShowRecents] = useState(true);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -17,12 +20,13 @@ export default function Search() {
   const limit = 20;
   const debRef = useRef(null);
   const queryVersionRef = useRef(0);
-  const { recent, add } = useRecentSearches();
+  const { recent, add, remove, clear } = useRecentSearches();
   const submit = () => {
     const q = text.trim();
     if (q) {
       add(q);
       navigate(`/search/${encodeURIComponent(q)}`);
+      setShowRecents(false);
     }
   };
 
@@ -39,6 +43,8 @@ export default function Search() {
     if (!q) {
       if (debRef.current) { clearTimeout(debRef.current); debRef.current = null; }
       setLoading(false);
+      // when cleared, show recents again
+      setShowRecents(true);
       return;
     }
 
@@ -106,7 +112,12 @@ export default function Search() {
 
   return (
     <div className="search-page">
-      <SearchTopbar value={text} onChange={setText} onSubmit={submit} />
+      <SearchTopbar
+        value={text}
+        onChange={setText}
+        onSubmit={submit}
+        onBack={() => navigate('/', { replace: true })}
+      />
       <div className="search-content">
         {text.trim() ? (
           <div className="live-results">
@@ -121,32 +132,14 @@ export default function Search() {
             {error && <p style={{ color: 'crimson' }}>오류: {error}</p>}
           </div>
         ) : (
-          <>
-            <div className="section-title">최근검색어</div>
-            {recent.length === 0 ? (
-              <div className="empty-recent">아직 최근검색어가 없어요!</div>
-            ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {recent.map((word, i) => (
-                  <button
-                    key={word + i}
-                    style={{
-                      background: '#E7ECF3',
-                      border: 0,
-                      borderRadius: 16,
-                      padding: '4px 12px',
-                      fontSize: 13,
-                      color: '#333',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => { setText(word); navigate(`/search/${encodeURIComponent(word)}`); }}
-                  >
-                    {word}
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
+          showRecents ? (
+            <RecentList
+              items={recent}
+              onSelect={(term) => { setText(term); navigate(`/search/${encodeURIComponent(term)}`); setShowRecents(false); }}
+              onDelete={(term) => remove(term)}
+              onClear={() => { clear(); setShowRecents(true); }}
+            />
+          ) : null
         )}
       </div>
     </div>
@@ -165,4 +158,55 @@ function NewsItemCard({ news, onClick }) {
       onClick={onClick}
     />
   );
+}
+
+// 최근 검색어 리스트 (기초 틀)
+function RecentList({ items, onSelect, onDelete, onClear }) {
+  return (
+    <div>
+      <div className="recent-header">
+        <div className="title">최근검색어</div>
+        {!!items?.length && (
+          <button className="clear-btn" onClick={onClear}>
+            전체 삭제
+          </button>
+        )}
+      </div>
+      {(!items || items.length === 0) ? (
+        <div className="empty-recent">아직 최근검색어가 없어요!</div>
+      ) : (
+        <div className="recent-list">
+          {items.map((it) => (
+            <div className="recent-row" key={it.term}>
+              <div className="left">
+                <span className="icon icon-clock" aria-hidden>
+                  <AlarmIcon className="svg-icon" />
+                </span>
+                <button className="term" onClick={() => onSelect(it.term)} title={it.term}>{it.term}</button>
+              </div>
+              <div className="right">
+                <span className="date">{formatDate(it.ts)}</span>
+                <button className="del icon-close" aria-label="삭제" onClick={() => onDelete(it.term)}>
+                  <CloseIcon className="svg-icon" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatDate(ts) {
+  if (!ts) return '';
+  try {
+    const d = new Date(ts);
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    return `${y}.${m}.${day}`;
+  } catch {
+    return '';
+  }
 }
