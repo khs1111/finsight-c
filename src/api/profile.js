@@ -5,7 +5,7 @@ import axios from 'axios';
 import { API_BASE, HAS_PROFILE_ENDPOINTS } from './config';
 
 async function http(path, opts = {}) {
-  const token = localStorage.getItem('accessToken');
+  const token = sessionStorage.getItem('accessToken');
   const headers = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -28,7 +28,7 @@ async function http(path, opts = {}) {
 export async function fetchProfile() {
   // 1) 대시보드 기반 우선 시도 (404 소음 방지)
   try {
-    const userId = Number(localStorage.getItem('userId')) || undefined;
+  const userId = Number(sessionStorage.getItem('userId')) || undefined;
     if (userId) {
       const dash = await http(`/dashboard?userId=${userId}`);
   const nickname = dash?.userInfo?.nickname || localStorage.getItem('username') || '퍼니의 동료';
@@ -64,7 +64,7 @@ export async function fetchProfile() {
   // 3) 최종 안전 폴백
   return {
     data: {
-      nickname: localStorage.getItem('username') || '퍼니의 동료',
+      nickname: sessionStorage.getItem('username') || '퍼니의 동료',
       tier: 'EMERALD',
       tierImageUrl: '',
     },
@@ -76,7 +76,7 @@ export async function fetchProfile() {
 export async function fetchProfileActivity() {
   // 1) 대시보드 기반 우선 시도 (404 소음 방지)
   try {
-    const userId = Number(localStorage.getItem('userId')) || undefined;
+  const userId = Number(sessionStorage.getItem('userId')) || undefined;
     if (userId) {
       const dash = await http(`/dashboard?userId=${userId}`);
       const arr = Array.isArray(dash?.weeklyProgress) ? dash.weeklyProgress : [];

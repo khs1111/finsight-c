@@ -86,9 +86,9 @@ export const recheckBackendConnection = async () => {
 // 현재 백엔드 연결 상태 확인
 export const isBackendOnline = () => isBackendConnected;
 
-// 공통 유틸: userId 보정 (로컬스토리지 fallback)
+// 공통 유틸: userId 보정 (세션 스토리지 우선)
 const withUserId = (userId) => {
-  const stored = Number(localStorage.getItem('userId'));
+  const stored = Number(sessionStorage.getItem('userId'));
   return userId ?? (Number.isFinite(stored) ? stored : undefined);
 };
 
@@ -112,33 +112,16 @@ function coerceLevelId(levelId) {
   return 1;
 }
 
-// JWT 토큰을 자동으로 헤더에 포함하는 fetch 함수
+// JWT 토큰 자동 확보를 중단: 명시적 로그인/게스트 로그인만 허용
 async function ensureAuth() {
   if (authInitialized) return;
-  const hasToken = !!localStorage.getItem('accessToken');
-  const isGuestSession = sessionStorage.getItem('guest') === '1';
-  // TTL(24h) 만료 여부
-  let ttlExpired = false;
-  try {
-    const at = Number(localStorage.getItem('guestLoginAt')) || 0;
-    if (at > 0) {
-      const elapsedMs = Date.now() - at;
-      const DAY_MS = 24 * 60 * 60 * 1000;
-      ttlExpired = elapsedMs >= DAY_MS;
-    }
-  } catch (_) {}
-
-  // 게스트 세션이면 매 진입 시 갱신, 아니면 토큰 없거나 TTL 만료 시 로그인
-  if (isGuestSession || !hasToken || ttlExpired) {
-    try { await guestLogin(API_BASE); } catch (_) {}
-  }
   authInitialized = true;
 }
 
 async function http(path, opts = {}, token) {
-  // 게스트 로그인 토큰 확보 (최초 1회)
+  // 자동 게스트 로그인 방지: 명시적 로그인만 사용
   await ensureAuth();
-  const jwt = opts.token || token || localStorage.getItem('accessToken');
+  const jwt = opts.token || token || sessionStorage.getItem('accessToken');
   const silent = !!opts.silent;
 
   // 경로 보정: API_BASE(/api 여부)와 path(/api 여부) 중복/누락 없이 합치기
@@ -1146,7 +1129,7 @@ export const submitAnswer = async ({ quizId, questionId, selectedOptionId, userI
   }
 
   let uid = userId ?? localStorage.getItem('userId') ?? undefined;
-  const jwt = token ?? localStorage.getItem('accessToken') ?? undefined;
+  const jwt = token ?? sessionStorage.getItem('accessToken') ?? undefined;
 
   // userId가 없으면 게스트 로그인 시도
   if (!uid) {
@@ -1318,7 +1301,7 @@ export const completeQuiz = async (quizId, userId, token) => {
   const uid = withUserId(userId);
   const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
 
-  const jwt = token ?? localStorage.getItem('accessToken') ?? undefined;
+  const jwt = token ?? sessionStorage.getItem('accessToken') ?? undefined;
   const headers = {
     'Content-Type': 'application/json',
     ...(jwt ? { Authorization: `Bearer ${jwt}` } : {})

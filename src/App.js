@@ -40,7 +40,6 @@ function App() {
   const isProfile = location.pathname.startsWith('/profile');
   const isNewsletter = location.pathname.startsWith('/newsletter');
   const isLogin = location.pathname.startsWith('/login');
-  // const isAdmin = location.pathname.startsWith('/admin');
   const hideNewsletterNav = location.pathname.startsWith('/newsletter/subscribe') ||
   
     location.pathname === '/newsletter' ||
@@ -68,7 +67,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/search" element={<Search />} />
           <Route path="/" element={
-            (sessionStorage.getItem('guest') === '1' || localStorage.getItem('accessToken'))
+            (sessionStorage.getItem('accessToken'))
               ? <Home />
               : <Navigate to="/login" replace />
           } />
