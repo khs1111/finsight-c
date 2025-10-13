@@ -1,15 +1,164 @@
-.bottom-nav { position:fixed; left:0; right:0; bottom:0; width:100%; height:64px; z-index:120; display:flex; }
-.bottom-nav-inner { flex:1; height:64px; background:rgba(255,255,255,0.96); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.4); box-shadow:0 4px 24px rgba(0,0,0,0.15); border-radius:16px 16px 0 0; display:flex; align-items:center; justify-content:space-around; padding:12px 8px 10px; gap:0; }
-@supports (height:env(safe-area-inset-bottom)) { .bottom-nav-inner { padding-bottom: calc(10px + env(safe-area-inset-bottom)); height: calc(64px + env(safe-area-inset-bottom)); } }
-.bottom-nav-item { flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:4px; padding:0; cursor:pointer; color:#A0A0A0; font-size:12px; line-height:14px; font-weight:600; letter-spacing:-0.02em; position:relative; }
-.bottom-nav-item:active { transform:translateY(1px); }
-.bottom-nav-item svg { display:block; }
-.bottom-nav-item .icon-wrapper { display:flex; align-items:center; justify-content:center; height:24px; }
-.bottom-nav-item.active { color:transparent; background:linear-gradient(120deg,#448FFF 0%, #4833D0 100%); -webkit-background-clip:text; background-clip:text; }
+/* ============================================= */
+/* ===== 하단 네비게이션 바 (Bottom Navigation Bar) ===== */
+/* ============================================= */
+
+/* 하단 네비게이션 바의 전체를 감싸는 외부 컨테이너 */
+.bottom-nav {
+  /* 화면 하단에 항상 고정시키기 위한 설정 */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  /* 너비를 화면에 꽉 채움 */
+  width: 100%;
+  /* 네비게이션 바의 높이 */
+  height: 64px;
+
+  /* 다른 요소들보다 위에 보이도록 레이어 순서를 높게 설정 */
+  z-index: 120;
+
+  /* 내부 아이템 정렬을 위해 flexbox 사용 */
+  display: flex;
+}
+
+/* 네비게이션 바의 실제 디자인이 적용되는 내부 컨테이너 */
+.bottom-nav-inner {
+  /* 부모(.bottom-nav)의 공간을 모두 차지하도록 설정 */
+  flex: 1;
+  height: 64px;
+
+  /* 반투명한 흰색 배경 */
+  background: rgba(255, 255, 255, 0.96);
+  /* iOS 스타일의 배경 블러(흐림) 효과 */
+  /* iOS/Android 브라우저 렌더링 차이에 대비한 블러 처리 */
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+
+  /* 테두리 및 그림자 효과 */
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+
+  /* 위쪽 모서리만 둥글게 처리 */
+  border-radius: 16px 16px 0 0;
+  /* 일부 기기에서 둥근 모서리 바깥으로 블러가 사각형으로 새는 이슈 방지 */
+  overflow: hidden;             /* 가장 중요: 내부 블러/배경을 둥근 모서리에 맞춰 클리핑 */
+  background-clip: padding-box; /* 보더 반사/누수 방지 */
+  mask-image: radial-gradient(circle at center, #fff 99%, transparent 100%);
+  -webkit-mask-image: -webkit-radial-gradient(white, black); /* WebKit 마스크로 추가 보강 */
+  transform: translateZ(0);     /* 레이어 승격으로 아티팩트 감소 */
+  isolation: isolate;           /* 새로운 스태킹 컨텍스트로 불필요한 합성 방지 */
+
+  /* 내부 아이템(버튼)들을 정렬 */
+  display: flex;
+  align-items: center; /* 세로 중앙 정렬 */
+  justify-content: space-around; /* 가로 공간을 균등하게 배분 */
+
+  /* 내부 여백 (위, 좌우, 아래) */
+  padding: 12px 8px 10px;
+  /* 아이템 사이의 간격 */
+  gap: 0;
+}
+
+/* iPhone의 하단 홈 바(Home Bar) 같은 '안전 영역'을 지원하는 브라우저에서만 적용 */
+@supports (height: env(safe-area-inset-bottom)) {
+  .bottom-nav-inner {
+    /* 시스템 UI에 가려지지 않도록 안전 영역만큼 추가로 하단 여백과 높이를 확보 */
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    height: calc(64px + env(safe-area-inset-bottom));
+  }
+}
+
+/* 네비게이션 바 안의 개별 아이템(버튼) 스타일 */
+.bottom-nav-item {
+  /* 공간을 균등하게 차지 */
+  flex: 1;
+
+  /* 기본 배경과 테두리 제거 */
+  background: none;
+  border: none;
+
+  /* 아이콘과 텍스트를 세로로 정렬하기 위한 flexbox 설정 */
+  display: flex;
+  flex-direction: column; /* 세로 방향으로 쌓기 */
+  align-items: center;    /* 가로 중앙 정렬 */
+  justify-content: flex-start; /* 위쪽부터 정렬 */
+  gap: 4px; /* 아이콘과 텍스트 사이의 간격 */
+
+  /* 내부 여백 제거 및 커서 모양 변경 */
+  padding: 0;
+  cursor: pointer;
+
+  /* 기본 텍스트 스타일 (비활성 상태) */
+  color: #A0A0A0;
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+
+  /* ::after 같은 가상 요소를 사용하기 위한 기준점 */
+  position: relative;
+}
+
+/* 아이템을 클릭(누르고 있는 동안)했을 때 미세하게 아래로 움직이는 효과 */
+.bottom-nav-item:active {
+  transform: translateY(1px);
+}
+
+/* 아이템 안의 SVG 아이콘 기본 스타일 */
+.bottom-nav-item svg {
+  display: block;
+}
+
+/* SVG 아이콘을 감싸는 컨테이너 (정확한 중앙 정렬을 위해) */
+.bottom-nav-item .icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 아이콘의 높이를 고정하여 텍스트와의 간격을 일정하게 유지 */
+  height: 24px;
+}
+
+/* 활성화된 아이템에 적용되는 스타일 */
+.bottom-nav-item.active {
+  /* 텍스트 색상을 투명하게 만들어 배경이 비치도록 준비 */
+  color: transparent;
+  /* 배경에 그라데이션을 적용 */
+  background: linear-gradient(120deg, #448FFF 0%, #4833D0 100%);
+  /* 배경을 텍스트 모양으로 잘라내어 글자에 그라데이션 효과를 줌 */
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* 활성화된 아이템 내부의 SVG 아이콘 색상을 그라데이션으로 변경 */
+/* SVG 코드 내에 <defs><linearGradient id="nav-gradient">...</linearGradient></defs>가 정의되어 있어야 함 */
 .bottom-nav-item.active svg path,
 .bottom-nav-item.active svg rect,
-.bottom-nav-item.active svg circle { fill:url(#nav-gradient); stroke:none; }
-.bottom-nav-label { font-size:12px; font-weight:600; }
+.bottom-nav-item.active svg circle {
+  fill: url(#nav-gradient);
+  stroke: none;
+}
 
-.has-bottom-nav { padding-bottom:88px; }
-@supports (height:env(safe-area-inset-bottom)) { .has-bottom-nav { padding-bottom: calc(88px + env(safe-area-inset-bottom)); } }
+/* 아이콘 아래의 텍스트 라벨 */
+.bottom-nav-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+
+/* ============================================= */
+/* ===== 콘텐츠 영역 패딩 확보 (Helper Class) ===== */
+/* ============================================= */
+
+/* 하단 네비게이션 바가 있는 페이지의 메인 콘텐츠 컨테이너에 이 클래스를 추가 */
+.has-bottom-nav {
+  /* 콘텐츠의 맨 아래 부분이 네비게이션 바에 가려지지 않도록 하단에 충분한 여백을 줌 */
+  padding-bottom: 88px;
+}
+
+/* 안전 영역을 지원하는 브라우저에서는 해당 영역만큼 여백을 더 추가 */
+@supports (height: env(safe-area-inset-bottom)) {
+  .has-bottom-nav {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+}
