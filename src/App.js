@@ -5,7 +5,6 @@ import Home from './pages/Home';
 import SearchResults from './pages/SearchResults';
 import Search from './pages/Search';       
 import NewsDetail from './pages/NewsDetail';
-import CategoryNav from './components/news/CategoryNav';
 import Explore from './pages/Explore';
 import StudyPage from './pages/StudyPage';
 import AddWordPage from './pages/AddWordPage';
@@ -60,7 +59,6 @@ function App() {
   return (
     <>
   {!(isExplore || isStudy || isAddWord || isCommunity || isProfile || isNewsletter || isLogin) && <Header onSearch={handleSearch} />}
-  {!(isExplore || isStudy || isAddWord || isCommunity || isProfile || isNewsletter || isLogin) && <CategoryNav />}
 
       <div className="has-bottom-nav">
         <Routes>

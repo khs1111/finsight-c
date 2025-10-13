@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "env": {
+    "PUBLIC_URL": "/"
+  },
   "builds": [
     {
       "src": "package.json",
@@ -17,9 +20,19 @@
         "cache-control": "s-maxage=31536000,immutable"
       }
     },
-    { "src": "/favicon.ico", "dest": "/favicon.ico" },
+    {
+      "src": "/(.*)/static/(.*)",
+      "dest": "/static/$2"
+    },
+    {
+      "src": "/(.*)/(favicon\\.ico|logo\\.svg|logo\\.png|logo192\\.png|logo512\\.png|manifest\\.json|robots\\.txt)",
+      "dest": "/$2"
+    },
+  { "src": "/favicon.ico", "dest": "/logo.svg" },
     { "src": "/logo192.png", "dest": "/logo192.png" },
     { "src": "/logo512.png", "dest": "/logo512.png" },
+  { "src": "/logo.png", "dest": "/logo.png" },
+  { "src": "/logo.svg", "dest": "/logo.svg" },
     { "src": "/manifest.json", "dest": "/manifest.json" },
     { "src": "/robots.txt", "dest": "/robots.txt" },
     {

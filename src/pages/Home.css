@@ -17,8 +17,9 @@
 *::before,
 *::after { box-sizing: border-box; }
 
-/* Make images and svgs responsive so fixed widths (e.g. logo svg) don't force overflow */
-img, svg { max-width: 100%; height: auto; display: block; }
+/* Make images and svgs responsive within Home only so it doesn't affect global UI like BottomNav */
+.home-container img,
+.home-container svg { max-width: 100%; height: auto; display: block; }
 
 html, body { height: 100%; }
 /* Prevent horizontal pan/overscroll on touch devices while allowing vertical scrolling */
@@ -212,41 +213,7 @@ body { margin: 0; font-family: 'Pretendard', system-ui, -apple-system, sans-seri
 .error { color: red; }
 .loading { color: gray; }
 
-.category-nav {
-  position: fixed;
-  inset: auto 0 0 0;
-  height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
-  padding: 8px 0 env(safe-area-inset-bottom, 0px);
-  background: #fff;
-  border-top: 1px solid #e5e7eb;
-  display: flex; justify-content: space-around; align-items: center;
-  gap: 0; z-index: 100;
-  font-family: 'Pretendard', sans-serif;
-}
-
-.category-button {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: #999;
-  font-weight: 500;
-  cursor: pointer;
-  padding-bottom: 6px;
-  position: relative;
-}
-
-.category-button.active {
-  color: #111;
-  font-weight: 600;
-}
-
-.category-button.active::after {
-  position: absolute;
-  bottom: 0; left: 0;
-  width: 100%; height: 2px;
-  background: linear-gradient(to right, rgba(68,143,255,1), rgba(72,51,208,1));
-  border-radius: 1px;
-}
+/* CategoryNav removed */
 
 /* ===== 탐험지 메인 ===== */
 .explore-step-container { padding: 40px; text-align: center; }

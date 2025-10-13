@@ -8,6 +8,7 @@ import { ReactComponent as FinletterIcon } from '../../assets/newsletter/finlett
 import newsIcon from '../../assets/newsletter/news-icon.png';
 import newsData from './NewsletterData';
 import { ReactComponent as NewsDateIcon } from '../../assets/newsletter/Calendar.svg';
+import { resolveAssetUrl } from '../../utils/path';
 
 function TopBar() {
   return (
@@ -44,7 +45,7 @@ function Banner() {
 
   return (
     <div className="nl-banner" onClick={handleBannerClick}>
-      <img src={newsIcon} alt="NEWS" className="nl-banner-news-img" />
+  <img src={resolveAssetUrl(newsIcon)} alt="NEWS" className="nl-banner-news-img" />
       <div className="nl-banner-text">
         <div className="nl-banner-title">My news로 맞춤 뉴스 보자!</div>
         <div className="nl-banner-desc">핀레터에서 나의 관심사에 딱 맞는 정보들만 확인해요</div>
@@ -58,7 +59,11 @@ function Card({ title, subtitle, date, readTime, category, tags, imageUrl, url }
     <a href={url} target="_blank" rel="noopener noreferrer" className="nl-card-link">
       <article className="nl-card">
         {imageUrl && (
-          <div className="nl-card-image" style={{ backgroundImage: `url(${imageUrl})` }} aria-hidden="true" />
+          <div
+            className="nl-card-image"
+            style={{ backgroundImage: `url(${resolveAssetUrl(imageUrl)})` }}
+            aria-hidden="true"
+          />
         )}
         <div className="nl-card-content">
           {tags && (
