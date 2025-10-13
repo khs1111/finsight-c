@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "./static/css/main.005fbf7b.css",
-    "main.js": "./static/js/main.c2742e87.js",
+    "main.css": "./static/css/main.0fef722b.css",
+    "main.js": "./static/js/main.8077a61e.js",
     "static/media/back.png": "./static/media/back.9c168b1dd39328551dcd.png",
     "static/media/news-icon.png": "./static/media/news-icon.38a91037b88ec32a010a.png",
     "static/media/q4-article.png": "./static/media/q4-article.b9bae2c808078ef9243f.png",
@@ -14,26 +14,26 @@
     "static/media/stepant.png": "./static/media/stepant.2d11458b3027ec60ec4a.png",
     "static/media/gold.png": "./static/media/gold.101becfc0bfb0e75785e.png",
     "static/media/nvidia.png": "./static/media/nvidia.20e12bcb2b6a1deb2243.png",
-    "static/media/finletter.svg": "./static/media/finletter.20a62cbc3a92063206aafa03b0b67f76.svg",
-    "static/media/wordHeaderCharacter.svg": "./static/media/wordHeaderCharacter.6badf9d136253df998986abac2b44ed8.svg",
+    "static/media/finletter.svg": "./static/media/finletter.bd1e2feeb14d74037bc0679e6e32ada7.svg",
+    "static/media/wordHeaderCharacter.svg": "./static/media/wordHeaderCharacter.b98c2d8e1eb7752203fdf79dbaf7ede8.svg",
     "static/media/Son.svg": "./static/media/Son.e306adb2a299f57a22c431e4a7a38e22.svg",
-    "static/media/Icon.svg": "./static/media/Icon.1137b0d603f5e15b1c338f3b5ff18e47.svg",
-    "static/media/delete.svg": "./static/media/delete.24aad4b6d6704eaf3d0132aaf56cae05.svg",
-    "static/media/Calendar.svg": "./static/media/Calendar.de62bf44a529c0377cda298ea2abe65d.svg",
+    "static/media/Icon.svg": "./static/media/Icon.dff5b14070f700d4292c4f054206d667.svg",
+    "static/media/delete.svg": "./static/media/delete.81c4a7d2e47b44d975d41b26907cfeba.svg",
     "index.html": "./index.html",
+    "static/media/Calendar.svg": "./static/media/Calendar.ef32addabc5b5852562225af4fd54dfa.svg",
     "static/media/Bookmark.svg": "./static/media/Bookmark.bea0ab48bbf7454064bd47e6462b82eb.svg",
-    "static/media/community-default-avatar.svg": "./static/media/community-default-avatar.913b9d915f8c5de2219b1c868334cbf2.svg",
+    "static/media/community-default-avatar.svg": "./static/media/community-default-avatar.62e08bd1e3e48d293a7a7822c868ee1a.svg",
     "static/media/Magnifier.svg": "./static/media/Magnifier.14601b35debd03c57cb222a054b212ae.svg",
-    "static/media/back.svg": "./static/media/back.e9cae423eb21cdfe960a463d34dd1fe3.svg",
-    "static/media/wrongNoteIllustration.svg": "./static/media/wrongNoteIllustration.2df0af373e0e15ab5f6d8242187928a6.svg",
+    "static/media/back.svg": "./static/media/back.462882304f41d0c292a8438d9b688674.svg",
+    "static/media/wrongNoteIllustration.svg": "./static/media/wrongNoteIllustration.a7e59e52f2e0f791f5a998dd52273d71.svg",
     "static/media/link_alt.svg": "./static/media/link_alt.00d316dabc568981bdf06778b510cfc3.svg",
-    "static/media/plus.svg": "./static/media/plus.6dbfbac4e222e4c50aca0151ca35fec9.svg",
-    "static/media/Ellipse 212.svg": "./static/media/Ellipse 212.3707a2062acc2e1abb7835eb78bffcf9.svg",
-    "main.005fbf7b.css.map": "./static/css/main.005fbf7b.css.map",
-    "main.c2742e87.js.map": "./static/js/main.c2742e87.js.map"
+    "static/media/plus.svg": "./static/media/plus.c2ad3297b6dfb2fdc7489021734c31ef.svg",
+    "static/media/ellipse-212.svg": "./static/media/ellipse-212.3707a2062acc2e1abb7835eb78bffcf9.svg",
+    "main.0fef722b.css.map": "./static/css/main.0fef722b.css.map",
+    "main.8077a61e.js.map": "./static/js/main.8077a61e.js.map"
   },
   "entrypoints": [
-    "static/css/main.005fbf7b.css",
-    "static/js/main.c2742e87.js"
+    "static/css/main.0fef722b.css",
+    "static/js/main.8077a61e.js"
   ]
 }

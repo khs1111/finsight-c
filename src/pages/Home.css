@@ -17,8 +17,9 @@
 *::before,
 *::after { box-sizing: border-box; }
 
-/* Make images and svgs responsive so fixed widths (e.g. logo svg) don't force overflow */
-img, svg { max-width: 100%; height: auto; display: block; }
+/* Make images and svgs responsive within Home only so it doesn't affect global UI like BottomNav */
+.home-container img,
+.home-container svg { max-width: 100%; height: auto; display: block; }
 
 html, body { height: 100%; }
 /* Prevent horizontal pan/overscroll on touch devices while allowing vertical scrolling */

@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "env": {
+    "PUBLIC_URL": "/"
+  },
   "builds": [
     {
       "src": "package.json",
@@ -16,6 +19,14 @@
       "headers": {
         "cache-control": "s-maxage=31536000,immutable"
       }
+    },
+    {
+      "src": "/(.*)/static/(.*)",
+      "dest": "/static/$2"
+    },
+    {
+      "src": "/(.*)/(favicon\\.ico|logo\\.svg|logo\\.png|logo192\\.png|logo512\\.png|manifest\\.json|robots\\.txt)",
+      "dest": "/$2"
     },
     { "src": "/favicon.ico", "dest": "/favicon.ico" },
     { "src": "/logo192.png", "dest": "/logo192.png" },
