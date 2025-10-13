@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import AntImg from '../assets/profile/ant.png';
 import BackImg from '../assets/profile/back.png';
+import DefaultTierBadge from '../assets/tier/bronze.png';
 import { fetchProfile, fetchProfileActivity, fetchDashboard, fetchCurrentBadgeByUser } from '../api/profile';
 import './Profile.css';
 
@@ -307,6 +308,7 @@ export default function Profile() {
   // 화면 표시용 닉네임/티어: 백엔드 값을 그대로 사용하되, 닉네임은 비어있을 때만 안전하게 기본값 처리
   const displayNickname = '피니';
   const displayTier = normalizeTier(profile.tier);
+  const tierIconSrc = tierImageFor(displayTier, profile.tierImageUrl) || DefaultTierBadge;
   return (
     <>
       <div className="p-topbar" aria-label="상단 제목">
@@ -324,16 +326,20 @@ export default function Profile() {
           <div className="p-hero-bottom" aria-hidden="true" />
           <div className="p-hero-title" aria-label="티어와 닉네임">
             <div className="tier-inline">
-              {tierImageFor(displayTier, profile.tierImageUrl) ? (
-                <img
-                  className="tier-image"
-                  src={tierImageFor(displayTier, profile.tierImageUrl)}
-                  alt={displayTier}
-                  width={32}
-                  height={32}
-                  onError={(e) => { e.currentTarget.remove(); }}
-                />
-              ) : null}
+              <img
+                className="tier-image"
+                src={tierIconSrc}
+                alt={displayTier ? `${displayTier} 배지` : '티어 배지'}
+                width={32}
+                height={32}
+                onError={(e) => {
+                  // If backend icon fails to load, fall back to bundled default once
+                  if (e.currentTarget.src !== DefaultTierBadge) {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = DefaultTierBadge;
+                  }
+                }}
+              />
               <span className="nickname-inline">{displayNickname}</span>
             </div>
           </div>

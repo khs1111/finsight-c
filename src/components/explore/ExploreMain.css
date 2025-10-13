@@ -19,6 +19,9 @@
   z-index: 100;
   transition: height .2s;
   box-sizing: border-box;
+  /* 화면 전체 스크롤을 막는 대신, 패널 자체 스크롤 허용 */
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
 }
 
 /* 내부 컨텐츠 오토레이아웃 */
@@ -334,6 +337,9 @@
   z-index: 100;
   box-shadow: 0 4px 24px rgba(10,26,51,0.18);
   height: auto !important;
+  /* 드롭다운 항목이 길 때, 페이지가 아니라 드롭다운 내부가 스크롤 */
+  max-height: min(60dvh, 480px);
+  overflow-y: auto;
 }
 .explore-main-subtopic-dropdown-header {
   width: 100%;
@@ -541,7 +547,9 @@
 .explore-main-steppingstones-wrap {
   z-index: 1; 
   width: calc(100% - 32px);
-  min-height: 100%;
+  /* 부모 높이 내에서만 스크롤 영역이 되도록 설정 */
+  flex: 1 1 auto;
+  min-height: 0; /* flex 컨테이너 내 자식 스크롤 활성화를 위한 필수값 */
   margin: 0;
 
   font-family: 'Roboto', sans-serif;
@@ -549,7 +557,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow-y: auto; /* 추가 */
+  overflow-y: auto; /* 징검다리만 세로 스크롤 */
+  -webkit-overflow-scrolling: touch; /* 모바일 관성 스크롤 */
+  overscroll-behavior: contain; /* 상위 컨테이너로 스크롤 전이 방지 */
+  padding-bottom: 80px; /* 하단 고정 CTA/네비와 겹침 방지 여백 */
 }
 .stepping-stone-item {
   position: relative; /* z-index 적용 위해 */
@@ -571,17 +582,21 @@
   z-index: 0; /* 기본 계층 */
   width: 100%;
   max-width: 100%;
-  min-height: 100vh;
+  /* 페이지 전체 스크롤 방지를 위해 뷰포트 고정 높이 지정 */
+  height: 100vh;
+  height: 100dvh; /* 모바일 브라우저 주소창 변화 대응 */
   margin: 0 auto;
   background: #F4F6FA;
   font-family: 'Roboto', sans-serif;
   box-sizing: border-box;
-  padding: 0 0 80px 0;
+  padding: 0; /* 스크롤 영역 하단 여백은 징검다리 래퍼에서 처리 */
   display: flex;
   flex-direction: column;
   align-items: center;
    /* 모바일에서 가로 넘침 방지 */
    overflow-x: hidden;
+   overflow-y: hidden; /* 바디/페이지 스크롤 비활성화 */
+   overscroll-behavior: none; /* 상위로 스크롤 전파 방지 */
 }
 
 .explore-main-filter {
