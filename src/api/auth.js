@@ -13,18 +13,42 @@ export async function guestLogin(baseOverride) {
       credentials: 'include',
       headers: { 'Accept': 'application/json' }
     });
-    if (!res.ok) return false;
+    if (!res.ok) {
+      // Fallback: set dummy token so UX continues even if backend rejects
+      const dummy = 'guest_' + Date.now();
+      try { sessionStorage.setItem('accessToken', dummy); } catch (_) {}
+      try { localStorage.setItem('accessToken', dummy); } catch (_) {}
+      try { if (!sessionStorage.getItem('userId')) sessionStorage.setItem('userId', '64'); } catch (_) {}
+      try { if (!localStorage.getItem('userId')) localStorage.setItem('userId', '64'); } catch (_) {}
+      try { sessionStorage.setItem('guest', '1'); } catch (_) {}
+      try { sessionStorage.setItem('guestLoginAt', String(Date.now())); } catch (_) {}
+      try { localStorage.setItem('guestLoginAt', String(Date.now())); } catch (_) {}
+      return true;
+    }
     const data = await res.json();
     // Support both `token` and `accessToken` keys from backend
     const tok = data?.token || data?.accessToken;
-    if (tok) localStorage.setItem('accessToken', tok);
-    if (data?.userId != null) localStorage.setItem('userId', String(data.userId));
+    const uid = data?.userId != null ? String(data.userId) : undefined;
+    if (tok) {
+      try { sessionStorage.setItem('accessToken', tok); } catch (_) {}
+      try { localStorage.setItem('accessToken', tok); } catch (_) {}
+    }
+    if (uid) {
+      try { sessionStorage.setItem('userId', uid); } catch (_) {}
+      try { localStorage.setItem('userId', uid); } catch (_) {}
+    }
+    try { sessionStorage.setItem('guest', '1'); } catch (_) {}
+    try { sessionStorage.setItem('guestLoginAt', String(Date.now())); } catch (_) {}
     try { localStorage.setItem('guestLoginAt', String(Date.now())); } catch (_) {}
     return true;
   } catch (e) {
     const dummy = 'guest_' + Date.now();
-    localStorage.setItem('accessToken', dummy);
-    if (!localStorage.getItem('userId')) localStorage.setItem('userId', '64');
+    try { sessionStorage.setItem('accessToken', dummy); } catch (_) {}
+    try { localStorage.setItem('accessToken', dummy); } catch (_) {}
+    try { if (!sessionStorage.getItem('userId')) sessionStorage.setItem('userId', '64'); } catch (_) {}
+    try { if (!localStorage.getItem('userId')) localStorage.setItem('userId', '64'); } catch (_) {}
+    try { sessionStorage.setItem('guest', '1'); } catch (_) {}
+    try { sessionStorage.setItem('guestLoginAt', String(Date.now())); } catch (_) {}
     try { localStorage.setItem('guestLoginAt', String(Date.now())); } catch (_) {}
     return true;
   }

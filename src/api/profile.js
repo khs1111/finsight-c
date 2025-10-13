@@ -5,7 +5,7 @@ import axios from 'axios';
 import { API_BASE, HAS_PROFILE_ENDPOINTS } from './config';
 
 async function http(path, opts = {}) {
-  const token = localStorage.getItem('accessToken');
+  const token = sessionStorage.getItem('accessToken');
   const headers = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -28,10 +28,10 @@ async function http(path, opts = {}) {
 export async function fetchProfile() {
   // 1) 대시보드 기반 우선 시도 (404 소음 방지)
   try {
-    const userId = Number(localStorage.getItem('userId')) || undefined;
+    const userId = Number(sessionStorage.getItem('userId')) || undefined;
     if (userId) {
       const dash = await http(`/dashboard?userId=${userId}`);
-  const nickname = dash?.userInfo?.nickname || localStorage.getItem('username') || '퍼니의 동료';
+  const nickname = dash?.userInfo?.nickname || sessionStorage.getItem('username') || '퍼니의 동료';
       // 가능한 위치에서 티어 문자열 추출 시도
       const fromObj = (obj) => {
         if (!obj || typeof obj !== 'object') return undefined;
@@ -64,7 +64,7 @@ export async function fetchProfile() {
   // 3) 최종 안전 폴백
   return {
     data: {
-      nickname: localStorage.getItem('username') || '퍼니의 동료',
+      nickname: sessionStorage.getItem('username') || '퍼니의 동료',
       tier: 'EMERALD',
       tierImageUrl: '',
     },
@@ -76,7 +76,7 @@ export async function fetchProfile() {
 export async function fetchProfileActivity() {
   // 1) 대시보드 기반 우선 시도 (404 소음 방지)
   try {
-    const userId = Number(localStorage.getItem('userId')) || undefined;
+    const userId = Number(sessionStorage.getItem('userId')) || undefined;
     if (userId) {
       const dash = await http(`/dashboard?userId=${userId}`);
       const arr = Array.isArray(dash?.weeklyProgress) ? dash.weeklyProgress : [];
@@ -107,7 +107,8 @@ export async function fetchProfileActivity() {
 const BASE_URL = API_BASE;
 
 export function getAxios(token) {
-  const instance = axios.create({ baseURL: BASE_URL });
+  // Include credentials so cookie-based sessions work across origins
+  const instance = axios.create({ baseURL: BASE_URL, withCredentials: true });
   if (token) {
     instance.interceptors.request.use((config) => {
       config.headers.Authorization = `Bearer ${token}`;
@@ -167,6 +168,73 @@ export async function fetchBadgeById(badgeId, token) {
       throw e;
     }
   }
+}
+
+// 현재 대표 배지 조회: GET /api/badges/user/{userId}/current
+// 반환 형태 예: { id, name, iconUrl, ... }
+export async function fetchCurrentBadgeByUser(userId, token) {
+  const tk = token || sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') || undefined;
+  const ax = getAxios(tk);
+  const path = `/badges/user/${userId}/current`;
+  try {
+    // Log the request details (without sensitive headers)
+    // eslint-disable-next-line no-console
+    console.log('[Badge][request] GET', `${API_BASE}${path}`, { userId, hasToken: !!tk });
+
+    const res = await ax.get(path);
+
+    // Log the response brief summary
+    // eslint-disable-next-line no-console
+    console.log('[Badge][response]', {
+      status: res?.status,
+      data: res?.data,
+    });
+
+    const data = res?.data || res;
+    if (data) return data;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[Badge][error]', {
+      status: err?.response?.status,
+      message: err?.message,
+      url: `${API_BASE}${path}`,
+    });
+    // fall through to fallback
+  }
+
+  // Fallback path: try dashboard to infer current badge or icon
+  try {
+    // eslint-disable-next-line no-console
+    console.log('[Badge][fallback] trying /dashboard to infer badge', { userId });
+    const dashRes = await getAxios(tk).get('/dashboard', { params: { userId } });
+    const dash = dashRes?.data || {};
+    const ui = dash.userInfo || dash.profile || dash;
+    const iconFromDash = ui?.badge?.iconUrl || ui?.badge?.icon_url || dash.badgeIconUrl || dash.badge_icon_url;
+    const badgeId = ui?.displayed_badge_id || ui?.displayedBadgeId || dash.displayed_badge_id || dash.displayedBadgeId || ui?.current_badge_id || ui?.currentBadgeId || ui?.badge_id || ui?.badgeId || ui?.badge?.id || dash.current_badge_id || dash.currentBadgeId;
+    if (iconFromDash) {
+      // eslint-disable-next-line no-console
+      console.log('[Badge][fallback] using icon from dashboard', iconFromDash);
+      return { iconUrl: iconFromDash };
+    }
+    if (badgeId) {
+      // eslint-disable-next-line no-console
+      console.log('[Badge][fallback] fetching badge by id', badgeId);
+      try {
+        const byId = await fetchBadgeById(badgeId, tk);
+        const data = byId?.data || byId;
+        if (data) return data;
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('[Badge][fallback][byId][error]', { message: e?.message, status: e?.response?.status });
+      }
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('[Badge][fallback][dash][error]', { message: e?.message, status: e?.response?.status });
+  }
+
+  // Final: nothing found
+  return null;
 }
 
 // 주의: 구 경로(/api/user/*) 기반의 중복 export는 제거했습니다.

@@ -1,13 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import TierMaster from '../assets/tier/master.png';
-import TierDiamond from '../assets/tier/diamond.png';
-import TierGold from '../assets/tier/gold.png';
-import TierSilver from '../assets/tier/silver.png';
-import TierBronze from '../assets/tier/bronze.png';
-import TierEmerald from '../assets/tier/emerald.png';
 import AntImg from '../assets/profile/ant.png';
 import BackImg from '../assets/profile/back.png';
-import { fetchProfile, fetchProfileActivity, fetchDashboard, fetchBadgeById } from '../api/profile';
+import { fetchProfile, fetchProfileActivity, fetchDashboard, fetchCurrentBadgeByUser } from '../api/profile';
 import './Profile.css';
 
 const actionItems = [
@@ -232,23 +226,22 @@ export default function Profile() {
     return s.toUpperCase();
   };
   const tierImageFor = (tier, urlFromApi) => {
-    if (urlFromApi && typeof urlFromApi === 'string' && urlFromApi.startsWith('http')) return urlFromApi;
-    switch (normalizeTier(tier)) {
-      case 'MASTER': return TierMaster;
-      case 'DIAMOND': return TierDiamond;
-      case 'EMERALD': return TierEmerald;
-      case 'GOLD': return TierGold;
-      case 'SILVER': return TierSilver;
-      case 'BRONZE': return TierBronze;
-      default: return null;
-    }
+    // 정책: 로컬 더미 이미지는 사용하지 않음. 서버 URL만 허용.
+    if (urlFromApi && typeof urlFromApi === 'string' && /^https?:\/\//i.test(urlFromApi)) return urlFromApi;
+    return null;
   };
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetchProfile();
-        const hasUserId = !!Number(localStorage.getItem('userId'));
-        const hasToken = !!localStorage.getItem('accessToken');
+  const res = await fetchProfile();
+  const uFromSS = Number(sessionStorage.getItem('userId')) || undefined;
+  const uFromLS = Number(localStorage.getItem('userId')) || undefined;
+  const tFromSS = sessionStorage.getItem('accessToken') || undefined;
+  const tFromLS = localStorage.getItem('accessToken') || undefined;
+  const userId = uFromSS || uFromLS;
+  const token = tFromSS || tFromLS;
+  const hasUserId = !!userId;
+  const hasToken = !!token;
         try {
           // eslint-disable-next-line no-console
           console.log('[Profile] source:', res?.isDummy ? 'dummy' : (res?.isFallback ? 'dashboard' : 'profile API'), '| hasUserId:', hasUserId, '| hasToken:', hasToken);
@@ -269,8 +262,6 @@ export default function Profile() {
         // 추가 진단: 대시보드 경로일 때 실제 tier 관련 필드 후보를 콘솔에 덤프
         if (res?.isFallback) {
           try {
-            const userId = Number(localStorage.getItem('userId')) || undefined;
-            const token = localStorage.getItem('accessToken') || undefined;
             if (userId) {
               const dashRes = await fetchDashboard(userId, token);
               const dash = dashRes?.data || {};
@@ -291,39 +282,20 @@ export default function Profile() {
             }
           } catch (_) {}
         }
-        // 배지 아이콘 보강 1순위: 대시보드에서 badgeId 계열 필드 발견 시 단건 조회
+        // 현재 배지 단건 조회로 아이콘 URL 확정
         try {
-          const userId = Number(localStorage.getItem('userId')) || undefined;
           if (userId) {
-            const token = localStorage.getItem('accessToken') || undefined;
-            // 1) 대시보드에서 대표 배지 아이콘/ID 직접 사용 시도(백엔드별 구조 대응)
-            try {
-              const dashRes = await fetchDashboard(userId, token);
-              const dash = dashRes?.data || {};
-              const ui = dash.userInfo || dash.profile || dash;
-              // 아이콘이 바로 있으면 우선 사용
-              const directIcon = ui?.badgeIconUrl || ui?.badge_icon_url || dash?.badgeIconUrl || dash?.badge_icon_url || ui?.badge?.iconUrl || ui?.badge?.icon_url;
-              if (!base.tierImageUrl && directIcon && /^https?:\/\//i.test(directIcon)) {
-                base.tierImageUrl = directIcon;
-              }
-              const badgeId = (
-                // 대표 배지 우선
-                ui?.displayed_badge_id || ui?.displayedBadgeId || dash.displayed_badge_id || dash.displayedBadgeId ||
-                // 그 외 후보
-                ui?.current_badge_id || ui?.currentBadgeId || ui?.badge_id || ui?.badgeId ||
-                ui?.badge?.id || dash.current_badge_id || dash.currentBadgeId
-              );
-              if (badgeId) {
-                const bRes = await fetchBadgeById(badgeId, token);
-                const b = bRes?.data || bRes; // axios vs fetch 형태 대응
-                const icon = b?.iconUrl || b?.icon_url || b?.badge?.iconUrl || b?.badge?.icon_url;
-                if (icon && /^https?:\/\//i.test(icon)) {
-                  base.tierImageUrl = base.tierImageUrl || icon;
-                }
-              }
-            } catch (_) { /* ignore and fallback to list */ }
-
-            // 2) 리스트 기반 보강은 제거하여 404 소음과 과도한 호출을 방지합니다.
+            const currentBadge = await fetchCurrentBadgeByUser(userId, token);
+            const icon = currentBadge?.iconUrl || currentBadge?.icon_url || currentBadge?.badge?.iconUrl || currentBadge?.badge?.icon_url;
+            if (icon && /^https?:\/\//i.test(icon)) {
+              base.tierImageUrl = icon;
+              try {
+                // eslint-disable-next-line no-console
+                console.log('[Profile][badge] current badge fetched', currentBadge);
+                // eslint-disable-next-line no-console
+                console.log('[Profile][badge] using iconUrl:', icon);
+              } catch (_) {}
+            }
           }
         } catch (_) {}
         setProfile(base);
@@ -352,14 +324,16 @@ export default function Profile() {
           <div className="p-hero-bottom" aria-hidden="true" />
           <div className="p-hero-title" aria-label="티어와 닉네임">
             <div className="tier-inline">
-              <img
-                className="tier-image"
-                src={tierImageFor(displayTier, profile.tierImageUrl)}
-                alt={displayTier}
-                width={32}
-                height={32}
-                onError={(e) => { e.currentTarget.src = null; }}
-              />
+              {tierImageFor(displayTier, profile.tierImageUrl) ? (
+                <img
+                  className="tier-image"
+                  src={tierImageFor(displayTier, profile.tierImageUrl)}
+                  alt={displayTier}
+                  width={32}
+                  height={32}
+                  onError={(e) => { e.currentTarget.remove(); }}
+                />
+              ) : null}
               <span className="nickname-inline">{displayNickname}</span>
             </div>
           </div>
