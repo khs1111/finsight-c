@@ -53,6 +53,8 @@ export default function QuizQuestion({ current,
   const normalizePlain = (text) => {
     if (!text || typeof text !== 'string') return '';
     let t = text.replace(/\s*\/n\s*/g, '\n');
+    // Handle literal "\n" sequences coming from backend strings
+    t = t.replace(/\\n/g, '\n');
     t = t.replace(/\r\n?/g, '\n');
     return t;
   };
@@ -143,9 +145,15 @@ export default function QuizQuestion({ current,
       };
       const stripMdMarkers = (line) => {
         // 헤더 마커 제거 후 라벨링은 렌더 단계에서 처리
-        return line
-          .replace(/^\s*#{2,3}\s*/, '')
-          .replace(/\*\*(.*?)\*\*/g, '$1');
+        let t = line.replace(/^\s*#{2,3}\s*/, '');
+        // 우선 올바른 페어(**...**)는 내용만 남기기
+        t = t.replace(/\*\*(.*?)\*\*/g, '$1');
+        // 라인 시작/끝에 남은 고아 ** 제거 (닫힘 누락 등)
+        t = t.replace(/^\s*\*\*\s*/, '');
+        t = t.replace(/\s*\*\*\s*$/, '');
+        // 혹시 남은 ** 전부 제거 (보수적 정리)
+        t = t.replace(/\*\*/g, '');
+        return t;
       };
       
       // 📝 전체 텍스트 합치기 (헤더 + 메인 콘텐츠)
@@ -159,7 +167,7 @@ export default function QuizQuestion({ current,
         const trimmed = raw.trim();
         const isH3 = /^\s*###\s*/.test(raw);
         const isH2 = /^\s*##\s*/.test(raw) && !isH3;
-        const hasBold = /\*\*(.*?)\*\*/.test(raw);
+  const hasBold = /\*\*(.*?)\*\*/.test(raw);
         
         // 📏 빈 줄 처리 - 적절한 간격 제공
         if (!trimmed) {
@@ -238,6 +246,19 @@ export default function QuizQuestion({ current,
           );
         }
 
+        // 라인 맨 앞에 '**'만 남는 등 비정상 마크다운은 안전하게 제거
+        if (!hasBold && /^\s*\*\*/.test(raw)) {
+          return (
+            <div key={`text-${index}`} style={{ 
+              marginBottom: '8px',
+              lineHeight: '1.5',
+              color: '#FFFFFF'
+            }}>
+              {stripMdMarkers(raw)}
+            </div>
+          );
+        }
+
         // **굵게** 마커는 제거하고 굵게 표시
         if (hasBold) {
           const parts = raw.split(/(\*\*.*?\*\*)/g);
@@ -250,7 +271,8 @@ export default function QuizQuestion({ current,
               {parts.map((p, i) => {
                 const m = /^\*\*(.*?)\*\*$/.exec(p);
                 if (m) return <strong key={i}>{m[1]}</strong>;
-                return <span key={i}>{p}</span>;
+                // 남는 '**'는 보여주지 않도록 제거
+                return <span key={i}>{p.replace(/\*\*/g, '')}</span>;
               })}
             </div>
           );
@@ -783,14 +805,19 @@ export default function QuizQuestion({ current,
                 </div>
               )}
             </div>
-            <div className="quiz-question-explanation-text">
-              {(typeof answerResult?.serverCorrect === 'boolean')
-                ? (answerResult.serverCorrect
-                    ? (answerResult?.serverFeedback || question.answerExplanationMd || question.explanation || "해설이 준비되지 않았습니다.")
-                    : (answerResult?.serverFeedback || ""))
-                : (selected === correctIdx
-                    ? (question.answerExplanationMd || question.explanation || "해설이 준비되지 않았습니다.")
-                    : "")}
+            <div className="quiz-question-explanation-text" style={{ whiteSpace: 'pre-wrap' }}>
+              {(() => {
+                let expText = '';
+                if (typeof answerResult?.serverCorrect === 'boolean') {
+                  expText = answerResult.serverCorrect
+                    ? (answerResult?.serverFeedback || question.answerExplanationMd || question.explanation || '해설이 준비되지 않았습니다.')
+                    : (answerResult?.serverFeedback || '');
+                } else if (selected === correctIdx) {
+                  expText = (question.answerExplanationMd || question.explanation || '해설이 준비되지 않았습니다.');
+                }
+                const normalized = normalizePlain(expText);
+                return renderMdInlineBoldAndStrip(normalized);
+              })()}
             </div>
           </div>
         )}
