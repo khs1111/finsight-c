@@ -242,9 +242,12 @@ export default function Explore() {
           let serverFeedback = null;
           let serverCorrectOptionId = null;
           try {
+            // 서버가 기대하는 원본 질문 ID/코드 우선 사용 (정규화된 숫자 id는 폴백)
+            const backendQuestionId = (question && (question.questionIdRaw ?? question.question_id ?? question.code)) || question?.id;
+            console.log('[postAttempt] payload ids', { backendQuestionId, normalizedId: question?.id });
             const resp = await postAttempt({
               quizId: quizId ?? undefined,
-              questionId: question.id,
+              questionId: backendQuestionId,
               articleId: question.articleId || question.article_id || undefined,
               selectedOptionId,
               userId: localStorage.getItem('userId') || undefined,
@@ -278,6 +281,14 @@ export default function Explore() {
           setResults(newResults);
           persistProgress(level, question, selectedOptionId, isCorrect, current);
 
+          // 즉시 진행도 갱신: 로컬 결과로 answeredCount 계산 후 ExploreMain에 이벤트 전파
+          try {
+            const answeredCountLocal = (newResults.filter(r => r && r.checked === true).length);
+            const totalQuestionsLocal = Array.isArray(questions) ? questions.length : 0;
+            const detail = { answeredCount: answeredCountLocal, totalQuestions: totalQuestionsLocal };
+            window.dispatchEvent(new CustomEvent('fin:answer-submitted', { detail }));
+          } catch (_) { /* noop */ }
+
           // 5) 오답노트 기록 (로컬/백엔드)
           if (!isCorrect) {
             try {
@@ -309,9 +320,22 @@ export default function Explore() {
           const userId = localStorage.getItem('userId') || undefined;
           const token = localStorage.getItem('accessToken') || undefined;
           try {
-            const data = await completeQuiz(quizId, userId, token);
+            let finalQuizId = quizId;
+            if (!finalQuizId) {
+              try {
+                console.warn('[Complete] quizId가 비어 재해석 시도:', { subTopicId, level });
+                finalQuizId = await getQuizIdForSelection({ subTopicId, levelId: level });
+              } catch (_) { /* noop */ }
+            }
+            console.log('[Complete] 호출 시작', { quizId: finalQuizId, userId });
+            const data = await completeQuiz(finalQuizId, userId, token);
+            console.log('[Complete] 응답 수신', data);
             setQuizCompleteResult(data);
+            try {
+              window.dispatchEvent(new CustomEvent('fin:quiz-completed', { detail: { quizId: finalQuizId, userId, result: data } }));
+            } catch (_) { /* ignore */ }
           } catch (e) {
+            console.error('[Complete] 호출 실패', e);
             setQuizCompleteResult({ error: e?.message || '퀴즈 완료 처리 실패' });
           }
           setStep(5);
@@ -325,13 +349,31 @@ export default function Explore() {
   // 퀴즈 완료 POST 결과 상태 추가
   const [quizCompleteResult, setQuizCompleteResult] = useState(null);
   useEffect(() => {
-    if (step === 5 && quizId && !quizCompleteResult) {
-      // 퀴즈 완료 POST (인증 포함)
+    if (step === 5 && !quizCompleteResult) {
       const userId = localStorage.getItem('userId') || undefined;
       const token = localStorage.getItem('accessToken') || undefined;
-      completeQuiz(quizId, userId, token)
-        .then(data => setQuizCompleteResult(data))
-        .catch(e => setQuizCompleteResult({ error: e?.message || '퀴즈 완료 처리 실패' }));
+      (async () => {
+        try {
+          let finalQuizId = quizId;
+          if (!finalQuizId) {
+            try {
+              console.warn('[Complete/useEffect] quizId가 비어 재해석 시도:', { subTopicId, level });
+              finalQuizId = await getQuizIdForSelection({ subTopicId, levelId: level });
+            } catch (_) { /* noop */ }
+          }
+          if (!finalQuizId) {
+            console.error('[Complete/useEffect] quizId를 찾지 못해 완료 POST 생략');
+            return;
+          }
+          console.log('[Complete/useEffect] 호출 시작', { quizId: finalQuizId, userId });
+          const data = await completeQuiz(finalQuizId, userId, token);
+          console.log('[Complete/useEffect] 응답 수신', data);
+          setQuizCompleteResult(data);
+        } catch (e) {
+          console.error('[Complete/useEffect] 호출 실패', e);
+          setQuizCompleteResult({ error: e?.message || '퀴즈 완료 처리 실패' });
+        }
+      })();
     }
     if (step !== 5 && quizCompleteResult) {
       setQuizCompleteResult(null); // 단계 이동 시 초기화
@@ -344,16 +386,30 @@ export default function Explore() {
     const fixedResults = Array.from({ length: questionList.length }, (_, idx) =>
       results[idx] ? results[idx] : { selected: null, checked: false }
     );
-    // 서버 결과 우선, 없으면 기존 로컬 계산
-    const correctCount = quizCompleteResult && typeof quizCompleteResult.correctAnswers === 'number'
-      ? quizCompleteResult.correctAnswers
-      : fixedResults.filter((r, idx) => {
-          if (r && r.checked && typeof r.correct === 'boolean') return r.correct;
-          const question = questionList[idx];
-          const correctOption = question?.options?.find(o => o.isCorrect);
-          const correctIdx = correctOption ? question.options.indexOf(correctOption) : -1;
-          return r?.selected === correctIdx;
-        }).length;
+    // 총 맞춘 개수: 항상 로컬 계산 사용 (서버 값은 POST만 수행)
+    const correctCount = fixedResults.reduce((acc, r, idx) => {
+      // 1) 문제풀이 단계에서 계산된 boolean 우선 사용
+      if (r && r.checked && typeof r.correct === 'boolean') return acc + (r.correct ? 1 : 0);
+      // 2) 폴백: 문제 정의에서 정답 인덱스 도출 (isCorrect → correctOptionId)
+      const q = questionList[idx];
+      let correctIdx = -1;
+      if (Array.isArray(q?.options)) {
+        const byFlag = q.options.findIndex(o => o && o.isCorrect === true);
+        if (byFlag >= 0) correctIdx = byFlag;
+        else if (q?.correctOptionId != null) {
+          const cidStr = String(q.correctOptionId);
+          const byStr = q.options.findIndex(o => String(o?.id) === cidStr);
+          if (byStr >= 0) correctIdx = byStr;
+          else if (Number.isFinite(Number(cidStr))) {
+            const cidNum = Number(cidStr);
+            const byNum = q.options.findIndex(o => Number(o?.id) === cidNum);
+            if (byNum >= 0) correctIdx = byNum;
+          }
+        }
+      }
+      const isCorrect = (r?.selected != null && correctIdx >= 0 && r.selected === correctIdx);
+      return acc + (isCorrect ? 1 : 0);
+    }, 0);
     content = (
       <CompletionScreen
         score={correctCount}

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 
 import FloatingQuizCTA from './FloatingQuizCTA';
-import { getQuestions as apiGetQuestions, getSectorsWithSubsectors, getQuizIdForSelection, getLevelProgress } from '../../api/explore';
+import { getQuestions as apiGetQuestions, getSectorsWithSubsectors, getQuizIdForSelection, getLevelProgress, getUserProgress, getSubsectorProgress } from '../../api/explore';
 import antCharacter from '../../assets/explore/stepant.png';
 import './ExploreMain.css';
 
@@ -145,7 +145,11 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
 
   // ===== 백엔드 진행도/완료/배지 상태 =====
   const [backendProgress, setBackendProgress] = useState(null); // { isCompleted, completionRate, totalQuizzes, completedQuizzes, totalScore, maxScore, completedAt, quizzes: [...], ... }
+  const [userProgress, setUserProgress] = useState(null); // GET /users/{userId}/progress 응답 원본 저장
+  const [subsectorProgress, setSubsectorProgress] = useState(null); // GET /subsectors/{id}/progress 응답 원본 저장
   const [, setProgressLoading] = useState(false); // ESLint: progressLoading 사용하지 않음
+  // 문제 제출 직후 API 반영 전까지의 낙관적 진행도(즉시 바 애니메이션 반영용)
+  const [tempProgress, setTempProgress] = useState(null); // { answeredCount, total }
   // userId는 localStorage에서 가져오거나, selection이 바뀔 때마다 갱신
   // 진행도는 항상 최신 userId로 조회 (localStorage에서 직접 읽음)
   useEffect(() => {
@@ -176,6 +180,24 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
           setBackendProgress(res);
           try { window.__EXPLORE_MAIN_PROGRESS = res; } catch (_) {}
         }
+        // 서브섹터 진행도 병행 조회
+        try {
+          const ssId = selection?.subTopicId;
+          if (ssId) {
+            console.log('[진행도 API 요청] getSubsectorProgress', { subsectorId: ssId, userId });
+            const sp = await getSubsectorProgress(ssId, userId);
+            console.log('[진행도 API 응답] getSubsectorProgress', sp);
+            if (!cancelled) setSubsectorProgress(sp);
+          }
+        } catch (e) { console.warn('[진행도 API 에러] getSubsectorProgress', e); if (!cancelled) setSubsectorProgress(null); }
+        // 사용자 전체 진행도도 함께 로드하여 현재 선택 레벨 완료 여부 판정에 사용
+        try {
+          const up = await getUserProgress(userId);
+          if (!cancelled) setUserProgress(up);
+          try { if (typeof window !== 'undefined') window.__USER_PROGRESS_LAST = up; } catch (_) {}
+        } catch (e) {
+          if (!cancelled) setUserProgress(null);
+        }
       } catch (e) {
         console.error('[진행도 API 에러] getLevelProgress', e);
         if (!cancelled) setBackendProgress(null);
@@ -186,23 +208,127 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     return () => { cancelled = true; };
   }, [selection]);
 
+  // 홈으로 돌아왔을 때도 최신화 보장: 마운트 직후 한 번 더 재조회
+  useEffect(() => {
+    const { levelId } = selection || {};
+    const userId = localStorage.getItem('userId') || undefined;
+    if (!levelId || !userId) return;
+    // 짧은 지연 후 재조회로 서버 집계 지연 대응
+    const t = setTimeout(async () => {
+      try {
+        const [lp, sp, up] = await Promise.all([
+          getLevelProgress(levelId, userId).catch(() => null),
+          (selection?.subTopicId ? getSubsectorProgress(selection.subTopicId, userId).catch(() => null) : Promise.resolve(null)),
+          getUserProgress(userId).catch(() => null),
+        ]);
+        if (lp) setBackendProgress(lp);
+        if (sp) setSubsectorProgress(sp);
+        if (up) setUserProgress(up);
+      } catch (_) {}
+    }, 300);
+    return () => clearTimeout(t);
+  }, [selection]);
+
+  // fin:quiz-completed 이벤트 수신 시 진행도 재조회 (레벨/유저)
+  useEffect(() => {
+    const handler = async () => {
+      try {
+        const { levelId } = selection || {};
+        const userId = localStorage.getItem('userId') || undefined;
+        if (!levelId || !userId) return;
+        const [lp, up] = await Promise.all([
+          getLevelProgress(levelId, userId).catch(() => null),
+          getUserProgress(userId).catch(() => null),
+        ]);
+        if (lp) setBackendProgress(lp);
+        if (up) setUserProgress(up);
+      } catch (_) { /* noop */ }
+    };
+    window.addEventListener('fin:quiz-completed', handler);
+    return () => window.removeEventListener('fin:quiz-completed', handler);
+  }, [selection]);
+
   // 진행도/완료/점수/배지 정보 파싱
-  const totalProblems = backendProgress?.totalQuizzes || totalQuestions;
-  const answeredCount = backendProgress?.completedQuizzes ?? 0;
+  // 화면 표시는 '문항 기준'을 우선: totalQuestions(4)이 있으면 그 값을 기준으로, 없을 때만 백엔드 합계 사용
+  // 총 문제 수는 질문 배열 기준(보통 4문항). 백엔드 합계는 사용하지 않음.
+  const baseTotal = (typeof totalQuestions === 'number' && totalQuestions > 0)
+    ? totalQuestions
+    : 0;
+  // 진행 도중에는 로컬 이벤트로만 부분 진행 표시, 백엔드의 completedQuizzes는 사용하지 않음.
+  const baseAnswered = (tempProgress?.answeredCount != null)
+    ? tempProgress.answeredCount
+    : 0;
+  // 사용자 전체 진행도에서 현재 선택(섹터/서브섹터/레벨)의 완료 여부 추출
+  const isCompletedByUser = useMemo(() => {
+    try {
+      if (!userProgress || !selection?.levelId) return false;
+      const sectorList = Array.isArray(userProgress.sectorProgress) ? userProgress.sectorProgress : [];
+      // 섹터/서브섹터는 ID 우선 매칭, 불가 시 이름으로 폴백
+      const sector = sectorList.find(s => {
+        if (selection.topicId != null && Number(s.sectorId) === Number(selection.topicId)) return true;
+        if (selectedTopic && s.sectorName && String(s.sectorName).trim() === String(selectedTopic).trim()) return true;
+        return false;
+      });
+      if (!sector) return false;
+      const subs = Array.isArray(sector.subsectors) ? sector.subsectors : [];
+      const sub = subs.find(ss => {
+        if (selection.subTopicId != null && Number(ss.subsectorId) === Number(selection.subTopicId)) return true;
+        if (selectedSubTopic && ss.subsectorName && String(ss.subsectorName).trim() === String(selectedSubTopic).trim()) return true;
+        return false;
+      });
+      if (!sub) return false;
+      const lvls = Array.isArray(sub.levels) ? sub.levels : [];
+      const lid = Number(selection.levelId);
+      const lvl = lvls.find(lv => {
+        if (Number(lv.levelId) === lid) return true;
+        const ln = String(lv.levelName || '').toLowerCase();
+        if (lid === 1 && /초|입문|beginner|easy/.test(ln)) return true;
+        if (lid === 2 && /중|intermediate|medium/.test(ln)) return true;
+        if (lid === 3 && /고|advanced|hard/.test(ln)) return true;
+        return false;
+      });
+      return !!lvl?.isCompleted;
+    } catch (_) { return false; }
+  }, [userProgress, selection, selectedTopic, selectedSubTopic]);
+
+  // 서브섹터 진행도에서 현재 레벨 완료 여부 판정
+  const isCompletedBySubsector = useMemo(() => {
+    try {
+      const lid = Number(selection?.levelId);
+      const levels = Array.isArray(subsectorProgress?.levels) ? subsectorProgress.levels : [];
+      // 1) ID로 우선 매칭
+      let lvl = levels.find(l => Number(l.levelId) === lid);
+      if (!lvl) {
+        // 2) 이름/난이도 라벨로 폴백 매칭 (초/중/고)
+        const ln = String(selectedLevel || '').toLowerCase();
+        lvl = levels.find((l) => {
+          const name = String(l.levelName || '').toLowerCase();
+          if (!name) return false;
+          if (/초|입문|beginner|easy/.test(ln) && /초|입문|beginner|easy/.test(name)) return true;
+          if (/중|intermediate|medium/.test(ln) && /중|intermediate|medium/.test(name)) return true;
+          if (/고|advanced|hard/.test(ln) && /고|advanced|hard/.test(name)) return true;
+          return false;
+        });
+      }
+      return !!lvl?.isCompleted;
+    } catch (_) { return false; }
+  }, [subsectorProgress, selection, selectedLevel]);
+
+  const isCompleted = isCompletedByUser || isCompletedBySubsector || !!backendProgress?.isCompleted;
+  const isFullyDoneDisplay = isCompleted || (baseTotal > 0 && baseAnswered >= baseTotal);
+  const totalProblems = baseTotal;
+  const answeredCount = isFullyDoneDisplay ? baseTotal : baseAnswered;
   // eslint-disable-next-line no-unused-vars
   const _ = backendProgress?.totalScore ?? 0; // correctCount - 사용하지 않음
   const progressPercent = totalProblems > 0 ? (answeredCount / totalProblems) * 100 : 0;
-  const isCompleted = !!backendProgress?.isCompleted;
   const badge = backendProgress?.currentBadge;
   // 진행도 숫자: 현재/다음 단계 표시 (예: 1 2 -> 2 3)
   const currentNumber = totalProblems > 0 ? Math.min(answeredCount + 1, totalProblems) : 1;
   const nextNumber = totalProblems > 0 ? Math.min(currentNumber + 1, totalProblems) : 2;
   // 징검다리 단계: 문제 수 기준 (질문이 없을 때 최소 0)
   const totalStages = Math.max(0, totalProblems || 0);
-  // 문제별 완료 상태 배열 (서버 응답 기반)
-  const quizCompletionArr = Array.isArray(backendProgress?.quizzes)
-    ? backendProgress.quizzes.map(q => !!q.isCompleted)
-    : Array(totalStages).fill(false);
+  // 문제별 완료 상태 배열 (화면 표현 기준)
+  const quizCompletionArr = Array.from({ length: totalStages }, (_, i) => i < answeredCount);
   // active 단계: 현재 푸는 문제 index (모두 끝나면 -1 로 처리)
   const activeStage = answeredCount < totalStages ? answeredCount : -1;
 
@@ -246,6 +372,36 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
       // 로깅 도중 오류로 인해 렌더가 막히지 않도록 안전 처리
     }
   }, [backendProgress, selection, totalProblems, answeredCount, totalStages, activeStage, progressPercent, isCompleted, quizCompletionArr]);
+
+  // 각 문제 제출 시(QuizQuestion onCheck 후) 진행도 재조회 + 임시 반영
+  useEffect(() => {
+    const handler = async (e) => {
+      try {
+        const detail = e?.detail || {};
+        if (typeof detail.answeredCount === 'number' && typeof detail.totalQuestions === 'number') {
+          setTempProgress({ answeredCount: detail.answeredCount, total: detail.totalQuestions });
+        }
+        const levelId = selection?.levelId;
+        const userId = localStorage.getItem('userId') || undefined;
+        if (!levelId || !userId) return;
+        const res = await getLevelProgress(levelId, userId);
+        setBackendProgress(res);
+        // 전체 사용자 진행 상황도 관찰용으로 업데이트(있는 경우)
+        import('../../api/explore').then(mod => {
+          if (typeof mod.getUserProgress === 'function') {
+            mod.getUserProgress(userId).catch(() => {});
+          }
+        });
+      } catch (_) {
+        /* ignore fetch errors for UI smoothness */
+      } finally {
+        // 백엔드 진행도가 도착했으니 임시 진행도 제거(혹은 약간의 지연 후 제거 가능)
+        setTimeout(() => setTempProgress(null), 300);
+      }
+    };
+    window.addEventListener('fin:answer-submitted', handler);
+    return () => window.removeEventListener('fin:answer-submitted', handler);
+  }, [selection]);
 
   return (
     <div

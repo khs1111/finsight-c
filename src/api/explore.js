@@ -372,6 +372,46 @@ export const getLevelProgress = async (levelId, userId, token) => {
   }
 };
 
+// 4b. 서브섹터 진행도 조회: GET /api/subsectors/{id}/progress?userId=
+export const getSubsectorProgress = async (subsectorId, userId, token) => {
+  const uid = withUserId(userId);
+  const sid = Number(subsectorId);
+  if (!Number.isFinite(sid)) return null;
+  try {
+    const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
+    const data = await http(`/subsectors/${sid}/progress${qs}`, {}, token);
+    try {
+      console.log('[Progress] getSubsectorProgress raw:', data);
+      if (typeof window !== 'undefined') {
+        window.__SUBSECTOR_PROGRESS_LAST = { subsectorId: sid, userId: uid, raw: data };
+      }
+    } catch (_) {}
+    return data;
+  } catch (e) {
+    console.warn('[Progress] getSubsectorProgress failed:', e?.message || e);
+    return null;
+  }
+};
+
+// 7️⃣ 사용자 전체 진행 상황 조회: GET /api/users/{userId}/progress
+export const getUserProgress = async (userId, token) => {
+  const uid = withUserId(userId);
+  if (!uid) return null;
+  try {
+    const data = await http(`/users/${encodeURIComponent(uid)}/progress`, {}, token);
+    try {
+      console.log('[UserProgress] /users/{id}/progress raw:', data);
+      if (typeof window !== 'undefined') {
+        window.__USER_PROGRESS_LAST = { userId: uid, raw: data };
+      }
+    } catch (_) {}
+    return data;
+  } catch (e) {
+    console.warn('[UserProgress] fetch failed:', e?.message || e);
+    return null;
+  }
+};
+
 // 레벨 상세 정보 조회: desc/goal/levelNumber/title 등 보강용
 export const getLevelDetail = async (levelId) => {
   const id = coerceLevelId(levelId);

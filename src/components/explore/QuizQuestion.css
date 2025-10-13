@@ -270,7 +270,7 @@
   pointer-events: none;
   justify-self: end;     /* 오른쪽 끝 */
   align-self: end;       /* 아래 기준 */
-  transform: translateY(22px); /* 디자인 요구: 개미를 위로 3px */
+  transform: translateY(22px); 
 }
 
 /* Ant character */
