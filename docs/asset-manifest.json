@@ -1,21 +1,25 @@
 {
   "files": {
-    "main.css": "./static/css/main.9bec2324.css",
-    "main.js": "./static/js/main.786b90f1.js",
-    "static/media/target-icon.png": "./static/media/target-icon.989a227bd64681225056.png",
+    "main.css": "./static/css/main.005fbf7b.css",
+    "main.js": "./static/js/main.c2742e87.js",
     "static/media/back.png": "./static/media/back.9c168b1dd39328551dcd.png",
-    "static/media/finance-icon.png": "./static/media/finance-icon.c69f27564fcf0ed0486f.png",
     "static/media/news-icon.png": "./static/media/news-icon.38a91037b88ec32a010a.png",
-    "static/media/bell-icon.png": "./static/media/bell-icon.953bb5fa289438f8cd46.png",
     "static/media/q4-article.png": "./static/media/q4-article.b9bae2c808078ef9243f.png",
+    "static/media/real-estate.png": "./static/media/real-estate.bdfcd36a1bfe3cb3ab35.png",
+    "static/media/letter-book.png": "./static/media/letter-book.8475f3d2e9586c1d760a.png",
     "static/media/allfail.png": "./static/media/allfail.4062108ac79b583a2b1d.png",
     "static/media/complete.png": "./static/media/complete.b98045fa0450a3075344.png",
     "static/media/ant.png": "./static/media/ant.954608421f2e3f2889e9.png",
+    "static/media/usa.png": "./static/media/usa.07392dac8601c1a5e87e.png",
     "static/media/stepant.png": "./static/media/stepant.2d11458b3027ec60ec4a.png",
     "static/media/gold.png": "./static/media/gold.101becfc0bfb0e75785e.png",
+    "static/media/nvidia.png": "./static/media/nvidia.20e12bcb2b6a1deb2243.png",
+    "static/media/finletter.svg": "./static/media/finletter.20a62cbc3a92063206aafa03b0b67f76.svg",
     "static/media/wordHeaderCharacter.svg": "./static/media/wordHeaderCharacter.6badf9d136253df998986abac2b44ed8.svg",
     "static/media/Son.svg": "./static/media/Son.e306adb2a299f57a22c431e4a7a38e22.svg",
+    "static/media/Icon.svg": "./static/media/Icon.1137b0d603f5e15b1c338f3b5ff18e47.svg",
     "static/media/delete.svg": "./static/media/delete.24aad4b6d6704eaf3d0132aaf56cae05.svg",
+    "static/media/Calendar.svg": "./static/media/Calendar.de62bf44a529c0377cda298ea2abe65d.svg",
     "index.html": "./index.html",
     "static/media/Bookmark.svg": "./static/media/Bookmark.bea0ab48bbf7454064bd47e6462b82eb.svg",
     "static/media/community-default-avatar.svg": "./static/media/community-default-avatar.913b9d915f8c5de2219b1c868334cbf2.svg",
@@ -25,11 +29,11 @@
     "static/media/link_alt.svg": "./static/media/link_alt.00d316dabc568981bdf06778b510cfc3.svg",
     "static/media/plus.svg": "./static/media/plus.6dbfbac4e222e4c50aca0151ca35fec9.svg",
     "static/media/Ellipse 212.svg": "./static/media/Ellipse 212.3707a2062acc2e1abb7835eb78bffcf9.svg",
-    "main.9bec2324.css.map": "./static/css/main.9bec2324.css.map",
-    "main.786b90f1.js.map": "./static/js/main.786b90f1.js.map"
+    "main.005fbf7b.css.map": "./static/css/main.005fbf7b.css.map",
+    "main.c2742e87.js.map": "./static/js/main.c2742e87.js.map"
   },
   "entrypoints": [
-    "static/css/main.9bec2324.css",
-    "static/js/main.786b90f1.js"
+    "static/css/main.005fbf7b.css",
+    "static/js/main.c2742e87.js"
   ]
 }

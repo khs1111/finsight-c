@@ -1,172 +1,4 @@
-/* --- WORD/NOTE 드롭다운: 엄격 Figma 고정 버전 --- */
-.explore-main-menu-popup{
-  position: absolute; top: 32px; right: 0;
-  width: 82px !important;
-  padding: 16px 12px !important;
-  height: 76px !important;
-  box-sizing: border-box;
-  display: flex; flex-direction: column;
-  align-items: center; gap: 0 !important;
-  border-radius: 16px;
-}
 
-.explore-main-menu-popup > .explore-main-menu-popup-list{
-  display: grid !important;
-  grid-template-rows: 14px 1px 14px !important;
-  row-gap: 8px !important;
-  width: 58px !important;
-  height: 76px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  justify-items: stretch !important;
-}
-
-.explore-main-menu-popup > .explore-main-menu-popup-list > .explore-main-menu-popup-item{
-  width: 58px !important;
-  height: 14px !important;
-  line-height: 14px !important;
-  padding: 0 !important; margin: 0 !important;
-  font-size: 12px !important; font-weight: 700 !important;
-  text-align: left !important; border: none !important; background: none !important;
-  cursor: pointer !important;
-}
-
-.explore-main-menu-popup > .explore-main-menu-popup-list > .explore-main-menu-popup-divider{
-  width: 58px !important;
-  height: 1px !important;
-  background: #F5F5F5 !important;
-  border: none !important;
-  margin: 0 !important;
-}
-/* 드롭다운 팝업 하단 16px 패딩(Figma 스펙) */
-.explore-main-menu-popup {
-  padding-bottom: 16px !important;
-}
-/* --- FIX: 단어장/오답노트 드롭다운 중앙 구분선 & 8px 간격 (최종) --- */
-.explore-main-menu-popup{
-  height: auto !important;
-}
-
-.explore-main-menu-popup > .explore-main-menu-popup-list{
-  display: grid !important;
-  grid-template-rows: minmax(24px,1fr) 1px minmax(24px,1fr) !important;
-  row-gap: 8px !important;
-  align-items: center !important;
-  justify-items: stretch !important;
-  width: 100% !important;
-  height: auto !important;
-  padding: 0 !important;
-  gap: 0 !important;
-}
-
-.explore-main-menu-popup > .explore-main-menu-popup-list > .explore-main-menu-popup-item{
-  height: auto !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  line-height: 16px !important;
-  font-size: 12px !important;
-  font-weight: 700 !important;
-  background: none !important;
-  border: none !important;
-  text-align: left !important;
-  cursor: pointer !important;
-}
-
-.explore-main-menu-popup > .explore-main-menu-popup-list > .explore-main-menu-popup-divider{
-  width: 100% !important;
-  height: 1px !important;
-  background: #F5F5F5 !important;
-  margin: 0 !important;
-  border: none !important;
-}
-/* 드롭다운 구분선/간격/텍스트 완벽 정렬 (분석 기반) */
-.explore-main-menu-popup-list {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0;
-  gap: 0;
-  width: 100%;
-}
-
-.explore-main-menu-popup-item {
-  width: 100%;
-  padding: 8px 0;
-  font-family: 'Roboto', sans-serif;
-  font-weight: 700;
-  font-size: 12px;
-  line-height: 16px;
-  color: #282828;
-  background: none;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-}
-
-.explore-main-menu-popup-divider {
-  width: 100%;
-  height: 1px;
-  background: #F5F5F5;
-  margin: 0;
-  border: none;
-}
-/* 단어장/오답노트 드롭다운 Figma 스펙 */
-.explore-main-menu-popup {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 16px 12px;
-  gap: 10px;
-  position: absolute;
-  top: 32px;
-  right: 0;
-  width: 82px;
-  height: 76px;
-  background: #fff;
-  box-shadow: 0px 0px 16px rgba(10, 26, 51, 0.32);
-  border-radius: 16px;
-  z-index: 200;
-}
-
-.explore-main-menu-popup-list {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 0;
-  gap: 8px;
-  width: 58px;
-  height: 44px;
-}
-
-.explore-main-menu-popup-item {
-  width: 58px;
-  height: 14px;
-  font-family: 'Roboto', sans-serif;
-  font-style: normal;
-  font-weight: 700;
-  font-size: 12px;
-  line-height: 14px;
-  color: #282828;
-  background: none;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  padding: 0;
-}
-
-.explore-main-menu-popup-divider {
-  width: 58px;
-  height: 0px;
-  border: 1px solid #F5F5F5;
-  margin: 8px 0;
-}
-/* 상단 메뉴 드롭다운(단어장/오답노트) 항상 위에 보이도록 */
-.explore-main-menu-popup {
-  z-index: 200;
-  position: absolute;
-  top: 32px;
-  right: 0;
-}
 /* 주제/레벨 선택 전체 컨테이너 */
 .explore-main-selector-box {
   position: absolute;
@@ -174,7 +6,7 @@
   right: 16px; /* 양쪽 16px 여백 보장 */
   top: 64px;
   width: auto;  /* 고정폭 제거로 작은 화면에서 넘침 방지 */
-  max-width: calc(100% - 32px);
+  max-width: calc(100% - 80px);
   min-height: 0;
   background: #FFFFFF;
   box-shadow: 0px 0px 8px rgba(10, 26, 51, 0.18);
@@ -193,11 +25,11 @@
 .explore-main-selector-content {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch; /* 자식이 가로 100% 사용 */
   padding: 0;
   padding-bottom: 16px;
   gap: 16px;
-  width: 294px;
+  width: 100%;
   min-height: 100px;
 }
 
@@ -206,37 +38,11 @@
   display: flex;
   flex-direction: column;
   gap: 16px;   /* 드롭다운 ↔ 버튼 16px */
-  width: 294px;
-  padding-bottom: 16px; /* 버튼 ↔ 컨테이너 끝 16px */
+  width: 100%; /* 부모(.explore-main-selector-box) 패딩 16px과 맞춰 풀폭 사용 */
+  padding-bottom: 10px; /* 버튼 ↔ 컨테이너 끝 16px */
 }
 
-/* 드롭다운 헤더 */
-.explore-main-subtopic-dropdown-header {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  gap: 10px;
-  width: 294px;
-  height: 44px;
-  background: #fff;
-  border: 1px solid #999999;
-  border-radius: 8px;
-}
-
-.explore-main-subtopic-dropdown-text {
-  font-family: 'Roboto';
-  font-weight: 500;
-  font-size: 14px;
-  line-height: 16px;
-  color: #626262;
-}
-
-.explore-main-subtopic-dropdown-arrow {
-  width: 16px;
-  height: 16px;
-}
+/* 드롭다운 헤더 (old duplicate removed; using improved block below) */
 
 /* 확인 버튼 */
 .explore-main-selector-confirm-btn {
@@ -244,7 +50,7 @@
   justify-content: center;
   align-items: center;
   padding: 11px 0;
-  width: 294px;
+  width: 100%;
   height: 40px;
   background: linear-gradient(104.45deg, #448FFF -6.51%, #4833D0 105.13%);
   border-radius: 8px;
@@ -264,47 +70,10 @@
   color: #fff;
 }
 
-/* 난이도/주제 선택 타이틀 */
-.explore-main-level-title,
-.explore-main-topic-title {
-  font-family: 'Roboto';
-  font-weight: 700;
-  font-size: 16px;
-  line-height: 19px;
-  letter-spacing: -0.02em;
-  color: #1B1B1B;
-  width: 294px;
-  height: 19px;
-}
-
-/* 난이도/주제 선택 행 */
-.explore-main-level-row,
-.explore-main-topic-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  width: 294px;
-  height: 32px;
-}
+/* 중복된 초기 규격(294px 고정폭) 제거 — 아래 섹션별 블록과 100% 플루이드 규격 사용 */
 
 /* 난이도/주제 버튼 */
-.explore-main-level-btn,
-.explore-main-topic-btn {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  padding: 8px 10px;
-  gap: 10px;
-  width: 92.67px;
-  height: 32px;
-  background: #E5EFFF;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-}
+
 
 .explore-main-level-btn.selected,
 .explore-main-topic-btn.selected {
@@ -339,56 +108,7 @@
   z-index: 50;
 }
 
-/* Selector Box */
-.explore-main-selector-box {
-  position: absolute;
-  width: 326px;
-  height: 326px;
-  left: 16px;
-  top: 64px;
-  background: #fff;
-  box-shadow: 0px 0px 8px rgba(10, 26, 51, 0.18);
-  /* border-radius: 8px; 카드 컨테이너는 둥글게 하지 않음 */
-  z-index: 51;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 16px;
-  gap: 10px;
-  box-sizing: border-box;
-  transition: height 0.3s ease;
-}
-.explore-main-selector-box.open {
-  height: 502px;
-}
-
-.explore-main-selector-box.dynamic {
-  height: auto;
-  min-height: 326px;
-  max-height: 600px;
-  transition: height 0.3s;
-  overflow-y: auto;
-}
-
-.explore-main-selector-content {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 0;
-  gap: 16px;
-  width: 294px;
-  min-height: 293px;
-  height: auto;
-  flex: none;
-  order: 0;
-  align-self: stretch;
-  flex-grow: 0;
-  /* border-radius: 8px; 카드 컨테이너는 둥글게 하지 않음 */
-  overflow: visible;
-}
-.explore-main-selector-content.open {
-  height: 469px;
-}
+/* Duplicate fixed-size selector styles removed; using canonical block above with 16px gutters */
 
 /* Level Section */
 .explore-main-level-section {
@@ -397,7 +117,7 @@
   align-items: flex-start;
   padding: 0;
   gap: 12px;
-  width: 294px;
+  width: 100%;
   height: 63px;
   flex: none;
   order: 0;
@@ -405,7 +125,7 @@
   flex-grow: 0;
 }
 .explore-main-level-title {
-  width: 294px;
+  width: 100%;
   height: 19px;
   font-family: 'Roboto';
   font-style: normal;
@@ -423,14 +143,15 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 0;
   gap: 8px;
-  width: 294px;
+  width: 105.6%;
   height: 32px;
   flex: none;
   order: 1;
   align-self: stretch;
   flex-grow: 0;
+  box-sizing: border-box; /* 내부 여백 포함하여 계산 */
+  padding-right: 16px;    /* 카드 내부 오른쪽 16px 여백 */
 }
 .explore-main-level-btn {
   box-sizing: border-box;
@@ -440,14 +161,14 @@
   align-items: center;
   padding: 8px 10px;
   gap: 10px;
-  width: 92.67px;
+  width: 100%;
   height: 32px;
   background: #E5EFFF;
   border-radius: 8px;
   border: none;
   cursor: pointer;
-  flex: none;
-  flex-grow: 1;
+  flex: 1 1 0; /* 3개 버튼이 균등 분배 */
+  min-width: 0; /* 긴 텍스트에서도 줄맞춤 */
 }
 .explore-main-level-btn.selected {
   background:
@@ -487,7 +208,7 @@
   align-items: flex-start;
   padding: 0;
   gap: 12px;
-  width: 294px;
+  width: 100%;
   height: 63px;
   flex: none;
   order: 1;
@@ -495,7 +216,7 @@
   flex-grow: 0;
 }
 .explore-main-topic-title {
-  width: 294px;
+  width: 100%;
   height: 19px;
   font-family: 'Roboto';
   font-style: normal;
@@ -514,7 +235,7 @@
   flex-direction: row;
   align-items: center;
   gap: 8px;
-  width: 294px;
+  width: 100%;
   height: 32px;
 }
 .explore-main-topic-row.dynamic {
@@ -563,8 +284,8 @@
   align-items: flex-start;
   padding: 0;
   gap: 0;
-  width: 294px;
-  height: 19px;
+  width: 100%;
+  height: 86px; /* 콘텐츠 높이에 맞춰 확장 */
   flex: none;
   order: 2;
   align-self: stretch;
@@ -572,7 +293,7 @@
   margin-bottom: 0;
 }
 .explore-main-subtopic-title {
-  width: 294px;
+  width: 100%;
   height: 19px;
   font-family: 'Roboto';
   font-style: normal;
@@ -597,9 +318,9 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  width: 294px;
-  min-width: 220px;
-  max-width: 100vw;
+  width: 100%;
+  min-width: 0; /* 컨테이너 폭에 맞춰 유연하게 */
+  max-width: 100%;
   background: #fff;
   border: 1px solid #9B9B9B;
   border-radius: 12px;
@@ -820,13 +541,11 @@
 .explore-main-steppingstones-wrap {
   z-index: 1; 
   width: calc(100% - 32px);
-  max-width: 100%;
   min-height: 100%;
   margin: 0;
-  background: #F4F6FA;
+
   font-family: 'Roboto', sans-serif;
   box-sizing: border-box;
-  padding: 0 0 80px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -851,7 +570,7 @@
   position: relative; /* 추가 */
   z-index: 0; /* 기본 계층 */
   width: 100%;
-  max-width: 420px;
+  max-width: 100%;
   min-height: 100vh;
   margin: 0 auto;
   background: #F4F6FA;
@@ -944,94 +663,9 @@
   position: relative;
   cursor: pointer;
 }
-/* 세부주제 드롭다운 영역 */
-.explore-main-dropdown-wrap {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 294px;
-  min-width: 220px;
-  max-width: 100vw;
-  border: 1px solid #9B9B9B;
-  border-radius: 8px;
-  background: #fff;
-  position: relative;
-  z-index: 50;
-}
+/* 세부주제 generic dropdown (deprecated) removed */
 
-.explore-main-dropdown-btn {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  gap: 10px;
-  width: 100%;
-  height: 44px;
-  background: #fff;
-  border: 1px solid #9B9B9B;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: 'Roboto', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  color: #4D4D4D;
-}
-
-.explore-main-dropdown-list {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  border-radius: 0 0 8px 8px;
-  border-width: 0 1px 1px 1px;
-  border-style: solid;
-  border-color: #9B9B9B;
-  background: #fff;
-  position: absolute;
-  top: 44px;
-  left: 0;
-  z-index: 51;
-  max-height: 320px;
-  overflow-y: auto;
-  transition: max-height 0.3s;
-}
-
-.explore-main-dropdown-item {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: 14px 16px;
-  gap: 10px;
-  width: 100%;
-  height: 44px;
-  font-family: 'Roboto', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  color: #4D4D4D;
-  background: #fff;
-  border-bottom: 1px solid #F5F5F5;
-  cursor: pointer;
-    /* Properties already exist, no changes needed */
-}
-.explore-main-dropdown-item-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-  display: inline-block;
-}
-.explore-main-dropdown-item:last-child {
-  border-bottom: none;
-  border-radius: 0 0 8px 8px;
-}
-
-@media (max-width: 100%) {
-  .explore-main-dropdown-wrap {
-    width: 100vw;
-    min-width: unset;
-  }
-}
+/* 작은 화면에서도 동일한 16px 여백 유지 (별도 미디어쿼리 불필요) */
 
 /* 주제 드롭다운 버튼 행 */
 .explore-main-topic-row {

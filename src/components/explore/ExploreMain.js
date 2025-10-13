@@ -1,10 +1,10 @@
 // 탐험 메인화면
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 
 import FloatingQuizCTA from './FloatingQuizCTA';
-import useProgress from '../useProgress';
-import { getQuestions as apiGetQuestions, getSectorsWithSubsectors, getQuizIdForSelection, getLevelProgress } from '../../api/explore';
+import { getQuestions as apiGetQuestions, getSectorsWithSubsectors, getQuizIdForSelection, getUserProgress, getSubsectorProgress } from '../../api/explore';
+import { getProgress as getLevelProgress } from '../../api/levels';
 import antCharacter from '../../assets/explore/stepant.png';
 import './ExploreMain.css';
 
@@ -61,7 +61,10 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
   // 주간 출석(해당 주의 날짜 키)을 localStorage 'attendance'에서 읽어와 표시
   useEffect(() => {
     try {
-      const arr = JSON.parse(localStorage.getItem('attendance') || '[]');
+      // per-user attendance key
+      const uid = (() => { try { return localStorage.getItem('userId'); } catch (_) { return null; } })();
+      const attendanceKey = uid ? `attendance:${uid}` : 'attendance';
+      const arr = JSON.parse(localStorage.getItem(attendanceKey) || '[]');
       if (!Array.isArray(arr)) return;
       // 이번 주의 날짜 키 목록 생성
       const start = new Date(startOfWeek);
@@ -146,7 +149,11 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
 
   // ===== 백엔드 진행도/완료/배지 상태 =====
   const [backendProgress, setBackendProgress] = useState(null); // { isCompleted, completionRate, totalQuizzes, completedQuizzes, totalScore, maxScore, completedAt, quizzes: [...], ... }
-  const [progressLoading, setProgressLoading] = useState(false);
+  const [userProgress, setUserProgress] = useState(null); // GET /users/{userId}/progress 응답 원본 저장
+  const [subsectorProgress, setSubsectorProgress] = useState(null); // GET /subsectors/{id}/progress 응답 원본 저장
+  const [, setProgressLoading] = useState(false); // ESLint: progressLoading 사용하지 않음
+  // 문제 제출 직후 API 반영 전까지의 낙관적 진행도(즉시 바 애니메이션 반영용)
+  const [tempProgress, setTempProgress] = useState(null); // { answeredCount, total }
   // userId는 localStorage에서 가져오거나, selection이 바뀔 때마다 갱신
   // 진행도는 항상 최신 userId로 조회 (localStorage에서 직접 읽음)
   useEffect(() => {
@@ -173,7 +180,28 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
             quizzes: res.quizzes
           });
         }
-        if (!cancelled) setBackendProgress(res);
+        if (!cancelled) {
+          setBackendProgress(res);
+          try { window.__EXPLORE_MAIN_PROGRESS = res; } catch (_) {}
+        }
+        // 서브섹터 진행도 병행 조회
+        try {
+          const ssId = selection?.subTopicId;
+          if (ssId) {
+            console.log('[진행도 API 요청] getSubsectorProgress', { subsectorId: ssId, userId });
+            const sp = await getSubsectorProgress(ssId, userId);
+            console.log('[진행도 API 응답] getSubsectorProgress', sp);
+            if (!cancelled) setSubsectorProgress(sp);
+          }
+        } catch (e) { console.warn('[진행도 API 에러] getSubsectorProgress', e); if (!cancelled) setSubsectorProgress(null); }
+        // 사용자 전체 진행도도 함께 로드하여 현재 선택 레벨 완료 여부 판정에 사용
+        try {
+          const up = await getUserProgress(userId);
+          if (!cancelled) setUserProgress(up);
+          try { if (typeof window !== 'undefined') window.__USER_PROGRESS_LAST = up; } catch (_) {}
+        } catch (e) {
+          if (!cancelled) setUserProgress(null);
+        }
       } catch (e) {
         console.error('[진행도 API 에러] getLevelProgress', e);
         if (!cancelled) setBackendProgress(null);
@@ -184,24 +212,230 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     return () => { cancelled = true; };
   }, [selection]);
 
+  // 홈으로 돌아왔을 때도 최신화 보장: 마운트 직후 한 번 더 재조회
+  useEffect(() => {
+    const { levelId } = selection || {};
+    const userId = localStorage.getItem('userId') || undefined;
+    if (!levelId || !userId) return;
+    // 짧은 지연 후 재조회로 서버 집계 지연 대응
+    const t = setTimeout(async () => {
+      try {
+        const [lp, sp, up] = await Promise.all([
+          getLevelProgress(levelId, userId).catch(() => null),
+          (selection?.subTopicId ? getSubsectorProgress(selection.subTopicId, userId).catch(() => null) : Promise.resolve(null)),
+          getUserProgress(userId).catch(() => null),
+        ]);
+        if (lp) setBackendProgress(lp);
+        if (sp) setSubsectorProgress(sp);
+        if (up) setUserProgress(up);
+      } catch (_) {}
+    }, 300);
+    return () => clearTimeout(t);
+  }, [selection]);
+
+  // fin:quiz-completed 이벤트 수신 시 진행도 재조회 (레벨/유저)
+  useEffect(() => {
+    const handler = async () => {
+      try {
+        const { levelId } = selection || {};
+        const userId = localStorage.getItem('userId') || undefined;
+        if (!levelId || !userId) return;
+        const [lp, up] = await Promise.all([
+          getLevelProgress(levelId, userId).catch(() => null),
+          getUserProgress(userId).catch(() => null),
+        ]);
+        if (lp) setBackendProgress(lp);
+        if (up) setUserProgress(up);
+      } catch (_) { /* noop */ }
+    };
+    window.addEventListener('fin:quiz-completed', handler);
+    return () => window.removeEventListener('fin:quiz-completed', handler);
+  }, [selection]);
+
   // 진행도/완료/점수/배지 정보 파싱
-  const totalProblems = backendProgress?.totalQuizzes || totalQuestions;
-  const answeredCount = backendProgress?.completedQuizzes ?? 0;
-  const correctCount = backendProgress?.totalScore ?? 0;
+  // 화면 표시는 '문항 기준'을 우선: totalQuestions(4)이 있으면 그 값을 기준으로, 없을 때만 백엔드 합계 사용
+  // 총 문제 수는 질문 배열 기준(보통 4문항). 백엔드 합계는 사용하지 않음.
+  const baseTotal = (typeof totalQuestions === 'number' && totalQuestions > 0)
+    ? totalQuestions
+    : 0;
+  // 진행 도중에는 로컬 이벤트로만 부분 진행 표시, 백엔드의 completedQuizzes는 사용하지 않음.
+  const baseAnswered = (tempProgress?.answeredCount != null)
+    ? tempProgress.answeredCount
+    : 0;
+  // 사용자 전체 진행도에서 현재 선택(섹터/서브섹터/레벨)의 완료 여부 추출
+  const isCompletedByUser = useMemo(() => {
+    try {
+      if (!userProgress || !selection?.levelId) return false;
+      const sectorList = Array.isArray(userProgress.sectorProgress) ? userProgress.sectorProgress : [];
+      // 섹터/서브섹터는 ID 우선 매칭, 불가 시 이름으로 폴백
+      const sector = sectorList.find(s => {
+        if (selection.topicId != null && Number(s.sectorId) === Number(selection.topicId)) return true;
+        if (selectedTopic && s.sectorName && String(s.sectorName).trim() === String(selectedTopic).trim()) return true;
+        return false;
+      });
+      if (!sector) return false;
+      const subs = Array.isArray(sector.subsectors) ? sector.subsectors : [];
+      const sub = subs.find(ss => {
+        if (selection.subTopicId != null && Number(ss.subsectorId) === Number(selection.subTopicId)) return true;
+        if (selectedSubTopic && ss.subsectorName && String(ss.subsectorName).trim() === String(selectedSubTopic).trim()) return true;
+        return false;
+      });
+      if (!sub) return false;
+      const lvls = Array.isArray(sub.levels) ? sub.levels : [];
+      const lid = Number(selection.levelId);
+      const lvl = lvls.find(lv => {
+        if (Number(lv.levelId) === lid) return true;
+        const ln = String(lv.levelName || '').toLowerCase();
+        if (lid === 1 && /초|입문|beginner|easy/.test(ln)) return true;
+        if (lid === 2 && /중|intermediate|medium/.test(ln)) return true;
+        if (lid === 3 && /고|advanced|hard/.test(ln)) return true;
+        return false;
+      });
+      return !!lvl?.isCompleted;
+    } catch (_) { return false; }
+  }, [userProgress, selection, selectedTopic, selectedSubTopic]);
+
+  // 서브섹터 진행도에서 현재 레벨 완료 여부 판정
+  const isCompletedBySubsector = useMemo(() => {
+    try {
+      const lid = Number(selection?.levelId);
+      const levels = Array.isArray(subsectorProgress?.levels) ? subsectorProgress.levels : [];
+      // 1) ID로 우선 매칭
+      let lvl = levels.find(l => Number(l.levelId) === lid);
+      if (!lvl) {
+        // 2) 이름/난이도 라벨로 폴백 매칭 (초/중/고)
+        const ln = String(selectedLevel || '').toLowerCase();
+        lvl = levels.find((l) => {
+          const name = String(l.levelName || '').toLowerCase();
+          if (!name) return false;
+          if (/초|입문|beginner|easy/.test(ln) && /초|입문|beginner|easy/.test(name)) return true;
+          if (/중|intermediate|medium/.test(ln) && /중|intermediate|medium/.test(name)) return true;
+          if (/고|advanced|hard/.test(ln) && /고|advanced|hard/.test(name)) return true;
+          return false;
+        });
+      }
+      return !!lvl?.isCompleted;
+    } catch (_) { return false; }
+  }, [subsectorProgress, selection, selectedLevel]);
+
+  const isCompleted = isCompletedByUser || isCompletedBySubsector || !!backendProgress?.isCompleted;
+  const isFullyDoneDisplay = isCompleted || (baseTotal > 0 && baseAnswered >= baseTotal);
+  const totalProblems = baseTotal;
+  const answeredCount = isFullyDoneDisplay ? baseTotal : baseAnswered;
+  // eslint-disable-next-line no-unused-vars
+  const _ = backendProgress?.totalScore ?? 0; // correctCount - 사용하지 않음
   const progressPercent = totalProblems > 0 ? (answeredCount / totalProblems) * 100 : 0;
-  const isCompleted = !!backendProgress?.isCompleted;
   const badge = backendProgress?.currentBadge;
   // 진행도 숫자: 현재/다음 단계 표시 (예: 1 2 -> 2 3)
   const currentNumber = totalProblems > 0 ? Math.min(answeredCount + 1, totalProblems) : 1;
   const nextNumber = totalProblems > 0 ? Math.min(currentNumber + 1, totalProblems) : 2;
   // 징검다리 단계: 문제 수 기준 (질문이 없을 때 최소 0)
   const totalStages = Math.max(0, totalProblems || 0);
-  // 문제별 완료 상태 배열 (서버 응답 기반)
-  const quizCompletionArr = Array.isArray(backendProgress?.quizzes)
-    ? backendProgress.quizzes.map(q => !!q.isCompleted)
-    : Array(totalStages).fill(false);
+  // 문제별 완료 상태 배열 (화면 표현 기준)
+  const quizCompletionArr = Array.from({ length: totalStages }, (_, i) => i < answeredCount);
   // active 단계: 현재 푸는 문제 index (모두 끝나면 -1 로 처리)
   const activeStage = answeredCount < totalStages ? answeredCount : -1;
+
+  // ===== DEBUG: 진행도 상세 로깅 및 전역 노출 =====
+  useEffect(() => {
+    try {
+      // 전역에 최신 진행도와 선택 상태를 노출하여 빠른 점검 가능
+      if (typeof window !== 'undefined') {
+        window.__EXPLORE_MAIN_PROGRESS = backendProgress || null;
+        window.__EXPLORE_MAIN_SELECTION = selection || null;
+        window.__EXPLORE_MAIN_PROGRESS_SUMMARY = {
+          isCompleted,
+          progressPercent: Math.round(progressPercent),
+          answeredCount,
+          totalProblems,
+          totalStages,
+          activeStage,
+        };
+      }
+
+      // 콘솔에 사람이 읽기 쉬운 형태로 출력
+      // 너무 시끄럽지 않도록 그룹 콜랩스 사용
+      // 필요시 window.__FIN_DEBUG=true 로 강제 오픈
+      const title = `📊 [ExploreMain] 진행도 업데이트 (answered ${answeredCount}/${totalProblems}, ${Math.round(progressPercent)}%, completed=${isCompleted})`;
+      const collapse = !(typeof window !== 'undefined' && window.__FIN_DEBUG);
+      const group = collapse ? console.groupCollapsed : console.group;
+      group(title);
+      console.log('selection (IDs)', selection);
+      console.log('backendProgress raw', backendProgress);
+      console.log('derived:', {
+        isCompleted,
+        progressPercent,
+        answeredCount,
+        totalProblems,
+        totalStages,
+        activeStage,
+      });
+      console.log('quizCompletionArr', quizCompletionArr);
+      console.groupEnd();
+    } catch (e) {
+      // 로깅 도중 오류로 인해 렌더가 막히지 않도록 안전 처리
+    }
+  }, [backendProgress, selection, totalProblems, answeredCount, totalStages, activeStage, progressPercent, isCompleted, quizCompletionArr]);
+
+  // 각 문제 제출 시(QuizQuestion onCheck 후) 진행도 재조회 + 임시 반영
+  useEffect(() => {
+    const handler = async (e) => {
+      try {
+        const detail = e?.detail || {};
+        if (typeof detail.answeredCount === 'number' && typeof detail.totalQuestions === 'number') {
+          setTempProgress({ answeredCount: detail.answeredCount, total: detail.totalQuestions });
+        }
+        const levelId = selection?.levelId;
+        const userId = localStorage.getItem('userId') || undefined;
+        if (!levelId || !userId) return;
+        const res = await getLevelProgress(levelId, userId);
+        setBackendProgress(res);
+        // 전체 사용자 진행 상황도 관찰용으로 업데이트(있는 경우)
+        import('../../api/explore').then(mod => {
+          if (typeof mod.getUserProgress === 'function') {
+            mod.getUserProgress(userId).catch(() => {});
+          }
+        });
+      } catch (_) {
+        /* ignore fetch errors for UI smoothness */
+      } finally {
+        // 백엔드 진행도가 도착했으니 임시 진행도 제거(혹은 약간의 지연 후 제거 가능)
+        setTimeout(() => setTempProgress(null), 300);
+      }
+    };
+    window.addEventListener('fin:answer-submitted', handler);
+    return () => window.removeEventListener('fin:answer-submitted', handler);
+  }, [selection]);
+
+  // 레벨 완료 낙관적 UI 처리: fin:level-completed 발생 시 즉시 100%로 표시 후 백엔드 재조회
+  useEffect(() => {
+    const handler = async () => {
+      try {
+        // 즉시 100% 반영 (문제 수를 기준으로 answeredCount = total)
+        if (totalProblems > 0) {
+          setTempProgress({ answeredCount: totalProblems, total: totalProblems });
+        }
+        // 백엔드 진행도/유저 진행도 최신화
+        const { levelId } = selection || {};
+        const userId = localStorage.getItem('userId') || undefined;
+        if (levelId && userId) {
+          try {
+            const [lp, up] = await Promise.all([
+              getLevelProgress(levelId, userId).catch(() => null),
+              getUserProgress(userId).catch(() => null),
+            ]);
+            if (lp) setBackendProgress(lp);
+            if (up) setUserProgress(up);
+          } catch (_) { /* ignore */ }
+        }
+      } finally {
+        // 약간의 시간 후 임시 진행도 제거 (백엔드 값으로 대체)
+        setTimeout(() => setTempProgress(null), 500);
+      }
+    };
+    window.addEventListener('fin:level-completed', handler);
+    return () => window.removeEventListener('fin:level-completed', handler);
+  }, [selection, totalProblems]);
 
   return (
     <div
@@ -333,8 +567,31 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
 
   <div className="explore-main-cta-fixed">
     <FloatingQuizCTA
-      onClick={isLoading || fetching ? undefined : onStart}
-      label={isLoading || fetching ? '문제 불러오는 중...' : '퀴즈 풀러가기'}
+      onClick={isLoading || fetching ? undefined : () => {
+        try {
+          const summary = {
+            isLoading: !!isLoading,
+            fetching: !!fetching,
+            isCompleted,
+            progressPercent: Math.round(progressPercent),
+            answeredCount,
+            totalProblems,
+            totalStages,
+            activeStage,
+            selection,
+          };
+          console.log('▶️ [ExploreMain] CTA 클릭 - 현재 진행/게이팅 상태', summary);
+          if (typeof window !== 'undefined') {
+            window.__EXPLORE_MAIN_LAST_CTA = summary;
+          }
+        } catch {}
+        if (typeof onStart === 'function') onStart();
+      }}
+      label={
+        isLoading || fetching
+          ? '문제 불러오는 중...'
+          : (isCompleted ? '다시 풀기' : '퀴즈 풀러가기')
+      }
       disabled={!!(isLoading || fetching)}
     />
   </div>
@@ -349,6 +606,7 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
 
   const VIEWPORT_HEIGHT = 430; 
   const OFFSET_LEFT = 34;     
+  const BASE_WIDTH = 336;     // 고정 좌표계 너비 (스케일 기준)
 
   const baseRawPositions = [
     { left: 172, top: 665 }, // Stage 0 (bottom)
@@ -443,6 +701,7 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
   }
 
   const [dynamicTop, setDynamicTop] = React.useState(320);
+  const [scale, setScale] = React.useState(1);
   React.useEffect(() => {
     function recalc() {
       const root = document.querySelector('[data-explore-root]');
@@ -456,6 +715,14 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
       const proposedTop = targetBottomInRoot - VIEWPORT_HEIGHT;
   // 하단 버튼과의 간격을 정확히 44px로 유지하기 위해 클램프 없이 적용
   setDynamicTop(Math.round(proposedTop));
+
+      // 가용 너비 기반 스케일 계산 (양옆 16px 여백 반영)
+      const container = document.querySelector('.explore-main-container');
+      if (container) {
+        const available = Math.max(0, container.clientWidth - 32); // 16px * 2 여백
+        const nextScale = Math.min(1, available / BASE_WIDTH);
+        setScale(nextScale);
+      }
     }
     recalc(); 
     window.addEventListener('resize', recalc);
@@ -468,39 +735,42 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
   }, [totalStages, VIEWPORT_HEIGHT]);
 
   return (
-  <div style={{ position: 'absolute', left: OFFSET_LEFT, top: dynamicTop, width: 336, height: VIEWPORT_HEIGHT, overflowY: 'auto', overscrollBehavior: 'contain', transition: 'top .25s ease' }} ref={scrollRef}>
-      <div style={{ position: 'relative', width: 336, height: TOTAL_HEIGHT }}>
-        {/* 개미 캐릭터 (스크롤과 함께 이동) */}
-        <img
-          src={antCharacter}
-          alt="ant"
-          style={{
-            position: 'absolute',
-            // 루트 기준 (64, 511)을 스크롤 영역 내부 좌표로 변환: left는 OFFSET_LEFT를 보정, top은 minTop/MICRO_SHIFT_Y/STONES_SHIFT_Y 반영
-            left: 40 - OFFSET_LEFT,
-            top: 511 - minTop + MICRO_SHIFT_Y + STONES_SHIFT_Y,
-            width: 140,
-            height: 140,
-            objectFit: 'contain',
-            pointerEvents: 'none',
-            zIndex: 5,
-          }}
-        />
-  <svg width="301" height={TOTAL_HEIGHT} viewBox="0 0 301 599" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ position: 'absolute', left: 20, top: STONES_SHIFT_Y }}>
-          <path d="M150.5 595C199 589.333 296 555.9 296 467.5C296 379.1 199 360.333 150.5 362C101.333 363.833 3.19998 351.499 3.99998 287.499C4.99998 207.499 50 171.499 134.5 172.999C219 174.499 291.5 152.999 296 103.499C300.5 53.9994 269.5 2.99936 134.5 4.99936" stroke="url(#stepping_path_grad)" strokeWidth="8" strokeDasharray="15 15"/>
-          <defs>
-            <linearGradient id="stepping_path_grad" x1="150.203" y1="4.94238" x2="150.203" y2="595" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#DEECFF"/>
-              <stop offset="0.764423" stopColor="#DEECFF"/>
-              <stop offset="1" stopColor="#448FFF"/>
-            </linearGradient>
-            <linearGradient id="circle_grad" x1="-5.56897" y1="0" x2="83.967" y2="23.0671" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#448FFF"/>
-              <stop offset="1" stopColor="#4833D0"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        {Array.from({ length: totalStages }).map((_, i) => <StageCircle key={i} index={i} />)}
+  <div style={{ position: 'absolute', left: 16, right: 16, top: dynamicTop, height: VIEWPORT_HEIGHT, overflowY: 'auto', overscrollBehavior: 'contain', transition: 'top .25s ease' }} ref={scrollRef}>
+      {/* 스케일 적용을 위한 sizer 래퍼 (스크롤 높이 확보) */}
+      <div style={{ position: 'relative', width: BASE_WIDTH * scale, height: TOTAL_HEIGHT * scale }}>
+        {/* 고정 좌표계(336 x TOTAL_HEIGHT) 콘텐츠를 스케일로 축소/확대 */}
+        <div style={{ position: 'absolute', left: 0, top: 0, width: BASE_WIDTH, height: TOTAL_HEIGHT, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+          {/* 개미 캐릭터 (스크롤과 함께 이동) */}
+          <img
+            src={antCharacter}
+            alt="ant"
+            style={{
+              position: 'absolute',
+              left: 40 - OFFSET_LEFT,
+              top: 511 - minTop + MICRO_SHIFT_Y + STONES_SHIFT_Y,
+              width: 140,
+              height: 140,
+              objectFit: 'contain',
+              pointerEvents: 'none',
+              zIndex: 5,
+            }}
+          />
+          <svg width="301" height={TOTAL_HEIGHT} viewBox="0 0 301 599" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ position: 'absolute', left: 20, top: STONES_SHIFT_Y }}>
+            <path d="M150.5 595C199 589.333 296 555.9 296 467.5C296 379.1 199 360.333 150.5 362C101.333 363.833 3.19998 351.499 3.99998 287.499C4.99998 207.499 50 171.499 134.5 172.999C219 174.499 291.5 152.999 296 103.499C300.5 53.9994 269.5 2.99936 134.5 4.99936" stroke="url(#stepping_path_grad)" strokeWidth="8" strokeDasharray="15 15"/>
+            <defs>
+              <linearGradient id="stepping_path_grad" x1="150.203" y1="4.94238" x2="150.203" y2="595" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#DEECFF"/>
+                <stop offset="0.764423" stopColor="#DEECFF"/>
+                <stop offset="1" stopColor="#448FFF"/>
+              </linearGradient>
+              <linearGradient id="circle_grad" x1="-5.56897" y1="0" x2="83.967" y2="23.0671" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#448FFF"/>
+                <stop offset="1" stopColor="#4833D0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          {Array.from({ length: totalStages }).map((_, i) => <StageCircle key={i} index={i} />)}
+        </div>
       </div>
     </div>
   );

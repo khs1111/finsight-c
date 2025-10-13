@@ -1,0 +1,62 @@
+.progress-header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #F4F6FA;
+}
+
+.progress-header-statusbar-spacer {
+  height: 16px; /* 피그마 상태바 영역 */
+}
+
+.progress-header-container {
+  width: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.progress-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progress-header-back-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  margin-left: -10px;
+}
+
+.progress-header-progress {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 16px;
+  width: 100%;
+  margin-left: 10px;
+  margin-right: 0;
+  box-sizing: border-box;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.progress-header-progress-bar {
+  height: 16px;
+  border-radius: 8px;
+  background: #E0E8F3; /* 기본 */
+  flex: 1;
+}
+
+.progress-header-progress-bar.active {
+  background: #448FFF; /* 진행됨 */
+}
+
+.progress-header-top-shadow {
+  box-shadow: 0px -2px 4px rgba(10, 26, 51, 0.18);
+}

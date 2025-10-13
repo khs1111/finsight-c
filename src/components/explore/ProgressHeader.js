@@ -1,4 +1,5 @@
 import React from "react";
+import "./ProgressHeader.css";
 
 export default function ProgressHeader({
   current = 1,   // 기본값 1번 문제
@@ -10,41 +11,18 @@ export default function ProgressHeader({
   const clamped = Math.max(1, Math.min(current, total));
 
   return (
-    <div style={{ position: "sticky", top: 0, zIndex: 50, background: "#F4F6FA" }}>
-      {/* 상태바 높이만큼 여백 (피그마 48px) */}
-      <div style={{ height:16 }} />
+    <div className="progress-header-sticky">
+      {/* 상태바 높이만큼 여백 */}
+      <div className="progress-header-statusbar-spacer" />
 
-      {/* Frame 86 */}
-      <div
-        style={{
-          width: "100%",
-          padding: "16px",
-          boxSizing: "border-box",
-        }}
-      >
-        <div
-          style={{
-            // Frame 116
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
+      {/* 상단 내부 컨테이너 */}
+      <div className="progress-header-container">
+        <div className="progress-header-row">
           {/* Frame 88 (Arrow) */}
           <button
             aria-label="뒤로가기"
             onClick={onBack}
-            style={{
-              width: 40,
-              height: 40,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              marginLeft: 0
-            }}
+            className="progress-header-back-btn"
           >
             {/* SVG는 교체 가능 */}
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -54,31 +32,9 @@ export default function ProgressHeader({
           </button>
 
           {/* Frame 2608168 — 진행바 */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              height: 16,
-              width: "100%",
-              marginLeft: 0,
-              marginRight: 0,
-              boxSizing: "border-box",
-              paddingLeft: 0,
-              paddingRight: 0,
-            }}
-          >
+          <div className="progress-header-progress">
             {Array.from({ length: total }).map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  width: 73,
-                  height: 16,
-                  borderRadius: 8,
-                  background: i < clamped ? "#448FFF" : "#E0E8F3",
-                  flex: 1,
-                }}
-              />
+              <div key={i} className={`progress-header-progress-bar ${i < clamped ? 'active' : ''}`} />
             ))}
           </div>
         </div>
@@ -88,7 +44,7 @@ export default function ProgressHeader({
       <div style={{ marginBottom: spacing }} />
 
       {/* 상단 배경 그림자 (피그마 spec) */}
-      <div style={{ boxShadow: "0px -2px 4px rgba(10,26,51,0.18)" }} />
+      <div className="progress-header-top-shadow" />
     </div>
   );
 }

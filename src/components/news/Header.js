@@ -1,13 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import './Header.css'; // CSS 파일을 임포트합니다.
 
 export default function Header() {
-    const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : true);
-    useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    // 반응형 패딩이 고정으로 통일되어 상태/리스너 제거
 
     const headerStyle = {
         position: 'relative',

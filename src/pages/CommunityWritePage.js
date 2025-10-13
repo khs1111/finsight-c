@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
 import { createCommunityPost } from '../api/community';
+import { updateBadges } from '../api/profile';
 import { useNavigate } from 'react-router-dom';
 import './CommunityPage.css';
 import './CommunityWritePage.css';
+import { guestLogin } from '../api/auth';
 
 const INFO_TEXT = `금융·경제 관련 정보 공유와 학습 목적으로 작성할 수 있어요.\n글 작성 시에는 타인의 권리를 침해하지 않도록 주의하고, \n허위 정보, 광고성 글, 불법적인 내용은 금지되어요.\n주식 리딩, 명예훼손, 광고/홍보 목적 글은 올리실 수 없어요.\n본 커뮤니티에서 얻은 정보로 인한 투자·재정적 의사결정의 최종 책임은 전적으로 본인에게 있어요.\n건전한 토론과 지식 공유를 위해, 존중과 매너를 지켜주세요.`;
 
 const CATEGORIES = ['자유게시판','탐험지','경제 시사','투자'];
+const CATEGORY_CODE = {
+  '자유게시판': 'FREE',
+  '탐험지': 'EXPLORE',
+  '경제 시사': 'ECONOMY',
+  '투자': 'INVEST',
+};
 
 export default function CommunityWritePage() {
   const navigate = useNavigate();
@@ -25,11 +33,34 @@ export default function CommunityWritePage() {
     setLoading(true);
     setError(null);
     try {
-      const tags = category ? [category] : [];
-      await createCommunityPost({ body, tags });
+      // Require auth: retrieve token for authorized post creation
+      let token = localStorage.getItem('accessToken');
+      if (!token) {
+        // 토큰 없으면 게스트 로그인 시도 (백엔드 연결 시)
+        try {
+          const ok = await guestLogin();
+          if (ok) token = localStorage.getItem('accessToken');
+        } catch (_) {}
+        if (!token) {
+          setError('로그인이 필요합니다. 먼저 로그인해 주세요.');
+          return;
+        }
+      }
+  const tags = category ? [category] : [];
+  const categoryCode = category ? (CATEGORY_CODE[category] || category) : undefined;
+  await createCommunityPost({ body, tags, category: categoryCode }, token);
+  // 배지 진행 상황 업데이트: POST /api/badges/update/{userId}
+  try {
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      await updateBadges(userId, token);
+    }
+  } catch (_) { /* 배지 업데이트 실패는 화면 흐름에 영향 주지 않음 */ }
       navigate(-1);
     } catch (e) {
-      setError('글 등록에 실패했습니다. 다시 시도해주세요.');
+      // Try to surface server message if available
+      const msg = e?.response?.data?.message || e?.message;
+      setError(msg ? `글 등록에 실패했습니다: ${msg}` : '글 등록에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }

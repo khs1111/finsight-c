@@ -15,13 +15,17 @@ export async function guestLogin(baseOverride) {
     });
     if (!res.ok) return false;
     const data = await res.json();
-    if (data?.token) localStorage.setItem('accessToken', data.token);
+    // Support both `token` and `accessToken` keys from backend
+    const tok = data?.token || data?.accessToken;
+    if (tok) localStorage.setItem('accessToken', tok);
     if (data?.userId != null) localStorage.setItem('userId', String(data.userId));
+    try { localStorage.setItem('guestLoginAt', String(Date.now())); } catch (_) {}
     return true;
   } catch (e) {
     const dummy = 'guest_' + Date.now();
     localStorage.setItem('accessToken', dummy);
     if (!localStorage.getItem('userId')) localStorage.setItem('userId', '64');
+    try { localStorage.setItem('guestLoginAt', String(Date.now())); } catch (_) {}
     return true;
   }
 }

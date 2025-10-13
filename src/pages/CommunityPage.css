@@ -57,6 +57,7 @@
   align-items: center;
   justify-content: center;
 }
+.avatar-tier-badge img { width: 16px; height: 16px; display: block; }
 .avatar-tier-badge.is-star { width:16px; height:16px; }
 /* 우측 별도 인라인 티어 라벨은 디자인 변경으로 제거 (보존: 필요시 다시 사용) */
 .feed-card-tier-inline { display:none; }
@@ -129,6 +130,7 @@
 .avatar-wrap { position: relative !important; display: inline-block !important; flex-shrink: 0 !important; }
 .feed-card-profile { width: 40px !important; height: 40px !important; border-radius: 50% !important; object-fit: cover !important; }
 .avatar-tier-badge { position: absolute !important; right: -4px !important; bottom: -4px !important; width: 16px !important; height: 16px !important; z-index: 5 !important; }
+.avatar-tier-badge img { width: 16px !important; height: 16px !important; display: block !important; }
 .feed-card-header .avatar-tier-badge { position: absolute !important; }
 
 /* page container */

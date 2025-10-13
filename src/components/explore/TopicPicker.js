@@ -1,5 +1,5 @@
 // 주제 선택 - 백엔드 연동
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { getSectorsWithSubsectors } from "../../api/explore";
 
 export default function TopicPicker({ onConfirm }) {
@@ -148,9 +148,8 @@ export default function TopicPicker({ onConfirm }) {
               }}
             >
               {(subTopicMap[topic.id] || []).map((sub, idx) => (
-                <>
+                <Fragment key={`${topic.id}-${sub.id}`}>
                   <div
-                    key={sub.id}
                     onClick={e => { e.stopPropagation(); setSelectedSub({ id: sub.id, name: sub.name }); }}
                     style={{
                       display: 'flex',
@@ -196,7 +195,7 @@ export default function TopicPicker({ onConfirm }) {
                   {idx !== (subTopicMap[topic.id] || []).length - 1 && (
                     <div style={{ width: '100%', height: 0, border: '1px solid #F5F5F5' }} />
                   )}
-                </>
+                </Fragment>
               ))}
             </div>
           )}

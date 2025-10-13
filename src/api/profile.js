@@ -31,7 +31,7 @@ export async function fetchProfile() {
     const userId = Number(localStorage.getItem('userId')) || undefined;
     if (userId) {
       const dash = await http(`/dashboard?userId=${userId}`);
-      const nickname = dash?.userInfo?.nickname || localStorage.getItem('username') || '퍼니의 동료';
+  const nickname = dash?.userInfo?.nickname || localStorage.getItem('username') || '퍼니의 동료';
       // 가능한 위치에서 티어 문자열 추출 시도
       const fromObj = (obj) => {
         if (!obj || typeof obj !== 'object') return undefined;
@@ -46,8 +46,10 @@ export async function fetchProfile() {
         return undefined;
       };
       const tierRaw = fromObj(dash?.userInfo) || fromObj(dash) || fromObj(dash?.profile) || 'EMERALD';
-      const tierImageUrl = dash?.userInfo?.tierImageUrl || dash?.tierImageUrl || dash?.profile?.tierImageUrl || '';
-      return { data: { nickname, tier: tierRaw, tierImageUrl }, isFallback: true };
+  // Prefer badge icon from userInfo.badge.iconUrl if present
+  const badgeIconUrl = dash?.userInfo?.badge?.iconUrl || dash?.userInfo?.badge_icon_url || dash?.badgeIconUrl || dash?.badge_icon_url;
+  const tierImageUrl = badgeIconUrl || dash?.userInfo?.tierImageUrl || dash?.tierImageUrl || dash?.profile?.tierImageUrl || '';
+  return { data: { nickname, tier: tierRaw, tierImageUrl }, isFallback: true };
     }
   } catch (_) {}
 
@@ -119,8 +121,52 @@ export function fetchDashboard(userId, token) {
   return getAxios(token).get('/dashboard', { params: { userId } });
 }
 
-export function fetchBadges(userId, token) {
-  return getAxios(token).get(`/badges/user/${userId}`);
+// 배지 초기화: POST /api/badges/init
+export function initBadges(token) {
+  return getAxios(token).post('/badges/init');
+}
+
+// 배지 업데이트: POST /api/badges/update/{userId}
+export function updateBadges(userId, token) {
+  return getAxios(token).post(`/badges/update/${userId}`);
+}
+
+// 사용자 배지 목록 조회 (다양한 백엔드 경로에 대응하는 폴백 포함)
+// 반환 형태를 { data: Badge[] }로 통일합니다.
+export async function fetchBadges(userId, token) {
+  // 404 소음 제거: 대시보드만 확인하고, 없으면 빈 배열 반환
+  const ax = getAxios(token);
+  try {
+    const dash = await ax.get('/dashboard', { params: { userId } }).then(r => r?.data).catch(() => null);
+    if (dash && typeof dash === 'object') {
+      // 후보 위치: badges, userBadges, user_badges, achievements, awards 등
+      let badges = dash.badges || dash.userBadges || dash.user_badges || dash.achievements || dash.awards || null;
+      if (!badges) {
+        // 객체 맵 형태인 경우 values 추출
+        const maybeObj = dash.badgeMap || dash.userBadgeMap || dash.achievementMap;
+        if (maybeObj && typeof maybeObj === 'object') badges = Object.values(maybeObj);
+      }
+      if (Array.isArray(badges)) return { data: badges };
+      // 단일 현재 배지 정보만 있는 경우 배열로 래핑
+      const current = dash.currentBadge || dash.userInfo?.badge || dash.profile?.badge || dash.badge;
+      if (current && typeof current === 'object') return { data: [current] };
+    }
+  } catch (_) {}
+  return { data: [] };
+}
+
+// 단일 배지 조회 (아이콘 등 메타 용도)
+export async function fetchBadgeById(badgeId, token) {
+  const ax = getAxios(token);
+  try {
+    return await ax.get(`/badges/${badgeId}`);
+  } catch (_) {
+    try {
+      return await ax.get(`/badges`, { params: { id: badgeId } });
+    } catch (e) {
+      throw e;
+    }
+  }
 }
 
 // 주의: 구 경로(/api/user/*) 기반의 중복 export는 제거했습니다.
