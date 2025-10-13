@@ -311,9 +311,8 @@ body {
 ========================================================================= */
 .nl-category-filters {
     display: flex;
-    gap: 8px;
-    /* [핵심 수정] 상/하 8px, 좌/우 16px 여백 */
-    margin: 8px 16px;
+    gap: 8px;              /* 카테고리 간 간격 8px */
+    margin: 16px 16px;     /* 위/아래 16px, 좌/우 16px */
     
     overflow-x: auto;
     -ms-overflow-style: none;
