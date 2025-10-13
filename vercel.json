@@ -28,7 +28,7 @@
       "src": "/(.*)/(favicon\\.ico|logo\\.svg|logo\\.png|logo192\\.png|logo512\\.png|manifest\\.json|robots\\.txt)",
       "dest": "/$2"
     },
-    { "src": "/favicon.ico", "dest": "/favicon.ico" },
+  { "src": "/favicon.ico", "dest": "/logo.svg" },
     { "src": "/logo192.png", "dest": "/logo192.png" },
     { "src": "/logo512.png", "dest": "/logo512.png" },
     { "src": "/manifest.json", "dest": "/manifest.json" },
