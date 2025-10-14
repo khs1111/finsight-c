@@ -15,11 +15,158 @@
 
 ## 📄 문서 (Frontend)
 
-- 라우팅 구조: `docs/ROUTING.md`
-- API 매핑 (FE → BE): `docs/API_MAPPING.md`
-- 로컬 실행 방법: `docs/RUN_LOCAL_FE.md`
-- Vercel 배포 가이드: `docs/DEPLOY_VERCEL.md`
-- 작업 기록서 (국문): `docs/WORKLOG_KR.md`
+아래 내용은 본 README에 통합되어 있습니다. 필요 시 상세판은 `/docs` 폴더에서 확인할 수 있습니다.
+
+- [라우팅 구조](#-라우팅-구조)
+- [API 매핑 (FE → BE)](#-api-매핑-fe--be)
+- [로컬 실행](#️-로컬-실행)
+- [Vercel 배포](#-vercel-배포)
+- [작업 기록 요약](#-작업-기록-요약)
+
+---
+
+## 🔀 라우팅 구조
+
+- `/login` 로그인(게스트 시작)
+- `/` 홈(뉴스/뉴스레터)
+- `/explore`
+  - 메인: 주제/세부주제 선택
+  - `/explore/level` 레벨 선택(레벨 피커)
+  - `/explore/quiz` 퀴즈 진행(4문항 세트)
+  - `/explore/complete` 완료 화면
+- `/study`
+  - `/study/words` 단어장
+  - `/study/wrong-notes` 오답노트(섹터별/총계)
+- `/community`
+  - 목록 `/community`
+  - 글쓰기 `/community/new` (있는 경우)
+- `/profile` 프로필/달력/배지
+
+---
+
+## 🔗 API 매핑 (FE → BE)
+
+실제 백엔드 스펙과 동기화 필요. 현재 프론트 기준 가정/폴백 포함. 서버 DTO 확정되면 업데이트합니다.
+
+인증/세션
+- POST `/api/auth/guest` → 게스트 로그인 시작
+  - req: `{ deviceId? }`
+  - res: `{ token|accessToken, userId }`
+  - FE: `sessionStorage.setItem('guest','1')`, 토큰/유저ID 저장 (`src/api/auth.js`)
+- POST `/api/auth/login`, POST `/api/auth/signup` (있을 경우)
+
+탐험지/퀴즈 (src/api/explore.js)
+- 카테고리/주제
+  - GET `/api/sectors` → 섹터 목록
+  - GET `/api/sectors/{id}` → 섹터 상세(내부에 subsectors 있을 수도)
+  - GET `/api/sectors/{id}/subsectors` | `/api/subsectors?sectorId=...` → 서브섹터 목록
+  - GET `/api/subsectors/{id}` → 서브섹터 상세(내부에 levels 있을 수도)
+  - GET `/api/subsectors/{id}/levels` | `/api/levels?subsectorId=` | `/api/levels/search?subsectorId=` → 레벨 목록
+- 레벨/퀴즈/진행도
+  - GET `/api/levels/{levelId}/quizzes?userId=` → 레벨 내 퀴즈 목록/상태
+  - GET `/api/levels/{levelId}/progress?userId=` → 레벨 진행도
+  - POST `/api/levels/{levelId}/start?userId=` → 레벨 시작
+  - POST `/api/levels/{levelId}/complete?userId=` → 레벨 완료
+  - GET `/api/users/{userId}/progress` → 사용자 전체 진행
+  - GET `/api/subsectors/{id}/progress?userId=` → 서브섹터 진행
+  - GET `/api/levels/{id}` → 레벨 상세(title/goal/desc 추출)
+- 퀴즈/문항
+  - GET `/api/quizzes/{id}` | `/api/quiz/{id}` (변형 허용) → 퀴즈 상세(문항 포함, 최대 4문항 사용)
+  - POST 답안 제출 (자동 폴백 체인)
+    1) `/api/quizzes/{id}/submit-answer?userId=`
+    2) `/api/quizzes/{id}/attempt?userId=`
+    3) `/api/quizzes/submit-answer`
+    4) `/api/attempts`
+  - 퀴즈 완료 (자동 폴백 체인)
+    1) `POST /api/quizzes/{id}/complete?userId=`
+    2) `POST /api/quizzes/{id}/complete` (body에 `{ userId }`)
+    3) `POST /api/quizzes/complete`
+    4) `POST /api/quizzes/{id}/done`
+  - 시도 이력 조회 (복수 엔드포인트 시도)
+    - GET `/api/quizzes/{id}/attempts?userId=`
+    - GET `/api/quizzes/{id}/answers?userId=`
+    - GET `/api/attempts?quizId=&userId=`
+    - GET `/api/users/{userId}/attempts?quizId=`
+- 기사 데이터 병합 (선택)
+  - GET `/api/articles/{id}` | `/api/articles?code=|slug=|path=` | `/api/articles/by-code/{code}` 등 변형들을 순차 시도하여 문항의 article 정보를 보강
+
+응답 정규화(요지)
+- QuestionDTO: `{ id, type, stemMd, options[{id,text,isCorrect}], correctOptionId, article{ id,title,body,imageUrl }, ... }`
+- 정답 필드(`isCorrect`, `correctOptionId`, `answerId`, `correctText` 등)와 옵션 라벨/텍스트를 교차해 FE에서 정규화합니다.
+
+에러/토큰 처리
+- 모든 요청은 `Authorization: Bearer <token>`(게스트 포함) 시도.
+- 401/403 → 게스트 재로그인 시도 후 재호출. 5xx → 콘솔/토스트 안내.
+
+---
+
+## ▶️ 로컬 실행
+
+사전 준비
+- Node.js 18+ (LTS 권장)
+- npm (또는 pnpm)
+
+설치/실행
+```bash
+npm install
+npm start
+```
+- 기본 포트: 3000
+- 백엔드 프록시가 꺼져 있으면 콘솔에 proxy error가 보일 수 있으나 프론트 개발엔 영향 없음
+
+빌드/테스트
+```bash
+npm test
+npm run build
+```
+
+Troubleshooting
+- `node -v` 18+ 확인
+- Windows PowerShell 환경변수 반영 문제 시 터미널 재시작
+- CSS “Unclosed block” → 최근 수정 파일의 중괄호/세미콜론 확인
+- 100vw로 인한 가로 스크롤 → `width: 100%` + 부모 `overflow-x: hidden`
+
+---
+
+## ▲ Vercel 배포
+
+빠른 절차
+1) Vercel New Project → GitHub 연결 → 본 저장소 선택
+2) Framework Preset: Create React App 자동 감지
+3) Build: `npm run build` / Output: `build`
+4) 환경변수(필요 시)
+   - `REACT_APP_API_BASE` (예: https://api.example.com)
+   - `REACT_APP_SENTRY_DSN` 등
+5) Deploy
+
+라우팅
+- CSR(CRA) 특성상 별도 SPA fallback 없이 동작. 커스텀 라우팅 필요시 `vercel.json` rewrites 고려.
+
+자주 겪는 이슈
+- 모바일 드롭다운 깨짐: `position: fixed/absolute`와 상위 `overflow` 상호작용 점검, `vh` 대신 `dvh` 또는 px minHeight + 초기 측정 적용
+- 100vw로 인한 가로 스크롤: `width: 100%` + 부모 `overflow-x: hidden`
+- 환경변수 미반영: Vercel Settings → Environment Variables 추가 후 재배포
+
+---
+
+## 🧾 작업 기록 요약
+
+- Explore: 드롭다운 높이/정렬 개선, 가로 스크롤 제거, 메뉴 팝업 안정화
+- Home: `.home-container { width: 100%; overflow-x: hidden; }`로 수평 흔들림 제거
+- Level Picker: 고정 폭/높이 제거, 목표 섹션 스크롤 허용, 하단 spacer로 버튼/탭과 겹침 방지, CSS 문법 오류 수정
+- Completion Screen: `visualViewport + useLayoutEffect`로 첫 페인트에서 px minHeight 세팅 → 스크롤 없이 안정 레이아웃
+- Community: 헤더 `top: 24px` 정렬
+- Auth: 게스트 로그인 + 라우팅 가드 도입
+- Profile: 헤더 좌 16/상 24, 캘린더 헤더 정렬(서체 유지) 1차 적용
+- 배포/품질: 100vw 지양, `overflow-x: hidden` 가이드, ESLint 경고 정리, 문서화 추가
+
+Backlog
+- Explore 세부주제 드롭다운 “모든 주제” 첫 줄 사라짐(Vercel 포함) 재현/수정
+- Profile 출석 아이콘 정렬, 히어로 배경 높이 보강
+- 퀴즈 API 4문항 보장 로직 및 DTO 확정 반영
+- 뉴스레터 화면 CSS 분리/정리
+
+자세한 기록: `docs/WORKLOG_KR.md`
 
 현재 프로젝트는 게스트 로그인(Guest Login) 기능을 지원합니다. 백엔드 엔드포인트는 `src/api/*`에서 관리되며, 배포 환경에서는 환경 변수를 통해 설정됩니다.
 
