@@ -31,7 +31,7 @@ export async function fetchProfile() {
     const userId = Number(sessionStorage.getItem('userId')) || undefined;
     if (userId) {
       const dash = await http(`/dashboard?userId=${userId}`);
-  const nickname = dash?.userInfo?.nickname || sessionStorage.getItem('username') || '퍼니의 동료';
+  const nickname = dash?.userInfo?.nickname || sessionStorage.getItem('username') || '피니';
       // 가능한 위치에서 티어 문자열 추출 시도
       const fromObj = (obj) => {
         if (!obj || typeof obj !== 'object') return undefined;
