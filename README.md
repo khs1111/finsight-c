@@ -1,58 +1,67 @@
-# Getting Started with Create React App
+# 🚀 Finsight 프론트엔드 프로젝트
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+이 프로젝트는 [Create React App](https://github.com/facebook/create-react-app) 으로 초기 구성되었습니다.
 
-## Project Overview
+## 📘 프로젝트 개요
 
-This repository contains the frontend for the Finsight app (React). It includes Explore (quiz), News/Newsletter, Community, and Profile screens with mobile-first UI.
+이 저장소는 Finsight 앱의 프론트엔드(React) 코드를 포함합니다. 구성 화면은 다음과 같습니다:
 
-### Documentation (Frontend)
-- Routing map: `docs/ROUTING.md`
-- API mapping (FE → BE): `docs/API_MAPPING.md`
-- Run locally: `docs/RUN_LOCAL_FE.md`
-- Deploy to Vercel: `docs/DEPLOY_VERCEL.md`
+- Explore (퀴즈/탐험지)
+- News / Newsletter (뉴스, 뉴스레터 구독)
+- Community (커뮤니티 게시판)
+- Profile (프로필 및 학습 진행도)
 
-Note: This project currently supports guest login gating. Backend endpoints should be mapped in `src/api/*` and environment variables configured for deployments.
+이 프로젝트는 모바일 퍼스트 UI를 기준으로 설계되었습니다.
 
-## Available Scripts
+## 📄 문서 (Frontend)
 
-In the project directory, you can run:
+- 라우팅 구조: `docs/ROUTING.md`
+- API 매핑 (FE → BE): `docs/API_MAPPING.md`
+- 로컬 실행 방법: `docs/RUN_LOCAL_FE.md`
+- Vercel 배포 가이드: `docs/DEPLOY_VERCEL.md`
+- 작업 기록서 (국문): `docs/WORKLOG_KR.md`
 
-### `npm start`
+현재 프로젝트는 게스트 로그인(Guest Login) 기능을 지원합니다. 백엔드 엔드포인트는 `src/api/*`에서 관리되며, 배포 환경에서는 환경 변수를 통해 설정됩니다.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## ⚙️ 사용 가능한 명령어
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+프로젝트 디렉터리에서 다음 명령어들을 실행할 수 있습니다:
+
+```bash
+npm start
+```
+
+개발 모드에서 앱을 실행합니다. 브라우저에서 http://localhost:3000 을 열면 앱을 볼 수 있습니다.
+
+코드 변경 시 페이지가 자동으로 새로고침되며, 콘솔에서 Lint 오류도 확인할 수 있습니다.
 
 ## 🔄 백엔드 연결 및 더미 데이터 시스템
 
-이 프로젝트는 백엔드 연결 상태에 따라 자동으로 데이터 소스를 전환하는 시스템을 제공합니다.
+이 프로젝트는 백엔드 연결 상태에 따라 자동으로 데이터 소스를 전환합니다.
 
 ### 작동 방식
-- **백엔드 연결됨**: 실제 서버 API 사용
-- **백엔드 연결 안됨**: 더미 데이터 사용하여 디자인 확인 가능
+- ✅ 백엔드 연결됨 → 실제 서버 API 사용
+- ⚙️ 백엔드 연결 안됨 → 더미 데이터(`testData.js`) 사용 (디자인 확인용)
 
 ### 주요 파일
-- `src/api/explore.js`: API 함수들과 자동 폴백 로직
+- `src/api/explore.js`: API 함수 및 자동 폴백 로직
 - `src/utils/testData.js`: 개발용 더미 데이터
-- `src/hooks/useBackendStatus.js`: 백엔드 연결 상태 관리 훅
-- `src/components/BackendStatusDemo.js`: 연결 상태 테스트 컴포넌트
+- `src/hooks/useBackendStatus.js`: 백엔드 연결 상태 확인 훅
+- `src/components/BackendStatusDemo.js`: 연결 상태 테스트용 컴포넌트
 
-### 사용 방법
+## 🧩 사용 방법
 
-#### 1. API 함수 사용
+### 1) API 함수 호출 예시
 ```javascript
 import { getQuiz, submitAnswer } from '../api/explore.js';
 
-// 백엔드 연결시 → 실제 API 호출
-// 백엔드 연결 안됨 → 더미 데이터 반환
+// 백엔드 연결 시 → 실제 API 호출
+// 연결 안될 시 → 더미 데이터 반환
 const quiz = await getQuiz(1);
 const result = await submitAnswer(questionId, optionId);
 ```
 
-#### 2. 연결 상태 확인
+### 2) 연결 상태 확인 예시
 ```javascript
 import { useBackendStatus } from '../hooks/useBackendStatus.js';
 
@@ -67,88 +76,71 @@ function MyComponent() {
 }
 ```
 
-#### 3. 상태 표시기 사용
+### 3) 상태 표시기 컴포넌트
 ```javascript
 import { BackendStatusIndicator } from '../hooks/useBackendStatus.js';
 
 <BackendStatusIndicator showText={true} />
 ```
 
-### 환경 설정
-백엔드 URL은 환경변수로 설정 가능합니다:
-- `REACT_APP_API_BASE`: 개발/프로덕션 API 베이스 URL
-- `VITE_API_BASE`: Vite 환경에서의 API 베이스 URL
+## 🌐 환경 변수 설정
 
-## Folder Convention (Project Custom)
+배포 환경에 따라 다음 환경 변수를 설정할 수 있습니다:
 
-pages/ : Route-level components only. Each file corresponds to a URL entry point and orchestrates data + composition.
+- `REACT_APP_API_BASE`: 개발 및 프로덕션 API 기본 URL
+- `VITE_API_BASE`: Vite 환경일 때의 API 기본 URL
 
-components/ : Reusable UI parts (buttons, cards, lists, navigation, domain widgets). Domain grouping encouraged (e.g. `components/community/`, `components/explore/`).
+## 📂 폴더 구조 규칙 (Finsight Custom)
 
-Removed duplicate legacy scaffold: `ProfilePage.js` and its CSS were deleted. Active profile route component is `pages/profile.js` with styles in `pages/Profile.css`.
+폴더/파일 역할:
 
-Guidelines:
-- Keep purely page-specific layout glue in pages/.
-- Extract only when: reused across another route OR component grows too large (readability threshold).
-- Prefer domain folders over excessive granular nesting.
-- Avoid keeping two variants of the same page to prevent confusion (e.g. `ProfilePage.js` vs `profile.js`).
+- `pages/` 라우팅 단위의 페이지 컴포넌트 (각 URL에 대응)
+- `components/` 재사용 가능한 UI 컴포넌트 (버튼, 카드, 탭 등)
+- `components/community/`, `components/explore/` 도메인별 컴포넌트 그룹
+- `docs/` 문서 및 실행 가이드
 
-Refactor Log:
-1. Consolidated Profile into single file `pages/profile.js`.
-2. Removed obsolete scaffold files.
-3. Added this section for future contributors.
+중복된 페이지 파일(`ProfilePage.js` 등)은 정리되었습니다. 현재 활성 페이지는 `pages/profile.js`, 스타일은 `pages/Profile.css` 입니다.
 
-### `npm test`
+### 📘 유지보수 규칙
+- 페이지 전용 로직은 `pages/` 안에만 작성
+- 다른 라우트에서 재사용 시 `components/`로 분리
+- 도메인 중심 구조 유지 (예: `explore/`, `community/`)
+- 동일 페이지의 중복 파일은 금지
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 📗 리팩터링 로그
+1. Profile 구조 통합 (`pages/profile.js`)
+2. 중복 파일 삭제
+3. 폴더 구조 규칙 추가
 
-### `npm run build`
+## 🧪 테스트
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+npm test
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+테스트 러너를 인터랙티브 모드로 실행합니다. 자세한 내용은 공식 가이드를 참고하세요.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 🏗️ 빌드 및 배포
 
-### `npm run eject`
+```bash
+npm run build
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+프로덕션용 빌드를 생성하여 `build/` 폴더에 저장합니다. 코드는 최적화되어 번들링되며 파일 이름에는 해시가 포함됩니다. 앱은 바로 배포할 준비가 됩니다.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+배포 관련 자세한 내용은 CRA 공식 가이드를 참고하세요.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## ⚠️ `npm run eject`
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+한 번 eject 하면 되돌릴 수 없습니다. CRA의 내부 설정(webpack, Babel 등)을 프로젝트 안으로 복사해 직접 수정할 수 있도록 합니다. 대부분의 프로젝트에서는 eject 없이도 충분히 동작합니다.
 
-## Learn More
+## 📚 추가 문서
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- React 공식 문서: https://reactjs.org/
+- Create React App 가이드: https://facebook.github.io/create-react-app/docs/getting-started
+- 코드 스플리팅: https://facebook.github.io/create-react-app/docs/code-splitting
+- 번들 사이즈 분석: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
+- PWA 만들기: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
+- 고급 설정: https://facebook.github.io/create-react-app/docs/advanced-configuration
+- 배포 가이드: https://facebook.github.io/create-react-app/docs/deployment
+- 빌드 실패 문제 해결: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
