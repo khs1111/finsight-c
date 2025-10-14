@@ -2,6 +2,18 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Project Overview
+
+This repository contains the frontend for the Finsight app (React). It includes Explore (quiz), News/Newsletter, Community, and Profile screens with mobile-first UI.
+
+### Documentation (Frontend)
+- Routing map: `docs/ROUTING.md`
+- API mapping (FE → BE): `docs/API_MAPPING.md`
+- Run locally: `docs/RUN_LOCAL_FE.md`
+- Deploy to Vercel: `docs/DEPLOY_VERCEL.md`
+
+Note: This project currently supports guest login gating. Backend endpoints should be mapped in `src/api/*` and environment variables configured for deployments.
+
 ## Available Scripts
 
 In the project directory, you can run:
