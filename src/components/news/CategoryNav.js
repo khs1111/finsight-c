@@ -6,11 +6,7 @@ function CategoryNav() {
   const location = useLocation();
 
   const categories = [
-    { name: '홈', path: '/' },
-    { name: '뉴스레터', path: '/newsletter' }, 
-    { name: '탐험지', path: '/explore' },
-    { name: '커뮤니티', path: '/community' },
-    { name: '프로필', path: '/vocab' },
+    
   ];
 
   return (
