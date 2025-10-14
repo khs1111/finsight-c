@@ -1,7 +1,5 @@
 # 🚀 Finsight 프론트엔드 프로젝트
 
-이 프로젝트는 [Create React App](https://github.com/facebook/create-react-app) 으로 초기 구성되었습니다.
-
 ## 📘 프로젝트 개요
 
 이 저장소는 Finsight 앱의 프론트엔드(React) 코드를 포함합니다. 구성 화면은 다음과 같습니다:
@@ -13,7 +11,20 @@
 
 이 프로젝트는 모바일 퍼스트 UI를 기준으로 설계되었습니다.
 
-## 📄 문서 (Frontend)
+## � 목차
+
+- [프로젝트 개요](#-프로젝트-개요)
+- [시스템 아키텍처](#-시스템-아키텍처)
+- [기술 스택](#-기술-스택)
+- [주요 기능](#-주요-기능)
+- [패키지 구조](#-패키지-구조)
+- [데이터베이스 설계(프론트 관점)](#-데이터베이스-설계프론트-관점)
+- [API 문서](#-api-문서)
+- [CI/CD 파이프라인](#-cicd-파이프라인)
+- [실행 방법](#️-실행-방법)
+- [진척 현황](#-진척-현황)
+
+## �📄 문서 (Frontend)
 
 아래 내용은 본 README에 통합되어 있습니다. 필요 시 상세판은 `/docs` 폴더에서 확인할 수 있습니다.
 
@@ -22,6 +33,75 @@
 - [로컬 실행](#️-로컬-실행)
 - [Vercel 배포](#-vercel-배포)
 - [작업 기록 요약](#-작업-기록-요약)
+
+## 🏗️ 시스템 아키텍처
+
+- View: React Function Components + 페이지/도메인별 CSS
+- Routing: React Router (게스트 로그인 가드 포함)
+- API Layer: `src/api/*`에 백엔드 엔드포인트 집약, 폴백 체인으로 다양한 변형 대응
+- 상태/세션: `sessionStorage`(guest), `localStorage`(token/userId)
+- 배포: Vercel (GitHub → Vercel 연결, CRA Build 출력 `build/`)
+
+## 🧰 기술 스택
+
+- React (Create React App), React Router
+- CSS(모바일 퍼스트), SVG
+- Fetch API, JWT 헤더 자동 주입
+- Vercel 배포
+
+## ✨ 주요 기능
+
+- Explore: 주제/세부주제/레벨 선택 → 퀴즈(4문항) → 완료 화면
+- News/Newsletter: 뉴스 목록/상세
+- Community: 커뮤니티 목록/헤더 정렬(상단 24px)
+- Profile: 출석 캘린더/요약(배지/진행도)
+- Auth: 게스트 로그인 및 라우팅 가드
+
+## 🗂️ 패키지 구조
+
+- `src/pages/` 라우팅 단위 페이지 (예: `Home.js`, `Explore.js`, `profile.js`)
+- `src/components/` 재사용 컴포넌트 (예: `components/explore/*`, `components/news/*`)
+- `src/api/` API 래퍼 (예: `explore.js`, `auth.js`)
+- `src/assets/` 정적 리소스(SVG 등)
+
+## 🗄️ 데이터베이스 설계(프론트 관점)
+
+- 프론트는 DB가 아닌 서버 DTO를 소비합니다. 주요 구조는 아래와 같습니다.
+  - QuestionDTO: `{ id, type, stemMd, options[{id,text,isCorrect}], correctOptionId, article{ id,title,body,imageUrl } }`
+  - 진행도: 레벨/서브섹터/유저 단위의 `isCompleted`, `completionRate`, `quizzes[]`
+- 상세는 [API 매핑 (FE → BE)](#-api-매핑-fe--be) 참고
+
+## 📜 API 문서
+
+- 본 README의 [API 매핑 (FE → BE)](#-api-매핑-fe--be) 섹션에 정리되어 있습니다.
+
+## 🔁 CI/CD 파이프라인
+
+- GitHub → Vercel 연결로 main 브랜치 푸시 시 자동 배포
+- 환경변수: `REACT_APP_API_BASE` 등 Vercel Project Settings에 설정
+- CRA 프리셋 자동 인식 (Build `npm run build` / Output `build/`)
+
+## ⛏️ 실행 방법
+
+- 아래 [로컬 실행](#️-로컬-실행) 및 [🏗️ 빌드 및 배포](#-빌드-및-배포) 섹션을 참고하세요.
+
+## 📊 진척 현황
+
+### ✅ 완료된 것
+- Explore: 드롭다운 높이/정렬 개선, 가로 스크롤 제거, 메뉴 팝업 안정화
+- Home: `.home-container { width: 100%; overflow-x: hidden; }` 적용으로 수평 흔들림 제거
+- Level Picker: 고정 폭/높이 제거, 목표 섹션 스크롤 허용, 하단 spacer 도입, CSS 문법 오류 수정
+- Completion Screen: `visualViewport + useLayoutEffect`로 첫 페인트에서 px minHeight 세팅 → 스크롤 없이 안정 레이아웃
+- Community: 헤더 `top: 24px` 정렬
+- Auth: 게스트 로그인 + 라우팅 가드 도입
+- Profile: 헤더 좌 16/상 24, 캘린더 헤더 정렬(서체 유지) 1차 적용
+
+### 🛠️ 해야 할 것 (우선순위)
+1) Profile 배지 데이터 받아오기/표시 정상화 (요약/배지 DTO 매핑 확정)
+2) Explore 메인 ‘진행도’ 표시(레벨/서브섹터 진행도 불러와 카드/바 반영)
+3) 오답노트(Study) 목록/진행도 불러오기(완료률·최근 시도 반영)
+4) 퀴즈 API 4문항 보장 로직 및 DTO 확정 반영
+5) Explore 세부주제 드롭다운 “모든 주제” 첫 줄 사라짐(Vercel 포함) 재현/수정
 
 ---
 
@@ -161,10 +241,11 @@ Troubleshooting
 - 배포/품질: 100vw 지양, `overflow-x: hidden` 가이드, ESLint 경고 정리, 문서화 추가
 
 Backlog
-- Explore 세부주제 드롭다운 “모든 주제” 첫 줄 사라짐(Vercel 포함) 재현/수정
-- Profile 출석 아이콘 정렬, 히어로 배경 높이 보강
+
 - 퀴즈 API 4문항 보장 로직 및 DTO 확정 반영
 - 뉴스레터 화면 CSS 분리/정리
+- Profile 배지 데이터 수신/매핑 보완(배지 표시 정상화)
+- 오답노트(Study) 퀴즈 진행도 표시 UI/연동 추가(완료률·진행상태 표시)
 
 자세한 기록: `docs/WORKLOG_KR.md`
 
@@ -194,7 +275,6 @@ npm start
 - `src/api/explore.js`: API 함수 및 자동 폴백 로직
 - `src/utils/testData.js`: 개발용 더미 데이터
 - `src/hooks/useBackendStatus.js`: 백엔드 연결 상태 확인 훅
-- `src/components/BackendStatusDemo.js`: 연결 상태 테스트용 컴포넌트
 
 ## 🧩 사용 방법
 
