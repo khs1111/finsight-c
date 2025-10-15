@@ -18,6 +18,7 @@ import "./QuizQuestion.css";
 import ProgressHeader from "./ProgressHeader";
 import q4ArticlePng from "../../assets/explore/q4-article.png";
 // getKeyPoints 제거: 문제 객체에 포함된 solvingKeypointsMd / teachingExplainerMd 사용
+import { completeQuiz } from "../../api/explore";
 
 /**
  * 🎯 QuizQuestion 컴포넌트
@@ -35,6 +36,7 @@ import q4ArticlePng from "../../assets/explore/q4-article.png";
 export default function QuizQuestion({ current,
   setCurrent,
   questions,
+  quizId,
   selected,
   showResult,
   onSelect,
@@ -42,6 +44,7 @@ export default function QuizQuestion({ current,
   onComplete,
   onBack,
   answerResult,
+  allResults = [],
   quizCompletionArr = [],
   // NEW: 정답 아이콘 주입용 (A/B/C/D 각각 문자열 URL 또는 SVGR 컴포넌트)
   correctIcons = {}
@@ -601,10 +604,102 @@ export default function QuizQuestion({ current,
    * - 다음 문제가 있으면 current 증가
    * - 마지막 문제면 완료 처리
    */
-  const handleNext = () => {
+  // 완료 POST 중복 방지
+  const completionPostedRef = useRef(false);
+
+  const buildCompletionSummary = () => {
+    const qList = Array.isArray(questions) ? questions : [];
+    const resList = Array.isArray(allResults) && allResults.length === qList.length ? allResults : [];
+    const totalQuestions = qList.length;
+    const correctAnswers = qList.reduce((acc, q, idx) => {
+      const r = resList[idx];
+      let isCorrect = null;
+      if (r && typeof r.serverCorrect === 'boolean') isCorrect = r.serverCorrect;
+      else if (r && typeof r.correct === 'boolean') isCorrect = r.correct;
+      if (isCorrect == null) {
+        let correctIndex = -1;
+        if (Array.isArray(q?.options)) {
+          const byFlag = q.options.findIndex(o => o && o.isCorrect === true);
+          if (byFlag >= 0) correctIndex = byFlag;
+          else if (q?.correctOptionId != null) {
+            const cidStr = String(q.correctOptionId);
+            const byStr = q.options.findIndex(o => String(o?.id) === cidStr);
+            if (byStr >= 0) correctIndex = byStr;
+            else if (Number.isFinite(Number(cidStr))) {
+              const cidNum = Number(cidStr);
+              const byNum = q.options.findIndex(o => Number(o?.id) === cidNum);
+              if (byNum >= 0) correctIndex = byNum;
+            }
+          }
+        }
+        isCorrect = (r?.selected != null && correctIndex >= 0 && r.selected === correctIndex);
+      }
+      return acc + (isCorrect ? 1 : 0);
+    }, 0);
+    const answers = qList.map((q, idx) => {
+      const r = resList[idx] || {};
+      const selectedIndex = (typeof r.selected === 'number') ? r.selected : null;
+      const selectedOptionId = (selectedIndex != null && Array.isArray(q?.options) && q.options[selectedIndex])
+        ? (q.options[selectedIndex].id ?? (selectedIndex + 1))
+        : (r.selected ?? null);
+      let correctIndex = -1;
+      if (Array.isArray(q?.options)) {
+        const byFlag = q.options.findIndex(o => o && o.isCorrect === true);
+        if (byFlag >= 0) correctIndex = byFlag;
+        else if (q?.correctOptionId != null) {
+          const cidStr = String(q.correctOptionId);
+          const byStr = q.options.findIndex(o => String(o?.id) === cidStr);
+          if (byStr >= 0) correctIndex = byStr;
+          else if (Number.isFinite(Number(cidStr))) {
+            const cidNum = Number(cidStr);
+            const byNum = q.options.findIndex(o => Number(o?.id) === cidNum);
+            if (byNum >= 0) correctIndex = byNum;
+          }
+        }
+      }
+      const isCorrect = (r && typeof r.serverCorrect === 'boolean') ? r.serverCorrect
+        : (typeof r.correct === 'boolean' ? r.correct : (selectedIndex != null && correctIndex >= 0 && selectedIndex === correctIndex));
+      const correctOptionId = (correctIndex >= 0 && Array.isArray(q?.options) && q.options[correctIndex]) ? q.options[correctIndex].id : (r?.serverCorrectOptionId ?? null);
+      return {
+        questionId: q?.id ?? q?.questionIdRaw ?? idx + 1,
+        selectedOptionId: selectedOptionId ?? null,
+        isCorrect,
+        correctOptionId: correctOptionId ?? null,
+        selectedIndex,
+        correctIndex: (correctIndex >= 0 ? correctIndex : null),
+      };
+    });
+    const scorePercent = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+    return {
+      totalQuestions,
+      correctAnswers,
+      score: scorePercent,
+      scorePercent,
+      passed: scorePercent >= 60,
+      answers,
+    };
+  };
+
+  const handleNext = async () => {
     if (current + 1 < questionList.length) {
       setCurrent(current + 1);
     } else {
+      if (!completionPostedRef.current) {
+        try {
+          const uid = localStorage.getItem('userId') || undefined;
+          const token = localStorage.getItem('accessToken') || undefined;
+          if (quizId != null) {
+            const summary = buildCompletionSummary();
+            console.log('[QuizQuestion][Complete] posting summary', { quizId, summary });
+            completionPostedRef.current = true;
+            await completeQuiz(quizId, uid, token, summary);
+          } else {
+            console.warn('[QuizQuestion][Complete] quizId missing, skip completeQuiz POST');
+          }
+        } catch (e) {
+          console.warn('[QuizQuestion][Complete] POST failed (continuing):', e?.message || e);
+        }
+      }
       onComplete();
     }
   };
