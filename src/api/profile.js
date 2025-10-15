@@ -31,7 +31,7 @@ export async function fetchProfile() {
     const userId = Number(sessionStorage.getItem('userId')) || undefined;
     if (userId) {
       const dash = await http(`/dashboard?userId=${userId}`);
-  const nickname = dash?.userInfo?.nickname || sessionStorage.getItem('username') || '퍼니의 동료';
+  const nickname = dash?.userInfo?.nickname || sessionStorage.getItem('username') || '피니';
       // 가능한 위치에서 티어 문자열 추출 시도
       const fromObj = (obj) => {
         if (!obj || typeof obj !== 'object') return undefined;
@@ -237,4 +237,42 @@ export async function fetchCurrentBadgeByUser(userId, token) {
   return null;
 }
 
+export async function fetchAchievedBadges(userId, token) {
+  const tk = token || sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+  const ax = getAxios(tk);
+  const path = `/badges/user/${userId}/achieved`;
+
+  try {
+    const res = await ax.get(path);
+    // eslint-disable-next-line no-console
+    console.log('[Badge][achieved][response]', res?.status, res?.data);
+    // 백엔드가 배열 형태로 리턴한다고 가정
+    return res?.data || [];
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[Badge][achieved][error]', {
+      status: err?.response?.status,
+      message: err?.message,
+      url: `${API_BASE}${path}`,
+    });
+
+    // ✅ 폴백: 대시보드에서 뱃지 목록 추정
+    try {
+      const dashRes = await getAxios(tk).get('/dashboard', { params: { userId } });
+      const dash = dashRes?.data || {};
+      const inferred =
+        dash.badges ||
+        dash.userBadges ||
+        dash.user_badges ||
+        dash.achievements ||
+        dash.awards ||
+        [];
+      return inferred;
+    } catch (e) {
+      console.error('[Badge][achieved][fallback][dash][error]', e?.message);
+    }
+
+    return [];
+  }
+}
 // 주의: 구 경로(/api/user/*) 기반의 중복 export는 제거했습니다.

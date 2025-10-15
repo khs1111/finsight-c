@@ -12,7 +12,7 @@ import ExploreMain from "../components/explore/ExploreMain";
 import QuizQuestion from "../components/explore/QuizQuestion";
 import CompletionScreen from "../components/explore/CompletionScreen";
 
-import {getQuestions as apiGetQuestions, postAttempt, getQuizIdForSelection, completeQuiz, startLevel, completeLevel, fetchQuizAttempts } from "../api/explore";
+import {getQuestions as apiGetQuestions, postAttempt, getQuizIdForSelection, startLevel, completeLevel, fetchQuizAttempts } from "../api/explore";
 import { updateBadges } from "../api/profile";
 import { createWrongNote } from "../api/community";
 import { addWrongNoteImmediate } from "../components/study/useWrongNoteStore";
@@ -331,8 +331,10 @@ export default function Explore() {
         current={current}
         setCurrent={setQid}
         questions={questions}
+        quizId={quizId}
         selected={currentResult.selected}
         showResult={currentResult.checked}
+        allResults={results}
         // 문제별 완료 상태를 ExploreMain에서 받아서 전달
         quizCompletionArr={(() => {
           // ExploreMain에서 내려주는 backendProgress.quizzes의 isCompleted를 활용
@@ -453,44 +455,24 @@ export default function Explore() {
         }}
         answerResult={currentResult}
         onComplete={async () => {
-          // 퀴즈 완료 POST를 즉시 실행 (인증 포함)
+          // 완료 POST는 QuizQuestion 내부에서 처리. 여기서는 레벨 완료/배지 업데이트 및 화면 전환만 수행
           const userId = localStorage.getItem('userId') || undefined;
           const token = localStorage.getItem('accessToken') || undefined;
           try {
-            let finalQuizId = quizId;
-            if (!finalQuizId) {
-              try {
-                console.warn('[Complete] quizId가 비어 재해석 시도:', { subTopicId, level });
-                finalQuizId = await getQuizIdForSelection({ subTopicId, levelId: level });
-              } catch (_) { /* noop */ }
+            if (level) {
+              console.log('[CompleteLevel] 호출', { levelId: level, userId });
+              await completeLevel(level, userId, token);
             }
-            console.log('[Complete] 호출 시작', { quizId: finalQuizId, userId });
-            const data = await completeQuiz(finalQuizId, userId, token);
-            console.log('[Complete] 응답 수신', data);
-            setQuizCompleteResult(data);
-            // 레벨 완료 및 배지 업데이트 (최초 완료 시)
-            try {
-              if (level) {
-                console.log('[CompleteLevel] 호출', { levelId: level, userId });
-                await completeLevel(level, userId, token);
-              }
-            } catch (e) {
-              console.warn('[CompleteLevel] 호출 실패 (무시):', e?.message || e);
-            }
-            try {
-              if (userId) {
-                console.log('[Badges] 업데이트 호출', { userId });
-                await updateBadges(userId, token);
-              }
-            } catch (e) {
-              console.warn('[Badges] 업데이트 실패 (무시):', e?.message || e);
-            }
-            try {
-              window.dispatchEvent(new CustomEvent('fin:quiz-completed', { detail: { quizId: finalQuizId, userId, result: data } }));
-            } catch (_) { /* ignore */ }
           } catch (e) {
-            console.error('[Complete] 호출 실패', e);
-            setQuizCompleteResult({ error: e?.message || '퀴즈 완료 처리 실패' });
+            console.warn('[CompleteLevel] 호출 실패 (무시):', e?.message || e);
+          }
+          try {
+            if (userId) {
+              console.log('[Badges] 업데이트 호출', { userId });
+              await updateBadges(userId, token);
+            }
+          } catch (e) {
+            console.warn('[Badges] 업데이트 실패 (무시):', e?.message || e);
           }
           setStep(5);
         }}
@@ -500,40 +482,11 @@ export default function Explore() {
   }
 
   // [5단계] 완료 화면 (정답 개수/결과 표시, 재도전/탐험 재시작)
-  // 퀴즈 완료 POST 결과 상태 추가
+  // 완료 POST는 QuizQuestion 내부에서 처리. 여기서는 결과 상태만 필요 시 초기화
   const [quizCompleteResult, setQuizCompleteResult] = useState(null);
   useEffect(() => {
-    if (step === 5 && !quizCompleteResult) {
-      const userId = localStorage.getItem('userId') || undefined;
-      const token = localStorage.getItem('accessToken') || undefined;
-      (async () => {
-        try {
-          let finalQuizId = quizId;
-          if (!finalQuizId) {
-            try {
-              console.warn('[Complete/useEffect] quizId가 비어 재해석 시도:', { subTopicId, level });
-              finalQuizId = await getQuizIdForSelection({ subTopicId, levelId: level });
-            } catch (_) { /* noop */ }
-          }
-          if (!finalQuizId) {
-            console.error('[Complete/useEffect] quizId를 찾지 못해 완료 POST 생략');
-            return;
-          }
-          console.log('[Complete/useEffect] 호출 시작', { quizId: finalQuizId, userId });
-          const data = await completeQuiz(finalQuizId, userId, token);
-          console.log('[Complete/useEffect] 응답 수신', data);
-          setQuizCompleteResult(data);
-        } catch (e) {
-          console.error('[Complete/useEffect] 호출 실패', e);
-          setQuizCompleteResult({ error: e?.message || '퀴즈 완료 처리 실패' });
-        }
-      })();
-    }
-    if (step !== 5 && quizCompleteResult) {
-      setQuizCompleteResult(null); // 단계 이동 시 초기화
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, quizId]);
+    if (step !== 5 && quizCompleteResult) setQuizCompleteResult(null);
+  }, [step, quizCompleteResult]);
 
   if (step === 5) {
     const questionList = questions && questions.length > 0 ? questions : [];

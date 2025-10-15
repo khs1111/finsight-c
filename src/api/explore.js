@@ -1312,7 +1312,11 @@ export const completeLevel = async (levelId, userId, token) => {
 };
 
 // 퀴즈 완료 처리 (인증 포함): POST /api/quizzes/{id}/complete?userId=...
-export const completeQuiz = async (quizId, userId, token) => {
+// completionData(optional): {
+//   totalQuestions, correctAnswers, score, scorePercent, passed,
+//   answers: [{ questionId, selectedOptionId, isCorrect, correctOptionId, selectedIndex, correctIndex }]
+// }
+export const completeQuiz = async (quizId, userId, token, completionData) => {
   const id = Number(quizId);
   if (!Number.isFinite(id)) throw new Error('Invalid quizId for completeQuiz');
   const uid = withUserId(userId);
@@ -1323,11 +1327,21 @@ export const completeQuiz = async (quizId, userId, token) => {
     'Content-Type': 'application/json',
     ...(jwt ? { Authorization: `Bearer ${jwt}` } : {})
   };
-  const body = JSON.stringify({ quizId: id, userId: uid, user_id: uid });
+  // Merge completion summary data into the payload for better server-side recording
+  const summary = completionData && typeof completionData === 'object' ? completionData : undefined;
+  const derived = summary ? {
+    totalQuestions: summary.totalQuestions ?? summary.total ?? undefined,
+    correctAnswers: summary.correctAnswers ?? summary.correct ?? undefined,
+    score: summary.score ?? summary.scorePercent ?? undefined,
+    scorePercent: summary.scorePercent ?? summary.score ?? undefined,
+    passed: typeof summary.passed === 'boolean' ? summary.passed : undefined,
+    answers: Array.isArray(summary.answers) ? summary.answers : undefined,
+  } : {};
+  const body = JSON.stringify({ quizId: id, userId: uid, user_id: uid, ...derived, summary: summary || undefined });
 
   // 1) 스펙: POST /quizzes/{id}/complete?userId=
   try {
-    return await http(`/quizzes/${id}/complete${qs}`, { method: 'POST', headers }, jwt);
+    return await http(`/quizzes/${id}/complete${qs}`, { method: 'POST', headers, body }, jwt);
   } catch (e1) {
     // 2) 변형: POST /quizzes/{id}/complete (body에 userId 포함)
     try {
@@ -1339,7 +1353,7 @@ export const completeQuiz = async (quizId, userId, token) => {
       } catch (e3) {
         // 4) 구버전: POST /quizzes/{id}/done
         try {
-          return await http(`/quizzes/${id}/done${qs}`, { method: 'POST', headers }, jwt);
+          return await http(`/quizzes/${id}/done${qs}`, { method: 'POST', headers, body }, jwt);
         } catch (e4) {
           // 마지막 실패 시 최초 에러 전달
           throw e1;
@@ -1402,4 +1416,19 @@ export const fetchQuizAttempts = async (quizId, userId, token) => {
 export const getTopicStats = async () => {
   // 백엔드 스펙에 /topic-stats 없음 → 빈 객체/배열 반환
   return [];
+};
+export const submitQuizAnswer = async (quizId, userId, answers, token) => {
+  const body = {
+    quizId,
+    userId,
+    answers: answers.map(a => ({
+      questionId: a.questionId,
+      selectedOptionId: a.selectedOptionId,
+    })),
+  };
+
+  return await http("/quizzes/submit-answer", {
+    method: "POST",
+    body: JSON.stringify(body),
+  }, token);
 };
