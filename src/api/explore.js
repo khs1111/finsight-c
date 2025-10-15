@@ -1403,3 +1403,18 @@ export const getTopicStats = async () => {
   // 백엔드 스펙에 /topic-stats 없음 → 빈 객체/배열 반환
   return [];
 };
+export const submitQuizAnswer = async (quizId, userId, answers, token) => {
+  const body = {
+    quizId,
+    userId,
+    answers: answers.map(a => ({
+      questionId: a.questionId,
+      selectedOptionId: a.selectedOptionId,
+    })),
+  };
+
+  return await http("/quizzes/submit-answer", {
+    method: "POST",
+    body: JSON.stringify(body),
+  }, token);
+};

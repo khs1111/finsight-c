@@ -1,5 +1,9 @@
 {
   "version": 2,
+  "framework": "create-react-app",
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "ignoreCommand": "git diff --name-only $VERCEL_GIT_PREVIOUS_SHA $VERCEL_GIT_COMMIT_SHA | grep -qE '^(README.md|docs/)' && echo \"docs-only: skip\" && exit 0 || exit 1",
   "env": {
     "PUBLIC_URL": "/"
   },
