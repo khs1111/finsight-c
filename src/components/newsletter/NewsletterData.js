@@ -11,7 +11,7 @@ const newsData = [
     subtitle: 'AI 시장의 폭발적 성장과 함께 ‘황금알 낳는 거위’로 떠오른 AI 반도체. 엔비디아가 GPU로 압도적인 독주, 그 뒤를 잇는 추격자들',
     date: '2025/10/7',
     imageUrl: nvidiaImage,
-    url: 'https://stib.ee/2MfJ',
+    url: 'https://stib.ee/pxiJ',
   },
   {
     id: 2,
@@ -20,7 +20,7 @@ const newsData = [
     subtitle: '일반적으로 금리 인하는 시장에 활력을 불어넣는 긍정적인 신호로 여겨집니다. 그렇다면 Fed는 왜 이런 결정을 내렸을까요?',
     date: '2025/10/7',
     imageUrl: usStockImage,
-    url: 'https://stib.ee/4MfJ',
+    url: 'https://stib.ee/rxiJ',
   },
   {
     id: 3,
@@ -29,7 +29,7 @@ const newsData = [
     subtitle: '요즘 뉴스 보면 "부동산 시장이 다시 살아난다", "빙하기가 끝났다" 이런 말들이 많이 들리죠? 지난 몇 달 사이 분위기가 조금 달라진 건 사실이에요.',
     date: '2025/10/6',
     imageUrl: realEstateImage,
-    url: 'https://stib.ee/6MfJ',
+    url: 'https://stib.ee/jxiJ',
   },
   {
     id: 4,
