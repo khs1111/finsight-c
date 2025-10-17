@@ -95,14 +95,14 @@
 
 /* 칩 안의 텍스트를 그라데이션 처리 */
 .news-card__tag-text {
-  color: #234E8F;
-
-  background: var(--button_color, linear-gradient(104deg, #234E8F));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-
-  position: relative;
+  color: var(--Priamray_text_Color, #234E8F);
+  /* Roboto_R_12 */
+  font-family: Roboto;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  letter-spacing: -0.24px;
 }
 
 .news-card__description {  
