@@ -1245,26 +1245,14 @@ export const submitAnswer = async ({ quizId, questionId, selectedOptionId, userI
     const uidQ = withUserId(uidNum);
     const qs = uidQ ? `?userId=${encodeURIComponent(uidQ)}` : '';
     let response;
-    // 1) Preferred: quiz path + submit-answer
+    // Preferred: body-driven endpoint per spec
     try {
-      response = await http(`/quizzes/${qzIdNum}/submit-answer${qs}`,
-        { method: 'POST', body: JSON.stringify(payload), headers, silent: true }, jwt);
+      response = await http(`/quizzes/submit-answer${qs}`,
+        { method: 'POST', body: JSON.stringify(payload), headers, silent: false }, jwt);
     } catch (e1) {
-      // 2) Alternative: quiz path + attempt
-      try {
-        response = await http(`/quizzes/${qzIdNum}/attempt${qs}`,
-          { method: 'POST', body: JSON.stringify(payload), headers, silent: true }, jwt);
-      } catch (e2) {
-        // 3) Body-driven endpoint
-        try {
-          response = await http('/quizzes/submit-answer',
-            { method: 'POST', body: JSON.stringify(payload), headers, silent: true }, jwt);
-        } catch (e3) {
-          // 4) Generic attempts endpoint
-          response = await http('/attempts',
-            { method: 'POST', body: JSON.stringify(payload), headers, silent: true }, jwt);
-        }
-      }
+      // Fallback: path variant with quizId in URL
+      response = await http(`/quizzes/${qzIdNum}/submit-answer${qs}`,
+        { method: 'POST', body: JSON.stringify(payload), headers, silent: false }, jwt);
     }
 
     // 응답 데이터 처리 및 정규화
@@ -1468,15 +1456,10 @@ export const submitQuizAnswer = async (quizId, userId, answers, token) => {
   };
   const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
   const headers = { 'Content-Type': 'application/json' };
-  // Prefer path variant; fallback to body-driven route
+  // Prefer body-driven route; fallback to path variant
   try {
-    return await http(`/quizzes/${id}/submit-answer${qs}`, { method: 'POST', headers, body: JSON.stringify(body), silent: true }, token);
+    return await http(`/quizzes/submit-answer${qs}`, { method: 'POST', headers, body: JSON.stringify(body), silent: false }, token);
   } catch (e1) {
-    try {
-      return await http(`/quizzes/submit-answer${qs}`, { method: 'POST', headers, body: JSON.stringify(body), silent: true }, token);
-    } catch (e2) {
-      // Last resort: attempts batch
-      return await http(`/attempts`, { method: 'POST', headers, body: JSON.stringify(body), silent: true }, token);
-    }
+    return await http(`/quizzes/${id}/submit-answer${qs}`, { method: 'POST', headers, body: JSON.stringify(body), silent: false }, token);
   }
 };

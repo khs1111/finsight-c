@@ -18,7 +18,7 @@ import "./QuizQuestion.css";
 import ProgressHeader from "./ProgressHeader";
 import q4ArticlePng from "../../assets/explore/q4-article.png";
 // getKeyPoints 제거: 문제 객체에 포함된 solvingKeypointsMd / teachingExplainerMd 사용
-import { completeQuiz, submitQuizAnswer, submitAnswer } from "../../api/explore";
+import { completeQuiz, submitAnswer } from "../../api/explore";
 
 /**
  * 🎯 QuizQuestion 컴포넌트
@@ -745,19 +745,10 @@ export default function QuizQuestion({ current,
             const summary = buildCompletionSummary();
             console.log('[QuizQuestion][Complete] posting summary', { quizId, summary });
             completionPostedRef.current = true;
-            // 1) 명세 준수: 모든 답안을 한 번에 제출 (POST /api/quizzes/submit-answer)
-            try {
-              const answersPayload = Array.isArray(summary.answers)
-                ? summary.answers.map(a => ({ questionId: a.questionId, selectedOptionId: a.selectedOptionId }))
-                : [];
-              if (answersPayload.length > 0) {
-                const submitResp = await submitQuizAnswer(quizId, uid, answersPayload, token);
-                try { console.log('[QuizQuestion][Complete][submit-answer][response]', submitResp); } catch (_) {}
-              }
-            } catch (e) {
-              console.warn('[QuizQuestion][Complete] submitQuizAnswer failed (continuing):', e?.message || e);
-            }
-            // 2) 완료/진행도 업데이트 (서버 기록용)
+            // 사양 확정: 완료 시에는 per-question 개별 제출을 선호하고, 완료만 서버에 기록
+            // → 위 진행 중에 safeSubmitCurrentQuestion로 문항별 제출을 이미 수행했으므로 여기서는 생략
+            // (일부 백엔드는 /quizzes/{id}/submit-answer를 제공하지 않아 404가 발생하므로 호출 제거)
+            // 1) 완료/진행도 업데이트 (서버 기록용)
             try {
               const completeResp = await completeQuiz(quizId, uid, token, summary);
               try { console.log('[QuizQuestion][Complete][complete][response]', completeResp); } catch (_) {}

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 
 import FloatingQuizCTA from './FloatingQuizCTA';
-import { getQuestions as apiGetQuestions, getSectorsWithSubsectors, getQuizIdForSelection } from '../../api/explore';
+import { getQuestions as apiGetQuestions, getSectorsWithSubsectors, getQuizIdForSelection, getSteppingProgress } from '../../api/explore';
 import { getProgress as getLevelProgress } from '../../api/levels';
 import { fetchCurrentBadgeByUser } from '../../api/profile';
 import antCharacter from '../../assets/explore/stepant.png';
@@ -151,6 +151,7 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
   // ===== 백엔드 진행도/완료/배지 상태 =====
   const [backendProgress, setBackendProgress] = useState(null); // { isCompleted, completionRate, totalQuizzes, completedQuizzes, totalScore, maxScore, completedAt, quizzes: [...], ... }
   const [userProgress, setUserProgress] = useState(null); // 사용자 진행도 API 비활성화 상태
+  const [stepping, setStepping] = useState(null); // 징검다리 진행도 (steps, completionRate, currentStep)
   // 서브섹터 진행도 API 비활성화 상태
   const [, setProgressLoading] = useState(false); // ESLint: progressLoading 사용하지 않음
   // 낙관적 진행도 사용 제거: 진행도/배지는 백엔드가 단일 진실원천
@@ -169,6 +170,14 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
         // 서브섹터 진행도 API 호출 제거
         // 사용자 진행도 API 호출 제거
         if (!cancelled) setUserProgress(null);
+        // 징검다리 진행도 조회
+        try {
+          const data = await getSteppingProgress(Number(userId), Number(levelId));
+          if (!cancelled) setStepping(data);
+        } catch (e) {
+          if (!cancelled) setStepping(null);
+          try { console.warn('[ExploreMain] getSteppingProgress failed:', e?.message || e); } catch (_) {}
+        }
       } finally {
         if (!cancelled) setProgressLoading(false);
       }
@@ -206,6 +215,11 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
       const progVal = progress.status === 'fulfilled' ? (progress.value || null) : null;
       const badgeVal = badge.status === 'fulfilled' ? (badge.value || null) : null;
       setBackendProgress(progVal ? { ...progVal, currentBadge: (badgeVal || progVal?.currentBadge || null) } : (badgeVal ? { currentBadge: badgeVal } : null));
+      // 징검다리 진행도도 함께 업데이트
+      try {
+        const s = await getSteppingProgress(uid, lid);
+        setStepping(s || null);
+      } catch (_) { /* ignore */ }
     } catch (_) {
       // ignore
     } finally {
@@ -224,11 +238,31 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
   // 진행도/완료/점수/배지 정보 파싱
   // 화면 표시는 '문항 기준'을 우선: totalQuestions(4)이 있으면 그 값을 기준으로, 없을 때만 백엔드 합계 사용
   // 총 문제 수는 질문 배열 기준(보통 4문항). 백엔드 합계는 사용하지 않음.
-  const baseTotal = (typeof totalQuestions === 'number' && totalQuestions > 0)
-    ? totalQuestions
-    : 0;
-  // 진행 도중에는 로컬 이벤트로만 부분 진행 표시, 백엔드의 completedQuizzes는 사용하지 않음.
-  const baseAnswered = 0;
+  // 기본(문항 기반) 총 개수/진행도
+  const baseTotal = (typeof totalQuestions === 'number' && totalQuestions > 0) ? totalQuestions : 0;
+  const baseAnswered = 0; // 문항 기반 임시 진행도는 사용하지 않음
+
+  // 징검다리 진행도에서 단계/진행 파생
+  const steps = Array.isArray(stepping?.steps) ? stepping.steps : null;
+  const totalStagesFromSteps = steps ? steps.length : null;
+  const answeredFromSteps = steps ? steps.filter(s => {
+    const isDone = s.isCompleted || (Number(s.completedQuizzes) >= Number(s.totalQuizzes || 0) && Number(s.totalQuizzes || 0) > 0);
+    return !!isDone;
+  }).length : null;
+  const activeFromSteps = (() => {
+    if (!steps) return null;
+    // 우선 currentStep 사용 (1-based로 오는 경우가 많음)
+    if (Number.isFinite(Number(stepping?.currentStep))) {
+      const n = Number(stepping.currentStep);
+      const idx = n >= 1 ? n - 1 : n;
+      if (idx >= 0 && idx < steps.length) return idx;
+      // currentStep이 범위 밖이면 모든 완료 시 -1 반환
+      if (answeredFromSteps === steps.length) return -1;
+    }
+    // fallback: 첫 미완료 인덱스
+    const i = steps.findIndex(s => !(s.isCompleted || (Number(s.completedQuizzes) >= Number(s.totalQuizzes || 0) && Number(s.totalQuizzes || 0) > 0)));
+    return i === -1 ? -1 : i;
+  })();
   // 사용자 전체 진행도에서 현재 선택(섹터/서브섹터/레벨)의 완료 여부 추출
   const isCompletedByUser = useMemo(() => {
     try {
@@ -265,24 +299,34 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
   // 서브섹터 진행도에서 현재 레벨 완료 여부 판정
   const isCompletedBySubsector = false; // 서브섹터 진행도 판정 비활성화
 
-  const isCompleted = isCompletedByUser || isCompletedBySubsector || !!backendProgress?.isCompleted;
-  const isFullyDoneDisplay = isCompleted || (baseTotal > 0 && baseAnswered >= baseTotal);
-  const totalProblems = baseTotal;
-  const answeredCount = isFullyDoneDisplay ? baseTotal : baseAnswered;
+  const isCompletedFromSteps = (typeof stepping?.completionRate === 'number' && stepping.completionRate >= 1)
+    || (Number(totalStagesFromSteps) > 0 && Number(answeredFromSteps) === Number(totalStagesFromSteps));
+  const isCompleted = isCompletedFromSteps || isCompletedByUser || isCompletedBySubsector || !!backendProgress?.isCompleted;
+
+  // 표시용 총 단계/진행 개수 및 진행률
+  const totalProblems = (totalStagesFromSteps ?? baseTotal);
+  const answeredCount = (answeredFromSteps != null
+    ? (isCompleted ? (totalStagesFromSteps ?? 0) : answeredFromSteps)
+    : (isCompleted ? baseTotal : baseAnswered));
   // eslint-disable-next-line no-unused-vars
   const _ = backendProgress?.totalScore ?? 0; // correctCount - 사용하지 않음
-  const progressPercent = totalProblems > 0 ? (answeredCount / totalProblems) * 100 : 0;
+  const progressPercent = (typeof stepping?.completionRate === 'number')
+    ? Math.max(0, Math.min(100, stepping.completionRate * 100))
+    : (totalProblems > 0 ? (answeredCount / totalProblems) * 100 : 0);
   const badge = backendProgress?.currentBadge;
   const badgeIconUrl = badge?.iconUrl || badge?.icon_url || null;
   // 진행도 숫자: 현재/다음 단계 표시 (예: 1 2 -> 2 3)
   const currentNumber = totalProblems > 0 ? Math.min(answeredCount + 1, totalProblems) : 1;
   const nextNumber = totalProblems > 0 ? Math.min(currentNumber + 1, totalProblems) : 2;
-  // 징검다리 단계: 문제 수 기준 (질문이 없을 때 최소 0)
+  // 징검다리 단계 및 상태 배열
   const totalStages = Math.max(0, totalProblems || 0);
-  // 문제별 완료 상태 배열 (화면 표현 기준)
-  const quizCompletionArr = Array.from({ length: totalStages }, (_, i) => i < answeredCount);
-  // active 단계: 현재 푸는 문제 index (모두 끝나면 -1 로 처리)
-  const activeStage = answeredCount < totalStages ? answeredCount : -1;
+  const quizCompletionArr = steps
+    ? steps.map(s => !!(s.isCompleted || (Number(s.completedQuizzes) >= Number(s.totalQuizzes || 0) && Number(s.totalQuizzes || 0) > 0)))
+    : Array.from({ length: totalStages }, (_, i) => i < answeredCount);
+  // active 단계: currentStep 우선, 없으면 answeredCount 기반
+  const activeStage = (activeFromSteps != null)
+    ? activeFromSteps
+    : (answeredCount < totalStages ? answeredCount : -1);
 
   // ===== DEBUG: 진행도 상세 로깅 및 전역 노출 =====
   useEffect(() => {
