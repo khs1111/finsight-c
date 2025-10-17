@@ -701,7 +701,7 @@ body.profile-route { background:#F4F6FA; }
 
 /* --- Profile hero composition (background + character + overlays) --- */
 .p-hero { position:relative; margin-top:18px; left:0; right:0; top:0 !important; height:auto !important; min-height:460px !important; border-radius:0 0 16px 16px !important; overflow:hidden; background: transparent; z-index: 0; }
-.p-hero-bg { position:absolute; inset:0; width:105%; height:97.5%; object-fit:cover; z-index:1; border-radius:0 0 16px 16px !important; }
+.p-hero-bg { position:absolute; inset:0; width:110%; height:99.5%; object-fit:cover; z-index:1; border-radius:0 0 16px 16px !important; }
 /* Gradient layer like Rectangle 32977 */
 .p-hero::before { content:""; position:absolute; inset:0; background: linear-gradient(180deg, #F4F6FA 0%, #A0C6FF 100%); z-index:0; opacity: 0.0; /* keep as optional overlay: set >0 to show */ }
 /* Bottom fade overlay: soft gradient to page bg to match spec image */

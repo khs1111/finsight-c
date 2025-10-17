@@ -2,7 +2,7 @@
 // 프로필 정보 및 활동(출석) API 래퍼
 
 import axios from 'axios';
-import { API_BASE, HAS_PROFILE_ENDPOINTS } from './config';
+import { API_BASE, HAS_PROFILE_ENDPOINTS, HAS_BADGE_ENDPOINTS } from './config';
 import { IMAGE_BASE } from './config';
 
 // Normalize API base and path similar to other modules
@@ -219,6 +219,40 @@ export async function fetchCurrentBadgeByUser(userId, token) {
   const ax = getAxios(tk);
   const dbg = typeof window !== 'undefined' && (window.__FIN_DEBUG || window.__QUIZ_DEBUG || window.__BADGE_DEBUG);
   const path = `/badges/user/${userId}/current`;
+  // Helper: dashboard-based fallback normalization
+  const fallbackFromDashboard = async () => {
+    try {
+      const dashRes = await getAxios(tk).get('/dashboard', { params: { userId } });
+      const dash = dashRes?.data || {};
+      const ui = dash.userInfo || dash.profile || dash;
+      const icon = ui?.badge?.iconUrl || ui?.badge?.icon_url || dash.badgeIconUrl || dash.badge_icon_url || null;
+      const name = ui?.currentLevelTitle || ui?.tierName || ui?.tier || '';
+      const levelNumber = ui?.currentLevelNumber || ui?.levelNumber || ui?.level || null;
+      const norm = {
+        id: ui?.displayed_badge_id || ui?.badge?.id || null,
+        name: name || '',
+        iconUrl: toAbsoluteUrl(icon),
+        levelNumber: levelNumber ?? null,
+        description: name ? `${name} 배지` : '',
+        isAchieved: true,
+        progress: 100,
+      };
+      if (dbg) console.log('[Badge][fallback][dashboard][normalized]', norm);
+      return norm;
+    } catch (_) {
+      return null;
+    }
+  };
+  // Fast exit if feature flag disabled or previous hard 404 observed in this session
+  if (!HAS_BADGE_ENDPOINTS) {
+    if (dbg) console.log('[Badge][skip] HAS_BADGE_ENDPOINTS=false; using dashboard fallback');
+    return await fallbackFromDashboard();
+  }
+  const seen = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('badge.endpoint.404') : null;
+  if (seen === '1') {
+    if (dbg) console.log('[Badge][skip] cached 404; using dashboard fallback');
+    return await fallbackFromDashboard();
+  }
   try {
     if (dbg) console.log('[Badge][request] GET', buildUrl(path));
     const res = await ax.get(path);
@@ -251,29 +285,43 @@ export async function fetchCurrentBadgeByUser(userId, token) {
     return norm;
   } catch (err) {
     // Quiet on 404; only log in debug
-    if (dbg) console.warn('[Badge][error]', { status: err?.response?.status, message: err?.message, url: buildUrl(path) });
-    // Fallback: infer from dashboard (currentLevelTitle/Number, or badge.iconUrl)
-    try {
-      const dashRes = await getAxios(tk).get('/dashboard', { params: { userId } });
-      const dash = dashRes?.data || {};
-      const ui = dash.userInfo || dash.profile || dash;
-      const icon = ui?.badge?.iconUrl || ui?.badge?.icon_url || dash.badgeIconUrl || dash.badge_icon_url || null;
-      const name = ui?.currentLevelTitle || ui?.tierName || ui?.tier || '';
-      const levelNumber = ui?.currentLevelNumber || ui?.levelNumber || ui?.level || null;
-      const norm = {
-        id: ui?.displayed_badge_id || ui?.badge?.id || null,
-        name: name || '',
-        iconUrl: toAbsoluteUrl(icon),
-        levelNumber: levelNumber ?? null,
-        description: name ? `${name} 배지` : '',
-        isAchieved: true,
-        progress: 100,
-      };
-      if (dbg) console.log('[Badge][fallback][dashboard][normalized]', norm);
-      return norm;
-    } catch (_) {
-      return null;
+    const status = err?.response?.status;
+    if (status === 404) {
+      try { sessionStorage.setItem('badge.endpoint.404', '1'); } catch (_) {}
     }
+    if (dbg) console.warn('[Badge][error]', { status, message: err?.message, url: buildUrl(path) });
+    return await fallbackFromDashboard();
+  }
+}
+
+// 간단한 현재 배지 조회 (요청 샘플과 동일한 형태): GET /api/badges/user/{userId}/current
+// - 상대 경로 사용
+// - 본문 없음, Content-Type 헤더만 전송
+// - 200 아닐 경우 에러를 throw
+export async function getCurrentBadge(userId) {
+  const url = buildUrl(`/badges/user/${userId}/current`);
+  const reqInit = {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  };
+  try {
+    console.log('[Badge][current][request]', { url, ...reqInit });
+    const res = await fetch(url, reqInit);
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.log('[Badge][current][raw-error]', { url, status: res.status, body: text || '(empty)' });
+      const err = new Error(`뱃지 조회 실패 (HTTP ${res.status}) ${text}`);
+      err.status = res.status;
+      err.body = text;
+      throw err;
+    }
+    const json = await res.json().catch(() => ({}));
+    console.log('[Badge][current][raw-ok]', json);
+    return json;
+  } catch (err) {
+    console.error('[Badge][current][fetch-error]', err);
+    throw err;
   }
 }
 
@@ -281,6 +329,16 @@ export async function fetchAchievedBadges(userId, token) {
   const tk = token || sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
   const ax = getAxios(tk);
   const path = `/badges/user/${userId}/achieved`;
+  try {
+    const resolved = buildUrl(path);
+    console.log('[Badge][achieved][request]', {
+      method: 'GET',
+      url: path,
+      resolved,
+      baseURL: BASE_URL,
+      headers: { Authorization: tk ? 'Bearer ***' : undefined },
+    });
+  } catch (_) {}
 
   try {
     const res = await ax.get(path);

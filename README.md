@@ -51,7 +51,9 @@
 ## ✨ 주요 기능
 
 - Explore: 주제/세부주제/레벨 선택 → 퀴즈(4문항) → 완료 화면
-- News/Newsletter: 뉴스 목록/상세
+- News/Newsletter
+  - News: 오늘의 뉴스/카테고리 탭, 검색(/search/:query), 기사 상세 뷰
+  - Newsletter: 섹터·키 기반 뉴스레터 뷰, 구독 플로우 라우트, 관리용 퍼블리시 지원
 - Community: 커뮤니티 목록/헤더 정렬(상단 24px)
 - Profile: 출석 캘린더/요약(배지/진행도)
 - Auth: 게스트 로그인 및 라우팅 가드
@@ -133,6 +135,13 @@ Study
   - 글쓰기 `/community/new` (있는 경우)
 - `/profile` 프로필/달력/배지
 
+뉴스/뉴스레터 관련 라우팅
+- `/news/:id` 기사 상세
+- `/search/:query` 뉴스 검색 결과 페이지
+- `/newsletter/*` 뉴스레터 엔트리(하위 라우트에 따라 네비게이션 숨김 처리)
+  - 예: `/newsletter/subscribe`, `/newsletter/econ`, `/newsletter/companies`
+  - App 헤더/바텀내비 숨김 조건: `hideNewsletterNav` 로직 참고 (`src/App.js`)
+
 ---
 
 ## 🔗 API 매핑 
@@ -145,6 +154,21 @@ Study
   - res: `{ token|accessToken, userId }`
   - FE: `sessionStorage.setItem('guest','1')`, 토큰/유저ID 저장 (`src/api/auth.js`)
 - POST `/api/auth/login`, POST `/api/auth/signup` (있을 경우)
+
+뉴스(News) (`src/api/news.js`)
+- 베이스: `REACT_APP_NEWS_API_BASE`
+- 목록
+  - GET `/api/articles/today?skip=&limit=`: 오늘의 뉴스 목록
+  - GET `/api/articles/category/{category}?skip=&limit=`: 카테고리별 뉴스 목록
+- 상세
+  - GET `/api/articles/{id}`: 기사 상세
+- 검색
+  - GET `/api/articles/search?q=&skip=&limit=`: 키워드/해시태그 검색
+- 관리자(선택적)
+  - DELETE `/api/articles/admin/{id}?reason=&lock_hours=`: 소프트 삭제
+  - POST `/api/articles/admin/{id}/restore`: 복구
+  - DELETE `/api/articles/admin/{id}/purge`: 완전 삭제
+  - 헤더: `X-ADMIN-KEY: <REACT_APP_ADMIN_KEY>` (있을 때만)
 
 탐험지/퀴즈 (src/api/explore.js)
 - 카테고리/주제
@@ -180,6 +204,17 @@ Study
     - GET `/api/users/{userId}/attempts?quizId=`
 - 기사 데이터 병합 (선택)
   - GET `/api/articles/{id}` | `/api/articles?code=|slug=|path=` | `/api/articles/by-code/{code}` 등 변형들을 순차 시도하여 문항의 article 정보를 보강
+
+뉴스레터(Newsletter) (`src/api/letters.js`)
+- 베이스: `REACT_APP_API_BASE`
+- 조회
+  - GET `/api/letters/{sector}/{key}`: 최신 레터 조회
+  - GET `/api/letters/{sector}/{key}/history`: 레터 히스토리 목록
+  - GET `/api/letters/pending?sector=`: 발행 대기 레터 목록(옵션)
+- 발행(관리)
+  - POST `/api/letters/{sector}/{key}/{batchId}/publish`: 특정 배치 발행
+  - POST `/api/letters/{sector}/{key}/publish-latest`: 최신 레터 발행
+  - POST `/api/letters/{sector}/{key}/publish-all`: 모든 레터 일괄 발행
 
 응답 정규화(요지)
 - QuestionDTO: `{ id, type, stemMd, options[{id,text,isCorrect}], correctOptionId, article{ id,title,body,imageUrl }, ... }`
@@ -326,59 +361,66 @@ import { BackendStatusIndicator } from '../hooks/useBackendStatus.js';
 배포 환경에 따라 다음 환경 변수를 설정할 수 있습니다:
 
 - `REACT_APP_API_BASE`: 개발 및 프로덕션 API 기본 URL
+- `REACT_APP_NEWS_API_BASE`: 뉴스 API 기본 URL (News 전용)
+- `REACT_APP_ADMIN_KEY`: 관리자 기능 사용 시 인증 키(옵션)
 - `VITE_API_BASE`: Vite 환경일 때의 API 기본 URL
 
-## 📂 폴더 구조 규칙 (Finsight Custom)
+## 🤝 기여 가이드라인
 
-폴더/파일 역할:
+이 프로젝트에 기여하려면 아래 단계를 따라주세요:
 
-- `pages/` 라우팅 단위의 페이지 컴포넌트 (각 URL에 대응)
-- `components/` 재사용 가능한 UI 컴포넌트 (버튼, 카드, 탭 등)
-- `components/community/`, `components/explore/` 도메인별 컴포넌트 그룹
-- `docs/` 문서 및 실행 가이드
+1. 저장소를 포크합니다.
+2. 새로운 브랜치를 생성합니다: `git checkout -b feature/새로운기능`.
+3. 변경 사항을 커밋합니다: `git commit -m '새로운 기능 추가'`.
+4. 브랜치에 푸시합니다: `git push origin feature/새로운기능`.
+5. Pull Request를 생성합니다.
 
-중복된 페이지 파일(`ProfilePage.js` 등)은 정리되었습니다. 현재 활성 페이지는 `pages/profile.js`, 스타일은 `pages/Profile.css` 입니다.
+기여 시 아래 사항을 준수해주세요:
+- 코드 스타일 가이드를 따르세요.
+- 충분한 테스트를 작성하고 통과했는지 확인하세요.
+- 상세한 커밋 메시지를 작성하세요.
 
-### 📘 유지보수 규칙
-- 페이지 전용 로직은 `pages/` 안에만 작성
-- 다른 라우트에서 재사용 시 `components/`로 분리
-- 도메인 중심 구조 유지 (예: `explore/`, `community/`)
-- 동일 페이지의 중복 파일은 금지
+---
 
-### 📗 리팩터링 로그
-1. Profile 구조 통합 (`pages/profile.js`)
-2. 중복 파일 삭제
-3. 폴더 구조 규칙 추가
+## 🌐 환경 변수 설정 예제
 
-## 🧪 테스트
+로컬 개발을 위해 `.env` 파일을 프로젝트 루트에 생성하고 아래 내용을 추가하세요:
 
-```bash
-npm test
+```
+REACT_APP_API_BASE=https://api.example.com
+REACT_APP_NEWS_API_BASE=https://newsapi.example.com
+REACT_APP_ADMIN_KEY=your-admin-key
 ```
 
-테스트 러너를 인터랙티브 모드로 실행합니다. 자세한 내용은 공식 가이드를 참고하세요.
+환경 변수는 Vercel 배포 시에도 설정해야 합니다. 자세한 내용은 [Vercel 배포](#-vercel-배포) 섹션을 참고하세요.
 
-## 🏗️ 빌드 및 배포
+---
 
-```bash
-npm run build
-```
+## 📦 주요 의존성
 
-프로덕션용 빌드를 생성하여 `build/` 폴더에 저장합니다. 코드는 최적화되어 번들링되며 파일 이름에는 해시가 포함됩니다. 앱은 바로 배포할 준비가 됩니다.
+이 프로젝트에서 사용된 주요 라이브러리와 버전은 다음과 같습니다:
 
-배포 관련 자세한 내용은 CRA 공식 가이드를 참고하세요.
+- React: ^18.2.0
+- React Router: ^6.14.1
+- Axios: ^1.4.0
+- Jest: ^29.0.0
 
-## ⚠️ `npm run eject`
+자세한 의존성 목록은 `package.json` 파일을 참고하세요.
 
-한 번 eject 하면 되돌릴 수 없습니다. CRA의 내부 설정(webpack, Babel 등)을 프로젝트 안으로 복사해 직접 수정할 수 있도록 합니다. 대부분의 프로젝트에서는 eject 없이도 충분히 동작합니다.
+---
 
-## 📚 추가 문서
+## 🏷️ 라이선스
 
-- React 공식 문서: https://reactjs.org/
-- Create React App 가이드: https://facebook.github.io/create-react-app/docs/getting-started
-- 코드 스플리팅: https://facebook.github.io/create-react-app/docs/code-splitting
-- 번들 사이즈 분석: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
-- PWA 만들기: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
-- 고급 설정: https://facebook.github.io/create-react-app/docs/advanced-configuration
-- 배포 가이드: https://facebook.github.io/create-react-app/docs/deployment
-- 빌드 실패 문제 해결: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+이 프로젝트는 MIT 라이선스에 따라 배포됩니다. 자세한 내용은 [LICENSE](./LICENSE) 파일을 참고하세요.
+
+---
+
+## 🙏 감사의 글
+
+이 프로젝트는 다음과 같은 오픈소스 프로젝트와 도구의 도움을 받아 개발되었습니다:
+
+- [React](https://reactjs.org/)
+- [Create React App](https://create-react-app.dev/)
+- [Vercel](https://vercel.com/)
+
+기여해주신 모든 분들께 감사드립니다!
