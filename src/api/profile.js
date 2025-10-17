@@ -3,6 +3,18 @@
 
 import axios from 'axios';
 import { API_BASE, HAS_PROFILE_ENDPOINTS } from './config';
+import { IMAGE_BASE } from './config';
+
+// Normalize API base and path similar to other modules
+function buildUrl(path) {
+  const base = String(API_BASE || '').replace(/\/+$/, '');
+  const baseHasApi = /\/api$/i.test(base);
+  let p = String(path || '');
+  if (!p.startsWith('/')) p = `/${p}`;
+  if (baseHasApi && p.startsWith('/api/')) p = p.replace(/^\/api/, '');
+  if (!baseHasApi && !p.startsWith('/api/')) p = `/api${p}`;
+  return `${base}${p}`;
+}
 
 async function http(path, opts = {}) {
   const token = sessionStorage.getItem('accessToken');
@@ -12,7 +24,8 @@ async function http(path, opts = {}) {
     ...(opts.headers || {}),
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${API_BASE}${path}`, {
+  const url = buildUrl(path);
+  const res = await fetch(url, {
     credentials: 'include',
     ...opts,
     headers,
@@ -22,6 +35,21 @@ async function http(path, opts = {}) {
     throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`);
   }
   return res.json();
+}
+
+// Ensure image URLs are absolute to avoid broken icons when backend returns relative paths
+function toAbsoluteUrl(url) {
+  try {
+    if (!url) return null;
+    const s = String(url);
+    if (/^https?:\/\//i.test(s)) return s;
+    const base = String(IMAGE_BASE || '').replace(/\/$/, '');
+    if (!base) return s;
+    if (s.startsWith('/')) return `${base}${s}`;
+    return `${base}/${s}`;
+  } catch (_) {
+    return url;
+  }
 }
 
 // 프로필 기본 정보: 닉네임/티어/티어 이미지
@@ -104,7 +132,7 @@ export async function fetchProfileActivity() {
 }
 
 // (선택) 대시보드/배지 Axios 래퍼
-const BASE_URL = API_BASE;
+const BASE_URL = String(API_BASE || '').replace(/\/+$/, '');
 
 export function getAxios(token) {
   // Include credentials so cookie-based sessions work across origins
@@ -115,6 +143,20 @@ export function getAxios(token) {
       return config;
     });
   }
+  // Ensure path normalization for requests starting without '/api' when baseURL lacks it
+  instance.interceptors.request.use((config) => {
+    try {
+      const baseHasApi = /\/api$/i.test(BASE_URL);
+      let url = config.url || '';
+      if (!url.startsWith('http')) {
+        if (!url.startsWith('/')) url = `/${url}`;
+        if (!baseHasApi && !url.startsWith('/api/')) url = `/api${url}`;
+        if (baseHasApi && url.startsWith('/api/')) url = url.replace(/^\/api/, '');
+        config.url = url;
+      }
+    } catch (_) {}
+    return config;
+  });
   return instance;
 }
 
@@ -175,66 +217,64 @@ export async function fetchBadgeById(badgeId, token) {
 export async function fetchCurrentBadgeByUser(userId, token) {
   const tk = token || sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') || undefined;
   const ax = getAxios(tk);
+  const dbg = typeof window !== 'undefined' && (window.__FIN_DEBUG || window.__QUIZ_DEBUG || window.__BADGE_DEBUG);
   const path = `/badges/user/${userId}/current`;
   try {
-    // Log the request details (without sensitive headers)
-    // eslint-disable-next-line no-console
-    console.log('[Badge][request] GET', `${API_BASE}${path}`, { userId, hasToken: !!tk });
-
+    if (dbg) console.log('[Badge][request] GET', buildUrl(path));
     const res = await ax.get(path);
-
-    // Log the response brief summary
-    // eslint-disable-next-line no-console
-    console.log('[Badge][response]', {
-      status: res?.status,
-      data: res?.data,
-    });
-
-    const data = res?.data || res;
-    if (data) return data;
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[Badge][error]', {
-      status: err?.response?.status,
-      message: err?.message,
-      url: `${API_BASE}${path}`,
-    });
-    // fall through to fallback
-  }
-
-  // Fallback path: try dashboard to infer current badge or icon
-  try {
-    // eslint-disable-next-line no-console
-    console.log('[Badge][fallback] trying /dashboard to infer badge', { userId });
-    const dashRes = await getAxios(tk).get('/dashboard', { params: { userId } });
-    const dash = dashRes?.data || {};
-    const ui = dash.userInfo || dash.profile || dash;
-    const iconFromDash = ui?.badge?.iconUrl || ui?.badge?.icon_url || dash.badgeIconUrl || dash.badge_icon_url;
-    const badgeId = ui?.displayed_badge_id || ui?.displayedBadgeId || dash.displayed_badge_id || dash.displayedBadgeId || ui?.current_badge_id || ui?.currentBadgeId || ui?.badge_id || ui?.badgeId || ui?.badge?.id || dash.current_badge_id || dash.currentBadgeId;
-    if (iconFromDash) {
-      // eslint-disable-next-line no-console
-      console.log('[Badge][fallback] using icon from dashboard', iconFromDash);
-      return { iconUrl: iconFromDash };
-    }
-    if (badgeId) {
-      // eslint-disable-next-line no-console
-      console.log('[Badge][fallback] fetching badge by id', badgeId);
+    const raw = res?.data || res;
+    if (!raw || typeof raw !== 'object') return null;
+    // Normalize to expected shape
+    const norm = {
+      id: raw.id ?? raw.badgeId ?? raw.badge_id ?? null,
+      name: raw.name ?? raw.badgeName ?? raw.badge_name ?? '',
+      iconUrl: toAbsoluteUrl(raw.iconUrl ?? raw.icon_url ?? raw.icon ?? null),
+      levelNumber: raw.levelNumber ?? raw.level_number ?? raw.level ?? null,
+      description: raw.description ?? '',
+      isAchieved: (raw.isAchieved ?? raw.is_achieved ?? raw.achieved ?? true) === true,
+      progress: raw.progress ?? raw.completion ?? raw.percent ?? null,
+    };
+    // If endpoint succeeded but lacks icon/id, softly enrich from dashboard
+    if (!norm.iconUrl || norm.id == null) {
       try {
-        const byId = await fetchBadgeById(badgeId, tk);
-        const data = byId?.data || byId;
-        if (data) return data;
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error('[Badge][fallback][byId][error]', { message: e?.message, status: e?.response?.status });
-      }
+        const dashRes = await getAxios(tk).get('/dashboard', { params: { userId } });
+        const dash = dashRes?.data || {};
+        const ui = dash.userInfo || dash.profile || dash;
+        const fallbackIcon = ui?.badge?.iconUrl || ui?.badge?.icon_url || dash.badgeIconUrl || dash.badge_icon_url || null;
+        const fallbackId = ui?.displayed_badge_id || ui?.badge?.id || null;
+        norm.iconUrl = norm.iconUrl || toAbsoluteUrl(fallbackIcon);
+        norm.id = norm.id ?? fallbackId;
+        if (dbg) console.log('[Badge][enrich][dashboard]', { after: norm });
+      } catch (_) { /* ignore enrichment failures */ }
     }
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error('[Badge][fallback][dash][error]', { message: e?.message, status: e?.response?.status });
+    if (dbg) console.log('[Badge][response][normalized]', norm);
+    return norm;
+  } catch (err) {
+    // Quiet on 404; only log in debug
+    if (dbg) console.warn('[Badge][error]', { status: err?.response?.status, message: err?.message, url: buildUrl(path) });
+    // Fallback: infer from dashboard (currentLevelTitle/Number, or badge.iconUrl)
+    try {
+      const dashRes = await getAxios(tk).get('/dashboard', { params: { userId } });
+      const dash = dashRes?.data || {};
+      const ui = dash.userInfo || dash.profile || dash;
+      const icon = ui?.badge?.iconUrl || ui?.badge?.icon_url || dash.badgeIconUrl || dash.badge_icon_url || null;
+      const name = ui?.currentLevelTitle || ui?.tierName || ui?.tier || '';
+      const levelNumber = ui?.currentLevelNumber || ui?.levelNumber || ui?.level || null;
+      const norm = {
+        id: ui?.displayed_badge_id || ui?.badge?.id || null,
+        name: name || '',
+        iconUrl: toAbsoluteUrl(icon),
+        levelNumber: levelNumber ?? null,
+        description: name ? `${name} 배지` : '',
+        isAchieved: true,
+        progress: 100,
+      };
+      if (dbg) console.log('[Badge][fallback][dashboard][normalized]', norm);
+      return norm;
+    } catch (_) {
+      return null;
+    }
   }
-
-  // Final: nothing found
-  return null;
 }
 
 export async function fetchAchievedBadges(userId, token) {

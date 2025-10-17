@@ -1,6 +1,6 @@
 //초 중 고 레벨 선택
 import { useLayoutEffect, useRef, useState, useEffect } from "react";
-import { getLevelsBySubsector, getSectorsWithSubsectors, getLevelDetail } from "../../api/explore";
+import { getLevelsBySubsector, getSectorsWithSubsectors } from "../../api/explore";
 import "./LevelPicker.css";
 
 // props: mainTopic (대분류), subTopic (선택된 소분류)
@@ -99,25 +99,14 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
           return;
         }
         const list = await getLevelsBySubsector(subsectorId);
-        // 상세가 비어있을 수 있어 보강: 개별 레벨 상세 호출로 desc/goal/title 채움
+        // 백엔드에서 내려준 데이터만으로 매핑 (개별 상세 조회 제거)
         const mapped = Array.isArray(list)
-          ? await Promise.all(list.map(async (l) => {
+          ? list.map((l) => {
               const id = l.id ?? l.levelId ?? l.level_id;
-              let title = l.title ?? l.name ?? (l.levelNumber ? `레벨 ${l.levelNumber}` : (id ? `레벨 ${id}` : '레벨'));
-              let desc = l.desc ?? l.description ?? '';
-              let goal = l.goal ?? l.learning_goal ?? l.learningGoal ?? '';
-              let levelNumber = l.levelNumber ?? l.level_number ?? l.number;
-              if ((!desc || !goal) && id) {
-                try {
-                  const detail = await getLevelDetail(id);
-                  if (detail) {
-                    title = detail.title || title;
-                    desc = detail.desc ?? desc;
-                    goal = detail.goal ?? goal;
-                    if (detail.levelNumber != null) levelNumber = detail.levelNumber;
-                  }
-                } catch (_) { /* ignore */ }
-              }
+              const levelNumber = l.levelNumber ?? l.level_number ?? l.number;
+              const title = l.title ?? l.name ?? (levelNumber ? `레벨 ${levelNumber}` : (id ? `레벨 ${id}` : '레벨'));
+              const desc = l.desc ?? l.description ?? '';
+              const goal = l.goal ?? l.learning_goal ?? l.learningGoal ?? '';
               return {
                 id: id ?? levelNumber,
                 key: id ?? levelNumber,
@@ -126,7 +115,7 @@ export default function LevelPicker({ mainTopic, subTopic, onConfirm, onBack }) 
                 goal,
                 levelNumber,
               };
-            }))
+            })
           : [];
         if (!cancelled) {
           setLevels(mapped);

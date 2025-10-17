@@ -18,7 +18,7 @@ import "./QuizQuestion.css";
 import ProgressHeader from "./ProgressHeader";
 import q4ArticlePng from "../../assets/explore/q4-article.png";
 // getKeyPoints 제거: 문제 객체에 포함된 solvingKeypointsMd / teachingExplainerMd 사용
-import { completeQuiz } from "../../api/explore";
+import { completeQuiz, submitQuizAnswer, submitAnswer } from "../../api/explore";
 
 /**
  * 🎯 QuizQuestion 컴포넌트
@@ -49,6 +49,36 @@ export default function QuizQuestion({ current,
   // NEW: 정답 아이콘 주입용 (A/B/C/D 각각 문자열 URL 또는 SVGR 컴포넌트)
   correctIcons = {}
 }) {
+  // Per-question submission dedupe set: avoid duplicate submits for the same (user, quiz, question)
+  const submittedSetRef = useRef(new Set());
+
+  const getUserKey = () => {
+    try {
+      const uid = sessionStorage.getItem('userId') || localStorage.getItem('userId') || 'guest';
+      return String(uid);
+    } catch (_) { return 'guest'; }
+  };
+
+  const safeSubmitCurrentQuestion = async () => {
+    try {
+      if (!Array.isArray(question?.options)) return;
+      if (selected == null || selected < 0) return;
+      const qId = question?.id;
+      const sel = question?.options?.[selected]?.id;
+      if (!quizId || !qId || !sel) return;
+      const key = `${getUserKey()}:${quizId}:${qId}`;
+      if (submittedSetRef.current.has(key)) return;
+      submittedSetRef.current.add(key);
+      // Best-effort fire-and-forget; backend will persist per-question attempt
+      await submitAnswer({ quizId, questionId: qId, selectedOptionId: sel });
+    } catch (e) {
+      const isProd = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production';
+      const dbg = typeof window !== 'undefined' && (window.__FIN_DEBUG || window.__QUIZ_DEBUG);
+      if (!isProd || dbg) {
+        try { console.warn('[QuizQuestion] submitAnswer failed (ignored):', e?.message || e); } catch (_) {}
+      }
+    }
+  };
   
   // 🎓 학습 모드 관련 상태
   const [showLearning, setShowLearning] = useState(false);        // 학습 모드 표시 여부
@@ -94,16 +124,39 @@ export default function QuizQuestion({ current,
     }
   }
 
-  // NEW: 서버 채점 응답의 정답 인덱스를 “%4 매핑”으로 계산 (1→A(0), 2→B(1), 3→C(2), 0→D(3))
-  const mapServerCorrectToIdx = (scid) => {
-    const n = Number(scid);
-    if (!Number.isFinite(n)) return -1;
-    const r = n % 4;
-    return r === 0 ? 3 : r - 1;
+  // NEW: 서버 채점 응답의 정답 인덱스 계산 (옵션 ID 매칭 우선, 1-based 숫자 폴백, 최후 모듈러 폴백)
+  const mapServerCorrectToIdx = (serverValue, opts = []) => {
+    if (serverValue == null || !Array.isArray(opts) || opts.length === 0) return -1;
+    const sv = serverValue;
+    // 1) 옵션 id와 문자열 동일성 매칭 (서버가 optionId를 그대로 줄 때)
+    const svStr = String(sv);
+    let idx = opts.findIndex(o => String(o?.id) === svStr);
+    if (idx >= 0) return idx;
+    // 2) 레터(A-D) 형태일 때
+    if (/^[A-Za-z]$/.test(svStr)) {
+      const letterIdx = svStr.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+      if (letterIdx >= 0 && letterIdx < opts.length) return letterIdx;
+    }
+    // 3) 1-based 정수 인덱스일 때 (옵션 id가 1..N인 경우와 혼동 방지: 먼저 인덱스로 해석)
+    const n = Number(sv);
+    if (Number.isInteger(n)) {
+      // 3a) 1..N 범위면 0-based 인덱스로 처리
+      if (n >= 1 && n <= opts.length) return n - 1;
+      // 3b) 옵션 id가 1..N으로 구성되어 있다면 id 매칭도 시도
+      const idsAreSequential = opts.every((o, i) => Number(o?.id) === i + 1);
+      if (idsAreSequential) {
+        const byId = opts.findIndex(o => Number(o?.id) === n);
+        if (byId >= 0) return byId;
+      }
+      // 3c) 최후: 모듈러 폴백 (서버가 1~4 외 값을 줄 때도 일관된 매핑 보장)
+      const r = ((n % opts.length) + opts.length) % opts.length; // safe modulo
+      return r;
+    }
+    return -1;
   };
   const idxToLetter = (idx) => (idx >= 0 ? String.fromCharCode(65 + idx) : '');
   const serverCorrectIdx = (answerResult?.serverCorrectOptionId != null)
-    ? mapServerCorrectToIdx(answerResult.serverCorrectOptionId)
+    ? mapServerCorrectToIdx(answerResult.serverCorrectOptionId, question?.options || [])
     : -1;
   const finalCorrectIdx = (serverCorrectIdx >= 0 ? serverCorrectIdx : correctIdx);
   const correctLetter = idxToLetter(finalCorrectIdx);
@@ -692,7 +745,36 @@ export default function QuizQuestion({ current,
             const summary = buildCompletionSummary();
             console.log('[QuizQuestion][Complete] posting summary', { quizId, summary });
             completionPostedRef.current = true;
-            await completeQuiz(quizId, uid, token, summary);
+            // 1) 명세 준수: 모든 답안을 한 번에 제출 (POST /api/quizzes/submit-answer)
+            try {
+              const answersPayload = Array.isArray(summary.answers)
+                ? summary.answers.map(a => ({ questionId: a.questionId, selectedOptionId: a.selectedOptionId }))
+                : [];
+              if (answersPayload.length > 0) {
+                const submitResp = await submitQuizAnswer(quizId, uid, answersPayload, token);
+                try { console.log('[QuizQuestion][Complete][submit-answer][response]', submitResp); } catch (_) {}
+              }
+            } catch (e) {
+              console.warn('[QuizQuestion][Complete] submitQuizAnswer failed (continuing):', e?.message || e);
+            }
+            // 2) 완료/진행도 업데이트 (서버 기록용)
+            try {
+              const completeResp = await completeQuiz(quizId, uid, token, summary);
+              try { console.log('[QuizQuestion][Complete][complete][response]', completeResp); } catch (_) {}
+              try {
+                // 백엔드 기록 완료 후 전역 이벤트로 진행도/배지 재조회 트리거
+                window.dispatchEvent(new CustomEvent('fin:quiz-completed', {
+                  detail: {
+                    quizId,
+                    userId: uid,
+                    summary,
+                    result: completeResp || null,
+                  }
+                }));
+              } catch (_) { /* ignore */ }
+            } catch (e) {
+              console.warn('[QuizQuestion][Complete] completeQuiz failed (continuing):', e?.message || e);
+            }
           } else {
             console.warn('[QuizQuestion][Complete] quizId missing, skip completeQuiz POST');
           }
@@ -1067,8 +1149,11 @@ export default function QuizQuestion({ current,
       >
         <button
           disabled={selected === null}
-          onClick={() => {
+          onClick={async () => {
             if (!showResult) {
+              // Step 1: per-question submit (guarded against duplicates)
+              await safeSubmitCurrentQuestion();
+              // Then continue existing check flow
               onCheck();
             } else {
               handleNext();

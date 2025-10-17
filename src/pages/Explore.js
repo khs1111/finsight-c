@@ -12,8 +12,8 @@ import ExploreMain from "../components/explore/ExploreMain";
 import QuizQuestion from "../components/explore/QuizQuestion";
 import CompletionScreen from "../components/explore/CompletionScreen";
 
-import {getQuestions as apiGetQuestions, postAttempt, getQuizIdForSelection, startLevel, completeLevel, fetchQuizAttempts } from "../api/explore";
-import { updateBadges } from "../api/profile";
+import {getQuestions as apiGetQuestions, postAttempt, getQuizIdForSelection, startLevel } from "../api/explore";
+// 클라이언트에서 배지 업데이트 호출 제거: 백엔드가 갱신 후 조회로만 표시
 import { createWrongNote } from "../api/community";
 import { addWrongNoteImmediate } from "../components/study/useWrongNoteStore";
 import CategoryNav from "../components/news/CategoryNav";
@@ -31,16 +31,8 @@ export default function Explore() {
     }
   };
   // [화면 단계] 1: 주제선택, 2: 난이도선택, 3: 탐험메인, 4: 문제풀이, 5: 완료
-  const [step, setStep] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem('explore:state');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && Number.isInteger(parsed.step)) return parsed.step;
-      }
-    } catch (_) {}
-    return 1;
-  });
+  // 항상 주제 선택(step=1)부터 시작
+  const [step, setStep] = useState(1);
   // [주제/서브주제/레벨] - 이름/ID 모두 관리 (API 호출 및 화면 표시용)
   const [mainTopic, setMainTopic] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('explore:mainTopic') || 'null'); } catch { return null; }
@@ -75,6 +67,7 @@ export default function Explore() {
   const autoRefetchedRef = useRef(false);
 
   // Persist core selection and step in sessionStorage so back navigation returns to last selection
+  // 단계 저장은 유지하되, 초기 진입은 항상 1에서 시작하므로 단순 기록만 수행
   useEffect(() => {
     try { sessionStorage.setItem('explore:state', JSON.stringify({ step })); } catch {}
   }, [step]);
@@ -86,21 +79,7 @@ export default function Explore() {
   useEffect(() => { try { sessionStorage.setItem('explore:levelNumber', JSON.stringify(levelNumber)); } catch {} }, [levelNumber]);
   useEffect(() => { try { sessionStorage.setItem('explore:levelName', JSON.stringify(levelName)); } catch {} }, [levelName]);
 
-  // [진행도 저장] - useProgress 훅과 동일한 스키마로 localStorage에 기록 (문제별 선택/정답 여부 저장)
-  const persistProgress = (lvl, question, selectedOptionId, isCorrect, currentIndex) => {
-    try {
-      const key = `explorer:${lvl || 'default'}:progress`;
-      const saved = JSON.parse(localStorage.getItem(key) || 'null') || { index: 0, answers: [] };
-      const answers = Array.isArray(saved.answers) ? saved.answers.slice() : [];
-      // 동일 qid가 이미 있으면 덮어쓰기, 없으면 추가
-      const qid = question?.id ?? `${Date.now()}`;
-      const existingIdx = answers.findIndex(a => String(a.qid) === String(qid));
-      const record = { qid, choice: selectedOptionId, correct: !!isCorrect };
-      if (existingIdx >= 0) answers[existingIdx] = record; else answers.push(record);
-      const idx = Math.max(saved.index || 0, (Number.isFinite(currentIndex) ? currentIndex : 0) + 1);
-      localStorage.setItem(key, JSON.stringify({ index: idx, answers }));
-    } catch (_) { /* noop */ }
-  };
+  // 로컬 진행도 저장 제거: 진행도는 서버가 단일 진실원천
 
   // [출석 기록] - 5단계(완료) 진입 시 오늘 날짜를 attendance에 기록 (중복 방지)
   useEffect(() => {
@@ -124,47 +103,7 @@ export default function Explore() {
     return () => setHide(false); 
   }, [step, setHide]);
 
-  // 서버 저장된 시도(정오답/선택지) 동기화: questions/quizId가 준비되면 1회 반영
-  useEffect(() => {
-    const canSync = quizId && Array.isArray(questions) && questions.length > 0 && results.length === 0;
-    if (!canSync) return;
-    (async () => {
-      try {
-        const userId = localStorage.getItem('userId') || undefined;
-        const token = localStorage.getItem('accessToken') || undefined;
-        const attempts = await fetchQuizAttempts(quizId, userId, token);
-        if (!Array.isArray(attempts) || attempts.length === 0) return;
-        // question.id 기준으로 매핑해서 selected/checked/correct 구성
-        const qIndexById = new Map();
-        questions.forEach((q, idx) => qIndexById.set(String(q.id), idx));
-        const next = Array.from({ length: questions.length }, () => ({ selected: null, checked: false, correct: null }));
-        attempts.forEach(att => {
-          const key = String(att.questionId);
-          if (!qIndexById.has(key)) return;
-          const idx = qIndexById.get(key);
-          next[idx] = {
-            selected: att.selectedOptionId ?? null,
-            checked: true,
-            correct: typeof att.isCorrect === 'boolean' ? att.isCorrect : null,
-            serverCorrect: typeof att.isCorrect === 'boolean' ? att.isCorrect : null,
-            serverCorrectOptionId: att.correctOptionId ?? null,
-            serverFeedback: att.feedback ?? null,
-          };
-        });
-        setResults(next);
-        // 진행도 이벤트 전파
-        try {
-          const answeredCountLocal = next.filter(r => r && r.checked === true).length;
-          const totalQuestionsLocal = Array.isArray(questions) ? questions.length : 0;
-          const detail = { answeredCount: answeredCountLocal, totalQuestions: totalQuestionsLocal };
-          window.dispatchEvent(new CustomEvent('fin:answer-submitted', { detail }));
-        } catch (_) {}
-      } catch (e) {
-        console.warn('[Attempts Sync] 실패:', e?.message || e);
-      }
-    })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quizId, questions]);
+  // 서버 저장된 시도 동기화 기능 제거 (attempts 엔드포인트 미제공으로 404 발생)
 
   // Auto-refetch questions when returning to Explore with saved selection
   useEffect(() => {
@@ -392,6 +331,8 @@ export default function Explore() {
               userId: localStorage.getItem('userId') || undefined,
               token: localStorage.getItem('accessToken') || undefined,
             });
+            // 서버 응답을 콘솔에 명확히 출력하여 판정/정답/메시지를 확인 가능하게 함
+            try { console.log('[Explore][onCheck][submit-answer][response]', resp); } catch (_) {}
             // 정상화된 응답 필드 사용 (api.submitAnswer가 isCorrect/feedback/correctOptionId로 반환)
             if (resp) {
               if (typeof resp.isCorrect === 'boolean') serverIsCorrect = resp.isCorrect;
@@ -418,15 +359,8 @@ export default function Explore() {
             serverFeedback,
           };
           setResults(newResults);
-          persistProgress(level, question, selectedOptionId, isCorrect, current);
 
-          // 즉시 진행도 갱신: 로컬 결과로 answeredCount 계산 후 ExploreMain에 이벤트 전파
-          try {
-            const answeredCountLocal = (newResults.filter(r => r && r.checked === true).length);
-            const totalQuestionsLocal = Array.isArray(questions) ? questions.length : 0;
-            const detail = { answeredCount: answeredCountLocal, totalQuestions: totalQuestionsLocal };
-            window.dispatchEvent(new CustomEvent('fin:answer-submitted', { detail }));
-          } catch (_) { /* noop */ }
+          // 로컬 진행도 이벤트 전파 제거: 백엔드 완료 이벤트만 사용
 
           // 5) 오답노트 기록 (로컬/백엔드)
           if (!isCorrect) {
@@ -455,25 +389,8 @@ export default function Explore() {
         }}
         answerResult={currentResult}
         onComplete={async () => {
-          // 완료 POST는 QuizQuestion 내부에서 처리. 여기서는 레벨 완료/배지 업데이트 및 화면 전환만 수행
-          const userId = localStorage.getItem('userId') || undefined;
-          const token = localStorage.getItem('accessToken') || undefined;
-          try {
-            if (level) {
-              console.log('[CompleteLevel] 호출', { levelId: level, userId });
-              await completeLevel(level, userId, token);
-            }
-          } catch (e) {
-            console.warn('[CompleteLevel] 호출 실패 (무시):', e?.message || e);
-          }
-          try {
-            if (userId) {
-              console.log('[Badges] 업데이트 호출', { userId });
-              await updateBadges(userId, token);
-            }
-          } catch (e) {
-            console.warn('[Badges] 업데이트 실패 (무시):', e?.message || e);
-          }
+          // 완료 POST는 QuizQuestion 내부에서 처리. 여기서는 화면 전환만 수행
+          // 레벨 완료 호출 제거: 퀴즈 완료 시 백엔드가 진행도/배지를 자체 갱신하고, ExploreMain이 재조회함
           setStep(5);
         }}
         onBack={handleBack}
@@ -535,9 +452,28 @@ export default function Explore() {
           setStep(4);
         }}
         onExplore={() => {
+          // 홈(주제 선택)으로: 선택값과 진행 상태 초기화
           setQid(0);
           setResults([]);
-          setStep(3);
+          setMainTopic(null);
+          setMainTopicId(null);
+          setSubTopic(null);
+          setSubTopicId(null);
+          setLevel(null);
+          setLevelNumber(null);
+          setLevelName(null);
+          try {
+            sessionStorage.removeItem('explore:mainTopic');
+            sessionStorage.removeItem('explore:mainTopicId');
+            sessionStorage.removeItem('explore:subTopic');
+            sessionStorage.removeItem('explore:subTopicId');
+            sessionStorage.removeItem('explore:levelId');
+            sessionStorage.removeItem('explore:levelNumber');
+            sessionStorage.removeItem('explore:levelName');
+            // step 저장 상태도 초기화해 다음 진입 시 1단계 보장
+            sessionStorage.removeItem('explore:state');
+          } catch (_) {}
+          setStep(1);
         }}
       />
     );
