@@ -55,6 +55,11 @@ function App() {
     }
   }, [isProfile]);
 
+  useEffect(() => {
+    // Reset scroll position to top on route change
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   return (
     <>
   {!(isExplore || isStudy || isAddWord || isCommunity || isProfile || isNewsletter || isLogin) && <Header onSearch={handleSearch} />}

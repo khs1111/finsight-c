@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import AntImg from '../assets/profile/ant.png';
 import BackImg from '../assets/profile/back.png';
-import DefaultTierBadge from '../assets/tier/emerald.png';
 import BronzeBadge from '../assets/tier/bronze.png';
 import SilverBadge from '../assets/tier/silver.png';
 import GoldBadge from '../assets/tier/gold.png';
@@ -270,7 +269,6 @@ export default function Profile() {
     if (/SILVER|실버/.test(t)) return SilverBadge;
     if (/BRONZE|브론즈/.test(t)) return BronzeBadge;
     // 3) 최종 기본값
-    return DefaultTierBadge;
   };
   useEffect(() => {
     (async () => {
@@ -362,7 +360,7 @@ export default function Profile() {
     })();
   }, []);
   // 화면 표시용 닉네임/티어: 백엔드 닉네임 우선, 비어있으면 게스트 기본값
-  const displayNickname = (profile?.nickname && String(profile.nickname).trim()) || '게스트';
+  const displayNickname = (profile?.nickname && String(profile.nickname).trim());
   const displayTier = normalizeTier(profile.tier);
   const tierIconSrc = tierImageFor(displayTier, profile.tierImageUrl);
   const displayScore = useMemo(() => {
@@ -395,10 +393,6 @@ export default function Profile() {
                 height={32}
                 onError={(e) => {
                   // If backend icon fails to load, fall back to bundled default once
-                  if (e.currentTarget.src !== DefaultTierBadge) {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = DefaultTierBadge;
-                  }
                 }}
               />
               <span className="nickname-inline">{displayNickname}</span>
