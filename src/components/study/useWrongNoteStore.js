@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getWrongNoteStatistics, getWrongNotes } from '../../api/explore';
+import { getWrongNotes } from '../../api/explore';
 
 // In-memory wrong note (틀린문제) store
 // Each item: { id, question, userAnswer, correctAnswer, explanation?, addedAt }

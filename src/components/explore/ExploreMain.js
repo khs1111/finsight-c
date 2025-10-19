@@ -150,7 +150,7 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
 
   // 진행도 상태: getLevelProgress 응답만 사용
   const [progress, setProgress] = useState(null); // getLevelProgress 응답 전체
-  const [progressLoading, setProgressLoading] = useState(false); // 미사용, 추후 필요시 사용
+  // 진행도 로딩 상태 미사용 변수 삭제
 
   // selection 변경 시 진행도 조회
   useEffect(() => {
@@ -159,14 +159,11 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     if (!levelId || !userId) return;
     let cancelled = false;
     (async () => {
-      setProgressLoading(true);
       try {
         const data = await getLevelProgress(userId, levelId);
         if (!cancelled) setProgress(data);
       } catch (e) {
         if (!cancelled) setProgress(null);
-      } finally {
-        setProgressLoading(false);
       }
     })();
     return () => { cancelled = true; };
@@ -178,8 +175,7 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
       const { levelId } = selection || {};
       const userId = localStorage.getItem('userId') || undefined;
       if (!levelId || !userId) return;
-      setProgressLoading(true);
-      getLevelProgress(userId, levelId).then(data => setProgress(data)).finally(() => setProgressLoading(false));
+      getLevelProgress(userId, levelId).then(data => setProgress(data));
     };
     window.addEventListener('fin:quiz-completed', handler);
     return () => window.removeEventListener('fin:quiz-completed', handler);
