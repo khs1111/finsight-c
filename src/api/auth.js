@@ -72,14 +72,21 @@ export const guestLogin = async (userId = null) => {
     }
 
     const data = await response.json();
-    
+
     // 토큰과 사용자 ID를 로컬 스토리지에 저장
     if (data.accessToken && data.userId) {
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('userId', data.userId.toString());
       console.log('게스트 로그인 성공:', data);
+
+      // --- 프로필 캐시 시드 (백그라운드) ---
+      try {
+        seedProfileCacheAfterLogin(data.userId, data.accessToken);
+      } catch (_) {
+        // 캐시 시드는 실패해도 로그인 플로우에 영향 주지 않음
+      }
     }
-    
+
     return data;
   } catch (error) {
     console.error('게스트 로그인 실패:', error);
@@ -139,6 +146,12 @@ export const isLoggedIn = () => {
 export const logout = () => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('userId');
+  try {
+    // 프로필 즉시 렌더 캐시 제거
+    const KEY = 'profile.cache.v1';
+    sessionStorage.removeItem(KEY);
+    localStorage.removeItem(KEY);
+  } catch (_) {}
   console.log('게스트 로그아웃 완료');
 };
 
@@ -187,3 +200,82 @@ export const autoGuestLogin = async () => {
     }
   }
 };
+
+// ==============================
+// 내부 유틸: 프로필 캐시 시드
+// ==============================
+const PROFILE_CACHE_KEY = 'profile.cache.v1';
+function writeProfileCache(patch) {
+  try {
+    const raw = sessionStorage.getItem(PROFILE_CACHE_KEY) || localStorage.getItem(PROFILE_CACHE_KEY);
+    const base = raw ? (JSON.parse(raw) || {}) : {};
+    const next = { ...base, ...patch, updatedAt: Date.now() };
+    const serialized = JSON.stringify(next);
+    sessionStorage.setItem(PROFILE_CACHE_KEY, serialized);
+    localStorage.setItem(PROFILE_CACHE_KEY, serialized);
+  } catch (_) {}
+}
+
+function buildUrl(path) {
+  try {
+    const base = String(API_BASE || '').replace(/\/+$/, '');
+    const baseHasApi = /\/api$/i.test(base);
+    let p = String(path || '');
+    if (!p.startsWith('/')) p = `/${p}`;
+    if (baseHasApi && p.startsWith('/api/')) p = p.replace(/^\/api/, '');
+    if (!baseHasApi && !p.startsWith('/api/')) p = `/api${p}`;
+    return `${base}${p}`;
+  } catch (_) {
+    return `${API_BASE}${path}`;
+  }
+}
+
+async function seedProfileCacheAfterLogin(userId, token) {
+  if (!userId || !token) return;
+  // 사용자 ID만으로도 캐시 스켈레톤 생성
+  writeProfileCache({ userId });
+
+  const headers = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  // 대시보드: 닉네임/점수
+  try {
+    const dashUrl = buildUrl(`/dashboard?userId=${userId}`);
+    const res = await fetch(dashUrl, { method: 'GET', headers, credentials: 'include' });
+    if (res.ok) {
+      const dash = await res.json().catch(() => ({}));
+      const ui = dash?.userInfo || dash?.profile || dash || {};
+      const nickname = ui?.nickname || '';
+      if (nickname) writeProfileCache({ nickname, userId });
+      const cand = [
+        ui?.score, ui?.points, ui?.point, ui?.totalScore, ui?.totalPoints, ui?.xp, ui?.exp,
+        dash?.score, dash?.points, dash?.totalScore, dash?.totalPoints, dash?.xp, dash?.exp,
+      ];
+      for (const v of cand) {
+        if (v == null) continue;
+        const n = typeof v === 'number' ? v : Number(v);
+        if (!Number.isNaN(n)) { writeProfileCache({ score: n, userId }); break; }
+      }
+    }
+  } catch (_) {}
+
+  // 현재 배지: 티어명/아이콘
+  try {
+    const badgeUrl = buildUrl(`/badges/user/${userId}/current`);
+    const res = await fetch(badgeUrl, { method: 'GET', headers, credentials: 'include' });
+    if (res.ok) {
+      const raw = await res.json().catch(() => null);
+      if (raw && typeof raw === 'object') {
+        const icon = raw?.iconUrl || raw?.icon_url || raw?.badge?.iconUrl || raw?.badge?.icon_url;
+        const name = raw?.name || raw?.badge?.name || raw?.title || raw?.badge?.title;
+        const patch = { userId };
+        if (icon) patch.tierImageUrl = icon;
+        if (name) patch.tier = name;
+        writeProfileCache(patch);
+      }
+    }
+  } catch (_) {}
+}
