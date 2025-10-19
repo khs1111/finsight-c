@@ -369,7 +369,7 @@ export const getLevelQuizzes = async (levelId, userId, token) => {
 
 // 레벨별 징검다리 진행률 조회
 export async function getLevelProgress(userId, levelId) {
-  const response = await fetch(`/api/progress/user/${userId}/level/${levelId}`, {
+  const response = await fetch(`${API_BASE}/levels/${levelId}/progress?userId=${userId}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -386,7 +386,7 @@ export async function getLevelProgress(userId, levelId) {
 
 // 사용자 전체 진행률 요약 조회
 export async function getUserProgressSummary(userId) {
-  const response = await fetch(`/api/progress/user/${userId}/summary`, {
+  const response = await fetch(`${API_BASE}/progress/user/${userId}/summary`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -1381,7 +1381,7 @@ export const retryQuiz = async (quizId, userId, token) => {
 
   // 오답노트 목록 조회 (필터링, 페이징)
   export async function getWrongNotes(userId, page = 0, size = 20, filter = 'all') {
-    const response = await fetch(`/api/wrong-notes?userId=${userId}&page=${page}&size=${size}&filter=${filter}`, {
+  const response = await fetch(`${API_BASE}/wrong-notes?userId=${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -1397,7 +1397,7 @@ export const retryQuiz = async (quizId, userId, token) => {
 
   // 특정 오답노트 상세 조회
   export async function getWrongNote(userId, noteId) {
-    const response = await fetch(`/api/wrong-notes/${noteId}?userId=${userId}`, {
+  const response = await fetch(`${API_BASE}/wrong-notes/${noteId}?userId=${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -1413,7 +1413,7 @@ export const retryQuiz = async (quizId, userId, token) => {
 
   // 개인 메모 업데이트
   export async function updatePersonalNote(userId, noteId, personalNoteMd) {
-    const response = await fetch(`/api/wrong-notes/${noteId}/personal-note?userId=${userId}`, {
+  const response = await fetch(`${API_BASE}/wrong-notes/${noteId}/personal-note?userId=${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -1430,7 +1430,7 @@ export const retryQuiz = async (quizId, userId, token) => {
 
   // 해결 상태 토글
   export async function toggleResolved(userId, noteId) {
-    const response = await fetch(`/api/wrong-notes/${noteId}/toggle-resolved?userId=${userId}`, {
+  const response = await fetch(`${API_BASE}/wrong-notes/${noteId}/toggle-resolved?userId=${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -1446,7 +1446,7 @@ export const retryQuiz = async (quizId, userId, token) => {
 
   // 복습 완료 처리
   export async function markAsReviewed(userId, noteId) {
-    const response = await fetch(`/api/wrong-notes/${noteId}/mark-reviewed?userId=${userId}`, {
+  const response = await fetch(`${API_BASE}/wrong-notes/${noteId}/mark-reviewed?userId=${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

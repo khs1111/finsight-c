@@ -6,7 +6,8 @@ import CommentDropdown from '../components/community/CommentDropdown';
 import './StudyPage.css';
 import './CommunityPage.css';
 import RankFilterDropdown from '../components/community/RankFilterDropdown';
-import { fetchCommunityPosts, likeCommunityPost, unlikeCommunityPost } from '../api/community';
+import { fetchCommunityPosts } from '../api/community';
+import { API_BASE as BASE_URL } from '../api/config';
 import { fetchBadgeById } from '../api/profile';
 import { useNavigate } from 'react-router-dom';
 import defaultAvatar from '../assets/community-default-avatar.svg';
@@ -77,6 +78,12 @@ export default function CommunityPage() {
           };
         };
         let list = Array.isArray(data) ? data.map(normalizePost) : [];
+        // 최신순 정렬 (createdAt 내림차순)
+        list = list.slice().sort((a, b) => {
+          const aTime = new Date(a.createdAt).getTime();
+          const bTime = new Date(b.createdAt).getTime();
+          return bTime - aTime;
+        });
         // author_badge_id -> badge icon 보강 (병렬 최소화)
         try {
           const token = localStorage.getItem('accessToken');
@@ -152,26 +159,19 @@ export default function CommunityPage() {
   };
 
   const toggleLike = async (post) => {
-    const wasLiked = !!likedMap.get(post.id);
-    const nextLiked = !wasLiked;
-    // 낙관적 업데이트: likeCount 조정 + liked 상태 토글
-    setLikedMap(prev => new Map(prev).set(post.id, nextLiked));
-    setPosts(prev => prev.map(p => p.id === post.id
-      ? { ...p, likeCount: (p.likeCount ?? 0) + (nextLiked ? 1 : -1) }
-      : p));
+    const userId = localStorage.getItem('userId');
     try {
-      const token = localStorage.getItem('accessToken');
-      if (nextLiked) {
-        await likeCommunityPost(post.id, token);
-      } else {
-        await unlikeCommunityPost(post.id, token);
-      }
-    } catch (_) {
-      // 실패 시 롤백
-      setLikedMap(prev => new Map(prev).set(post.id, wasLiked));
+      const result = await import('../api/community').then(mod => mod.togglePostLike(userId, post.id));
+      // 서버 응답에 따라 UI 업데이트
+      setLikedMap(prev => new Map(prev).set(post.id, !!result.liked));
       setPosts(prev => prev.map(p => p.id === post.id
-        ? { ...p, likeCount: (p.likeCount ?? 0) + (wasLiked ? 1 : -1) }
+        ? { ...p, likeCount: result.likeCount, liked: !!result.liked }
         : p));
+      if (result.message) {
+        // 메시지 표시 함수가 있다면 호출 (예: showMessage(result.message))
+      }
+    } catch (err) {
+      // 실패 시 에러 처리 (옵션)
     }
   };
 
@@ -225,7 +225,7 @@ export default function CommunityPage() {
       
       <div className="community-content">
         {loading && <div className="community-loading">글 목록을 불러오는 중...</div>}
-        {error && <div className="community-error">{error}</div>}
+  {/* {error && <div className="community-error">{error}</div>} */}
         {!loading && !error && posts.length === 0 && (
           <div className="community-empty">글이 없습니다.</div>
         )}
@@ -309,7 +309,7 @@ export default function CommunityPage() {
                                     setPosts(prev => prev.filter(p => p.id !== post.id));
                                     window.alert('게시글이 삭제되었습니다.');
                                   } catch (e) {
-                                    window.alert('게시글 삭제에 실패했습니다.');
+                                    console.error('게시글 삭제에 실패했습니다.', e);
                                   }
                                 }}
                               >
@@ -393,11 +393,12 @@ export default function CommunityPage() {
 
 // fetch 기반 게시글 삭제 함수 (API 명세에 맞게 복원)
 async function deletePost(userId, postId) {
-  const response = await fetch(`/api/community/posts/${postId}`, {
+  const token = localStorage.getItem('accessToken');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const response = await fetch(`${BASE_URL}/community/posts/${postId}`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    }
+    headers
   });
   if (!response.ok) {
     throw new Error('포스트 삭제 실패');

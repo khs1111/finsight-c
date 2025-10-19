@@ -54,50 +54,29 @@ function toAbsoluteUrl(url) {
 
 // 프로필 기본 정보: 닉네임/티어/티어 이미지
 export async function fetchProfile() {
-  // 1) 대시보드 기반 우선 시도 (404 소음 방지)
   try {
     const userId = Number(sessionStorage.getItem('userId')) || undefined;
-    if (userId) {
-      const dash = await http(`/dashboard?userId=${userId}`);
-  const nickname = dash?.userInfo?.nickname || sessionStorage.getItem('username') || '피니';
-      // 가능한 위치에서 티어 문자열 추출 시도
-      const fromObj = (obj) => {
-        if (!obj || typeof obj !== 'object') return undefined;
-        // 우선순위: tierName > tier > rank.name > level.name > grade > badge.tier
-        const t1 = obj.tierName || obj.tier || obj.rank?.name || obj.level?.name || obj.grade || obj.badge?.tier;
-        if (typeof t1 === 'string' && t1.trim()) return t1;
-        // 객체형이면 name/title 필드 시도
-        if (typeof obj.rank === 'object') {
-          const t2 = obj.rank?.title || obj.rank?.label || obj.rank?.code;
-          if (typeof t2 === 'string' && t2.trim()) return t2;
-        }
-        return undefined;
-      };
-      const tierRaw = fromObj(dash?.userInfo) || fromObj(dash) || fromObj(dash?.profile) || 'EMERALD';
-  // Prefer badge icon from userInfo.badge.iconUrl if present
-  const badgeIconUrl = dash?.userInfo?.badge?.iconUrl || dash?.userInfo?.badge_icon_url || dash?.badgeIconUrl || dash?.badge_icon_url;
-  const tierImageUrl = badgeIconUrl || dash?.userInfo?.tierImageUrl || dash?.tierImageUrl || dash?.profile?.tierImageUrl || '';
-  return { data: { nickname, tier: tierRaw, tierImageUrl }, isFallback: true };
+    if (!userId) {
+      return { nickname: '피니', tier: '브론즈' };
     }
-  } catch (_) {}
-
-  // 2) 환경에서 /profile 엔드포인트 제공 시 직접 호출
-  if (HAS_PROFILE_ENDPOINTS) {
-    try {
-      const data = await http('/profile');
-      return { data };
-    } catch (_) {}
+  const dash = await http(`/dashboard?userId=${userId}`);
+  console.log('[프로필][대시보드][응답]', dash);
+    return {
+      nickname: dash?.userInfo?.nickname || '피니',
+      tier: dash?.userInfo?.currentLevelTitle || '브론즈',
+      totalScore: dash?.userInfo?.totalScore || 0,
+      streak: dash?.userInfo?.streak || 0,
+      // ... 기타 필요한 데이터
+    };
+  } catch (error) {
+    console.error('프로필 조회 실패:', error);
+    return {
+      nickname: '피니',
+      tier: '브론즈',
+      totalScore: 0,
+      streak: 0
+    };
   }
-
-  // 3) 최종 안전 폴백
-  return {
-    data: {
-      nickname: sessionStorage.getItem('username'),
-      tier: 'Bronze',
-      tierImageUrl: '',
-    },
-    isDummy: true,
-  };
 }
 
 // 프로필 활동(출석) 정보: YYYY-MM-DD 문자열 배열을 반환한다고 가정

@@ -1,15 +1,12 @@
+
 import { useWrongNoteStore } from './useWrongNoteStore';
 import Illustration from '../../assets/study/wrongNoteIllustration.svg';
+import WrongNoteList from '../../pages/WrongNoteList';
 
-const CATEGORY_ORDER = ['은행', '카드', '세금/절세', '투자'];
 
 export default function WrongNoteSection() {
   const { wrongNotes, loading, error, stats } = useWrongNoteStore();
   const total = stats?.total ?? wrongNotes.length;
-  const counts = CATEGORY_ORDER.map(cat => ({
-    category: cat,
-    count: (stats?.byCategory?.find(s => s.category === cat)?.count) ?? wrongNotes.filter(w => w.category === cat).length
-  }));
   const empty = !loading && total === 0;
 
   // 통계 시각화: 카테고리별 비율
@@ -55,21 +52,8 @@ export default function WrongNoteSection() {
       ) : (
         <>
           {error && <div className="error-text">서버 통신 오류: {error}</div>}
-          <ul className="wrongnote-category-list">
-            {counts.map(item => (
-              <li key={item.category} className="wrongnote-cat-card">
-                <div className="cat-left">{item.category}</div>
-                <div className="cat-right">
-                  <span className="cat-count">{item.count}개</span>
-                  <span className="cat-chevron" aria-hidden>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M7.99983 20.7498C8.19889 20.7508 8.38994 20.6715 8.52983 20.5298L16.5298 12.5298C16.8223 12.237 16.8223 11.7627 16.5298 11.4698L8.52983 3.46985C8.23432 3.19449 7.77382 3.20261 7.48821 3.48823C7.20259 3.77384 7.19447 4.23434 7.46983 4.52985L14.9398 11.9998L7.46983 19.4698C7.17737 19.7627 7.17737 20.237 7.46983 20.5298C7.60971 20.6715 7.80076 20.7508 7.99983 20.7498Z" fill="#4D4D4D"/>
-                    </svg>
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {/* 오답노트 카드 UI */}
+          <WrongNoteList wrongNotes={wrongNotes} statistics={{ totalCount: total }} />
         </>
       )}
     </div>

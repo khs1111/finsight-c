@@ -107,11 +107,14 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
   // 최초 마운트 시 초기값으로 selection(ID들) 확정 → 문제 호출 트리거
   useEffect(() => {
     (async () => {
-      const levelId = mapLevelLabelToId(propSelectedLevel || selectedLevel);
-      if (!initialTopic || !initialSubTopic || !levelId) return;
+      if (!initialTopic || !initialSubTopic || !(propSelectedLevel || selectedLevel)) return;
       const { topicId, subTopicId } = await resolveIdsFromNames(initialTopic, initialSubTopic);
-      if (topicId && subTopicId && levelId) {
-        setSelection({ topicId, subTopicId, levelId });
+      if (topicId && subTopicId) {
+        // Use resolveLevelEntityId to get the correct levelId for this topic/subtopic/level
+        const levelId = await import('../../api/explore').then(m => m.resolveLevelEntityId({ subTopicId, level: propSelectedLevel || selectedLevel }));
+        if (levelId) {
+          setSelection({ topicId, subTopicId, levelId });
+        }
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -400,28 +403,33 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
  */
 function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredCount = 0, currentIndex = 0, quizCompletionArr = [] }) {
 
-  const VIEWPORT_HEIGHT = 430; 
-  const OFFSET_LEFT = 34;     
-  const BASE_WIDTH = 336;     // 고정 좌표계 너비 (스케일 기준)
+  // 최소 1개는 돌판이 보이도록 보정
+  const safeTotalStages = Math.max(1, totalStages);
+  // 돌판별 완료 상태 배열 보정 (최소 1개)
+  const safeQuizCompletionArr = Array.isArray(quizCompletionArr) && quizCompletionArr.length > 0
+    ? quizCompletionArr
+    : Array.from({ length: safeTotalStages }, (_, i) => false);
+
+  const VIEWPORT_HEIGHT = 430;
+  const OFFSET_LEFT = 34;
+  const BASE_WIDTH = 336;
 
   const baseRawPositions = [
-    { left: 172, top: 665 }, // Stage 0 (bottom)
-    { left: 292, top: 617 }, // Stage 1
-    { left: 302, top: 484 }, // Stage 2
-    { left: 172, top: 432 }, // Stage 3
-    { left: 34,  top: 392 }, // Stage 4
-    { left: 74,  top: 264 }, // Stage 5
-    { left: 235, top: 242 }, // Stage 6
-    { left: 120, top: 40  }, // Stage 7 (topmost)
+    { left: 172, top: 665 },
+    { left: 292, top: 617 },
+    { left: 302, top: 484 },
+    { left: 172, top: 432 },
+    { left: 34,  top: 392 },
+    { left: 74,  top: 264 },
+    { left: 235, top: 242 },
+    { left: 120, top: 40  },
   ];
-
   const extraPositions = [];
-  if (totalStages > baseRawPositions.length) {
-    const need = totalStages - baseRawPositions.length;
-    const last = baseRawPositions[baseRawPositions.length - 1]; 
-    let currentTop = last.top - 140; 
+  if (safeTotalStages > baseRawPositions.length) {
+    const need = safeTotalStages - baseRawPositions.length;
+    const last = baseRawPositions[baseRawPositions.length - 1];
+    let currentTop = last.top - 140;
     for (let i = 0; i < need; i++) {
-
       const zigLeft = i % 2 === 0 ? 200 : 60;
       extraPositions.push({ left: zigLeft, top: currentTop });
       currentTop -= 140;
@@ -430,42 +438,44 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
   const rawPositions = [...baseRawPositions, ...extraPositions];
   const maxTop = Math.max(...rawPositions.map(p => p.top), 0);
   const minTop = Math.min(...rawPositions.map(p => p.top), 0);
-  const TOTAL_HEIGHT = (maxTop - minTop) + 120; 
+  const TOTAL_HEIGHT = (maxTop - minTop) + 120;
 
-  // 원형(68x68)의 정확한 중심 정렬을 위해 좌표를 보정합니다.
-  // - 가로: 중심값에서 반지름(34px)을 빼서 왼쪽 상단 좌표로 변환
-  // - 세로: 미세 상향 보정(-1px)으로 라인과의 시각적 중심을 맞춤
-  const MICRO_SHIFT_Y = -1; // 필요시 -2 ~ +2 사이에서 추가 조정 가능
-  const STONES_SHIFT_Y = 6; // 전체를 약간 올림(이전 12px에서 6px로 조정)
+  const MICRO_SHIFT_Y = -1;
+  const STONES_SHIFT_Y = 6;
   const positions = rawPositions.map(p => ({ left: p.left - 34, top: p.top - minTop + MICRO_SHIFT_Y + STONES_SHIFT_Y }));
-
-  // 특정 인덱스 원판의 미세 정렬 보정값 (px)
-  // 필요 시 여기서 인덱스별 dx/dy를 조정하세요.
   const INDEX_MICRO = {
-    // 두번째 원판: 선 중심에 정확히 올리기 위해 약간 왼쪽(-2px) + 위로 2px 보정
     1: { dx: -4, dy: -12 },
   };
-
 
   const scrollRef = React.useRef(null);
   React.useEffect(() => {
     const el = scrollRef.current;
     if (el) {
-
       requestAnimationFrame(() => {
-        el.scrollTop = el.scrollHeight; 
+        el.scrollTop = el.scrollHeight;
       });
     }
-  }, [totalStages]);
+  }, [safeTotalStages]);
 
+  // 돌판 상태: 완료(done), 현재(active), 잠금(locked)
   function StageCircle({ index }) {
-    // 문제별 완료 상태를 quizCompletionArr에서 가져옴
-    const isDone = !!quizCompletionArr[index];
-    const status = isDone ? 'done' : (index === activeStage && activeStage < totalStages) ? 'active' : 'locked';
+    // 완료: 해당 index가 true
+    // 현재: 아직 완료 안된 첫 번째 index
+    // 나머지: 잠금
+    let status = 'locked';
+    if (safeQuizCompletionArr[index]) {
+      status = 'done';
+    } else if (
+      // 아직 완료 안된 첫 번째 index가 현재
+      safeQuizCompletionArr.findIndex(v => !v) === index
+    ) {
+      status = 'active';
+    }
     const pos = positions[index] || { left: 0, top: 0 };
     const adj = INDEX_MICRO[index] || { dx: 0, dy: 0 };
     const style = { position: 'absolute', left: pos.left + adj.dx, top: pos.top + adj.dy };
     if (status === 'done') {
+      // 완료된 경우 항상 체크 아이콘 돌판
       return (
         <svg key={index} width="68" height="68" viewBox="0 0 68 68" fill="none" style={style}>
           <rect width="68" height="68" rx="34" fill="url(#circle_grad)"/>
@@ -479,8 +489,7 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
         <div key={index} style={{ ...style, width: 68, height: 82 }}>
           <svg width="68" height="68" viewBox="0 0 68 68" fill="none" style={{ position:'absolute', left:0, top:0 }}>
             <rect width="68" height="68" rx="34" fill="url(#circle_grad)"/>
-            {/* 진행중 아이콘 */}
-            <circle cx="34" cy="34" r="16" fill="#fff" opacity="0.2" />
+            {/* 진행중 아이콘 (투명 원 제거) */}
             <path fillRule="evenodd" clipRule="evenodd" d="M26.6785 25.542H41.1785C43.8479 25.542 46.0119 27.7059 46.0119 30.3753V37.6253C46.0119 40.2947 43.8479 42.4587 41.1785 42.4587H26.6785C24.0092 42.4587 21.8452 40.2947 21.8452 37.6253V30.3753C21.8452 27.7059 24.0092 25.542 26.6785 25.542ZM25.7844 37.3232H42.0727C42.5732 37.3232 42.979 36.9175 42.979 36.417C42.979 35.9165 42.5732 35.5107 42.0727 35.5107H25.7844C25.2839 35.5107 24.8781 35.9165 24.8781 36.417C24.8781 36.9175 25.2839 37.3232 25.7844 37.3232Z" fill="white"/>
           </svg>
         </div>
@@ -502,36 +511,33 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
     function recalc() {
       const root = document.querySelector('[data-explore-root]');
       const cta = document.querySelector('[data-floating-cta]');
-      if (!root || !cta) return; 
+      if (!root || !cta) return;
       const rootRect = root.getBoundingClientRect();
       const ctaRect = cta.getBoundingClientRect();
-  const GAP = 0; 
+      const GAP = 0;
       const ctaTopInRoot = ctaRect.top - rootRect.top;
       const targetBottomInRoot = ctaTopInRoot - GAP;
       const proposedTop = targetBottomInRoot - VIEWPORT_HEIGHT;
-  // 하단 버튼과의 간격을 정확히 44px로 유지하기 위해 클램프 없이 적용
-  setDynamicTop(Math.round(proposedTop));
-
-      // 가용 너비 기반 스케일 계산 (양옆 16px 여백 반영)
+      setDynamicTop(Math.round(proposedTop));
       const container = document.querySelector('.explore-main-container');
       if (container) {
-        const available = Math.max(0, container.clientWidth - 32); // 16px * 2 여백
+        const available = Math.max(0, container.clientWidth - 32);
         const nextScale = Math.min(1, available / BASE_WIDTH);
         setScale(nextScale);
       }
     }
-    recalc(); 
+    recalc();
     window.addEventListener('resize', recalc);
-    const interval = setInterval(recalc, 500); 
+    const interval = setInterval(recalc, 500);
     setTimeout(() => clearInterval(interval), 4000);
     return () => {
       window.removeEventListener('resize', recalc);
       clearInterval(interval);
     };
-  }, [totalStages, VIEWPORT_HEIGHT]);
+  }, [safeTotalStages, VIEWPORT_HEIGHT]);
 
   return (
-  <div style={{ position: 'absolute', left: 16, right: 16, top: dynamicTop, height: VIEWPORT_HEIGHT, overflowY: 'auto', overscrollBehavior: 'contain', transition: 'top .25s ease' }} ref={scrollRef}>
+    <div style={{ position: 'absolute', left: 16, right: 16, top: dynamicTop, height: VIEWPORT_HEIGHT, overflowY: 'auto', overscrollBehavior: 'contain', transition: 'top .25s ease' }} ref={scrollRef}>
       {/* 스케일 적용을 위한 sizer 래퍼 (스크롤 높이 확보) */}
       <div style={{ position: 'relative', width: BASE_WIDTH * scale, height: TOTAL_HEIGHT * scale }}>
         {/* 고정 좌표계(336 x TOTAL_HEIGHT) 콘텐츠를 스케일로 축소/확대 */}
@@ -565,7 +571,7 @@ function SteppingStonesScrollable({ totalStages = 0, activeStage = -1, answeredC
               </linearGradient>
             </defs>
           </svg>
-          {Array.from({ length: totalStages }).map((_, i) => <StageCircle key={i} index={i} />)}
+          {Array.from({ length: safeTotalStages }).map((_, i) => <StageCircle key={i} index={i} />)}
         </div>
       </div>
     </div>

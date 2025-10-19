@@ -347,7 +347,7 @@ export default function Profile() {
 
         // 일반 로그인: 프로필/뱃지 API를 각각 따로 setState
         fetchProfile().then(res => {
-          setNickname(res?.data?.nickname || '');
+          setNickname(res?.nickname || '');
         });
         if (userId) {
           getCurrentBadge(userId).then(badgeData => {
