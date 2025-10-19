@@ -443,7 +443,7 @@ export default function Profile() {
         {/* Hero: background + character + overlayed tier/nickname */}
         <div className="p-hero" aria-label="프로필 히어로">
           <img className="p-hero-bg" src={BackImg} alt="" aria-hidden="true" />
-          <div className="p-avatar-block" aria-hidden="true" style={{cursor:'pointer'}} onClick={() => navigate('/profile/modify')}>
+          <div className="p-avatar-block" aria-hidden="true">
             <img src={AntImg} alt="프로필 캐릭터" width={266} height={266} />
           </div>
           <div className="p-hero-shadow" aria-hidden="true" />
