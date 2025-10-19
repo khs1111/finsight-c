@@ -129,9 +129,9 @@ async function ensureAuth() {
   } catch (_) {}
 
   // 게스트 세션이면 매 진입 시 갱신, 아니면 토큰 없거나 TTL 만료 시 로그인
-  if (isGuestSession || !hasToken || ttlExpired) {
+  /*if (isGuestSession || !hasToken || ttlExpired) {
     try { await guestLogin(API_BASE); } catch (_) {}
-  }
+  }*/
   authInitialized = true;
 }
 
@@ -436,6 +436,7 @@ export const getLevelDetail = async (levelId) => {
 // (이전 submitAnswer / completeQuiz / progress 관련 구버전 함수 제거됨)
 
 // 회원가입 - 백엔드: POST /api/auth/signup
+/*
 export const signup = async (username, email, password) => {
   try {
     const result = await http("/auth/signup", {
@@ -504,7 +505,7 @@ export const login = async (username, password) => {
       isDummy: true
     };
   }
-};
+};*/
 
 // ========================================
 // 🔄 기존 함수들 (호환성 유지)
