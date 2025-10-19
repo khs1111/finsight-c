@@ -1,0 +1,273 @@
+.payment-wrapper {
+	/*
+		결제 페이지 최상위 컨테이너
+		- 중앙 정렬(max-width: 420px)
+		- 페이지 배경을 전체에 적용
+		- 화면 전체 높이를 확보하여 푸터 고정 시 레이아웃 문제 방지
+	*/
+	max-width: 420px;
+	margin: 0 auto;
+	background: #F4F6FA;
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	position: relative;
+}
+
+.payment-topbar {
+	/*
+		상단 바(뒤로가기 버튼 + 중앙 제목)
+		- 높이 56px
+		- 좌우 기본 패딩 16px
+		- 배경은 페이지와 동일하게 유지
+	*/
+	height: 56px;
+	display: flex;
+	align-items: center;
+	padding: 0 16px;
+	background: #F4F6FA;
+	position: relative;
+}
+
+.payment-topbar .back-btn {
+	/* 뒤로가기 버튼: 투명 배경, 클릭 영역 확보 */
+	background: transparent;
+	border: none;
+	padding: 6px 6px 6px 0;
+	min-width: 40px; /* 터치 영역 확보(모바일 대응) */
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-start; /* 아이콘을 왼쪽으로 붙임 (좌측 16px 패딩 기준) */
+}
+
+/* back icon 이미지 규격 (modifyProfile과 동일하게 사용) */
+.payment-topbar .back-btn img {
+	width: 40px;
+	height: 40px;
+	display: block;
+}
+
+.payment-topbar .payment-title {
+	/*
+		상단 제목: 절대 위치로 중앙에 고정
+		- pointer-events: none 으로 버튼 클릭을 막지 않도록 처리
+	*/
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	height: 56px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--Text-color_2, #282828);
+	/* Title3_Roboto_B_18 */
+	font-family: Roboto, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+	font-size: 18px;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+	letter-spacing: -0.36px;
+	pointer-events: none; /* 제목은 클릭 이벤트를 차단하지 않음 */
+}
+
+.payment-content {
+	/*
+		페이지 주요 컨텐츠 영역
+		- 하단 고정 버튼을 위해 bottom padding 확보(120px)
+		- 좌우 패딩 16px
+	*/
+	/* 상단 제목과 히어로 사이 간격을 52px로 확보 */
+	padding: 52px 16px 120px;
+
+	/* 레이아웃 변수: 제목의 좌우 여백을 한 곳에서 관리하면 반응형에서 조정이 쉬움
+	   --heading-lr: 제목 좌우 margin (per-side)
+	   --desc-lr: 설명 좌우 margin (per-side) = max(0, --heading-lr - 15px)
+	*/
+	--heading-lr: 20px;
+	--desc-lr: clamp(0px, calc(var(--heading-lr) - 15px), 9999px);
+	/* 카드 내부 왼쪽 여백(파란 박스 안의 상수값) */
+	--card-left-inset: 16px;
+	/* 히어로(개미 아이콘) 크기: 높이를 기준으로 가변, 가로는 비율(≈0.882)로 계산 */
+	--hero-h: clamp(96px, 22vw, 120px);
+	--hero-ar: 0.88235; /* 105.882 / 120 */
+	--hero-w: calc(var(--hero-h) * var(--hero-ar));
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+}
+
+.payment-hero {
+	/* 히어로(이미지) 영역 - 중앙 정렬 */
+	display: flex;
+	justify-content: center;
+	/* 히어로와 제목 사이 간격 32px */
+	margin-bottom: 32px;
+    width: var(--hero-w);
+    height: var(--hero-h);
+    overflow: hidden;
+    border-radius: 12px;
+    align-self: center;
+}
+
+.payment-hero img {
+	width: var(--hero-w);
+	height: var(--hero-h);
+	object-fit: contain;
+	border-radius: 12px;
+	flex-shrink: 0;
+}
+
+/* SVG 영웅 아이콘 크기 고정 */
+.payment-hero svg {
+	display: block; /* inline SVG의 베이스라인 여백 이슈 방지 */
+	width: var(--hero-w);
+	height: var(--hero-h);
+	flex-shrink: 0;
+	/* 일부 브라우저에서 SVG 마스크/클립 경계가 1px 보이는 현상 보정 */
+	transform: none;
+    transform: scale(1.02);
+    margin-top: -1px;
+}
+
+.payment-heading {
+	text-align: center;
+	/* 사용자 지정 규격 */
+	color: #000;
+	font-family: Roboto, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+	font-size: 20px;
+	font-style: normal;
+	font-weight: 700;
+	line-height: 22px; /* 110% */
+	letter-spacing: -0.4px;
+	/* 상단 간격은 0으로 두어 히어로와의 간격을 카드에서 통일 관리 */
+	margin: 0 var(--heading-lr) 16px;
+	height: 22px; /* 명시된 높이 */
+}
+
+.payment-desc {
+	text-align: center;
+	color: var(--text_box, #4D4D4D);
+	/* roboto_r_14_22_2 */
+	font-family: Roboto, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 22px; /* 157.143% */
+	letter-spacing: -0.28px;
+	/* per-side margin uses --desc-lr which is computed as heading - 15px */
+	margin: 0 var(--desc-lr) 24px;
+}
+
+.payment-features {
+	/* 기능 리스트: 카드 형태로 세로 나열 */
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	/* 카드들을 전체 폭으로 늘려 좌측 16px에 아이콘이 맞닿도록 */
+	align-items: stretch;
+}
+
+.payment-features .feature {
+	background: #FFF;
+	border-radius: 16px;
+	/* 요청된 패딩과 높이 규격 */
+	padding: 11px 16px 11px var(--card-left-inset); /* 파란 박스 안의 왼쪽 마진을 상수값으로 유지 */
+	min-height: 72px;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column; /* 제목/부제목을 위아래로 배치 */
+	justify-content: center;
+	align-items: flex-start;
+	gap: 10px;
+	width: 100%;
+	flex-shrink: 0;
+	border: 1px solid var(--button_color, #448FFF);
+	/* subtle inner shadow to match the mock feel */
+	box-shadow: 0 1px 0 rgba(0,0,0,0.02) inset;
+}
+
+/* 왼쪽 아이콘 + 텍스트 레이아웃 */
+.payment-features .feature {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-start; /* 가운데 정렬을 덮어써서 좌측 정렬 고정 */
+	gap: 12px;
+}
+
+.feature-icon {
+	width: 40px;
+	height: 40px;
+	flex: 0 0 40px;
+	object-fit: contain;
+	display: block;
+	margin-left: 0; /* 카드 왼쪽 보더로부터 정확히 16px 떨어지도록 */
+}
+
+.feature-body {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: flex-start;
+}
+
+.feature-title {
+	align-self: stretch;
+	color: #000;
+	font-family: Roboto, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 700;
+	line-height: 22px; /* 157.143% */
+	letter-spacing: -0.28px;
+}
+
+.feature-sub {
+	align-self: stretch;
+	color: var(--Text-color_1, #474747);
+	/* roboto_r_14_22_2 */
+	font-family: Roboto, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 22px; /* 157.143% */
+	letter-spacing: -0.28px;
+}
+
+.payment-footer {
+	/* 하단 고정 구독 버튼 래퍼 */
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 24px;
+	display: flex;
+	justify-content: center;
+	pointer-events: none; /* 래퍼는 클릭을 막고 내부 버튼만 반응 */
+}
+
+.subscribe-btn {
+	/* 구독 버튼 - modifyProfile 스타일 상속 */
+	pointer-events: auto;
+	display: flex;
+	height: 60px;
+	padding: 10px;
+	justify-content: center;
+	align-items: center;
+	gap: 10px;
+	align-self: stretch;
+	width: calc(100% - 48px);
+	max-width: 420px;
+	border-radius: 12px;
+	border: none;
+	color: var(--Text-color_w, #FFF);
+	font-family: Roboto, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+	font-size: 20px;
+	font-weight: 700;
+	background: var(--button_color, linear-gradient(104deg, #448FFF -6.51%, #4833D0 105.13%));
+}
+

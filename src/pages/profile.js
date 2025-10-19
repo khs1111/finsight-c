@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AntImg from '../assets/profile/ant.png';
 import BackImg from '../assets/profile/back.png';
 import DefaultTierBadge from '../assets/tier/bronze.png';
@@ -213,8 +214,43 @@ function Calendar() {
   );
 }
 
+function ConfirmModal({ modalType,title, description, confirmText, onConfirm, onClose }) {
+  return (
+    // 'modal-overlay' 클릭 시 onClose가 호출되어 모달이 닫히도록 합니다.
+    <div className="modal-overlay" onClick={onClose}>
+      {/* 모달 컨텐츠 자체를 클릭했을 때는 이벤트 버블링을 막아 
+        overlay의 onClick이 실행되지 않도록 합니다. 
+      */}
+      <div className={`modal-content modal-${modalType}`} onClick={(e) => e.stopPropagation()}>
+        <h3 className="modal-title">{title}</h3>
+        {description && (
+          <p className="modal-description">{description}</p>
+        )}
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="modal-btn confirm" // '로그아웃', '탈퇴하기' 버튼
+            onClick={onConfirm}
+          >
+            {confirmText}
+          </button>
+          <button
+            type="button"
+            className="modal-btn cancel" // '취소' 버튼
+            onClick={onClose}
+          >
+            취소
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const [profile, setProfile] = useState({ nickname: '', tier: '', tierImageUrl: '' });
+  const [modalType, setModalType] = useState(null);
+  const navigate = useNavigate();
   const normalizeTier = (t) => {
     const s = String(t || '').trim().toLowerCase();
     if (!s) return '';
@@ -305,6 +341,35 @@ export default function Profile() {
       }
     })();
   }, []);
+
+  const modalProps = useMemo(() => {
+    if (modalType === 'logout') {
+      return {
+        title: "'로그아웃' 하시겠습니까?",
+        description: null, // 로그아웃에는 설명이 없습니다.
+        confirmText: "로그아웃",
+        onConfirm: () => {
+          alert('로그아웃 처리 (DB 연결 전)'); // 요청대로 alert만 띄웁니다.
+          setModalType(null); // 모달 닫기
+          // 실제 로그아웃 로직은 여기에 추가... (예: navigate('/login'))
+        },
+      };
+    }
+    if (modalType === 'withdraw') {
+      return {
+        title: "'회원탈퇴' 하시겠습니까?",
+        description: "탈퇴시, 이전 내용은 복구되지 않습니다!",
+        confirmText: "탈퇴하기",
+        onConfirm: () => {
+          alert('계정 탈퇴 처리 (DB 연결 전)'); // 요청대로 alert만 띄웁니다.
+          setModalType(null); // 모달 닫기
+          // 실제 탈퇴 로직은 여기에 추가...
+        },
+      };
+    }
+    // modalType이 null이면 아무것도 반환하지 않습니다.
+    return null; 
+  }, [modalType]); // modalType이 바뀔 때만 이 값을 다시 계산합니다.
   // 화면 표시용 닉네임/티어: 백엔드 값을 그대로 사용하되, 닉네임은 비어있을 때만 안전하게 기본값 처리
   const displayNickname = '피니';
   const displayTier = normalizeTier(profile.tier);
@@ -319,7 +384,7 @@ export default function Profile() {
         {/* Hero: background + character + overlayed tier/nickname */}
         <div className="p-hero" aria-label="프로필 히어로">
           <img className="p-hero-bg" src={BackImg} alt="" aria-hidden="true" />
-          <div className="p-avatar-block" aria-hidden="true">
+          <div className="p-avatar-block" aria-hidden="true" style={{cursor:'pointer'}} onClick={() => navigate('/profile/modify')}>
             <img src={AntImg} alt="프로필 캐릭터" width={266} height={266} />
           </div>
           <div className="p-hero-shadow" aria-hidden="true" />
@@ -426,7 +491,24 @@ export default function Profile() {
 
       <div className="p-actions">
         {actionItems.map(a => (
-          <button key={a.key} className="action-row" type="button">
+          <button
+            key={a.key}
+            className="action-row"
+            type="button"
+            onClick={() => {
+              if (a.key === 'settings') {
+                navigate('/profile/modify');
+              } else if (a.key === 'premium') {
+                navigate('/profile/payment');
+              } else if (a.key === 'inquiry') {
+                navigate('/profile/contact');
+              } else if (a.key === 'logout') {
+                setModalType('logout'); 
+              } else if (a.key === 'withdraw') {
+                setModalType('withdraw');
+              }
+            }}
+          >
             <span className="icon-placeholder" aria-hidden="true">
               {a.svg ? a.svg : a.icon}
             </span>
@@ -437,6 +519,16 @@ export default function Profile() {
 
       <Calendar />
     </div>
-    </>
+    {modalProps && (
+      <ConfirmModal
+        modalType={modalType}
+        title={modalProps.title}
+        description={modalProps.description}
+        confirmText={modalProps.confirmText}
+        onConfirm={modalProps.onConfirm}
+        onClose={() => setModalType(null)} // 닫기 버튼은 항상 모달을 닫습니다.
+      />
+    )}
+  </>
   );
 }

@@ -15,6 +15,9 @@ import VocabPage from './pages/VocabPage';
 import BottomNav from './components/navigation/BottomNav';
 import { useNavVisibility } from './components/navigation/NavVisibilityContext';
 import Profile from './pages/profile';
+import ProfileModify from './pages/ProfileModify';
+import PaymentPage from './components/profile/paymentPage';
+import Contact from './components/profile/contact';
 import Newsletter from './pages/Newsletter';
 import Login from './pages/Login';
 import AdminLetters from './pages/AdminPage/AdminLetters';
@@ -36,6 +39,9 @@ function App() {
   const isAddWord = location.pathname.startsWith('/study/words/add');
   const isCommunity = location.pathname.startsWith('/community');
   const isProfile = location.pathname.startsWith('/profile');
+  const isProfileModify = location.pathname === '/profile/modify' || location.pathname.startsWith('/profile/modify');
+  const isProfilePayment = location.pathname === '/profile/payment' || location.pathname.startsWith('/profile/payment');
+  const isProfileContact = location.pathname === '/profile/contact' || location.pathname.startsWith('/profile/contact');
   const isNewsletter = location.pathname.startsWith('/newsletter');
   const isLogin = location.pathname.startsWith('/login');
   const hideNewsletterNav = location.pathname.startsWith('/newsletter/subscribe') ||
@@ -55,11 +61,22 @@ function App() {
     }
   }, [isProfile]);
 
+  useEffect(() => {
+    const htmlEl = document.documentElement;
+    if (isProfilePayment) {
+      document.body.classList.add('profile-payment');
+      htmlEl.classList.add('profile-payment');
+    } else {
+      document.body.classList.remove('profile-payment');
+      htmlEl.classList.remove('profile-payment');
+    }
+  }, [isProfilePayment]);
+
   return (
     <>
   {!(isExplore || isStudy || isAddWord || isCommunity || isProfile || isNewsletter || isLogin) && <Header onSearch={handleSearch} />}
 
-      <div className="has-bottom-nav">
+  <div className={`${(!hide && !isStudy && !hideNewsletterNav && !isLogin && !isProfileModify && !isProfilePayment && !isProfileContact) ? 'has-bottom-nav' : ''}`}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/search" element={<Search />} />
@@ -78,6 +95,9 @@ function App() {
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/vocab" element={<VocabPage />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/payment" element={<PaymentPage />} />
+          <Route path="/profile/contact" element={<Contact />} />
+          <Route path="/profile/modify" element={<ProfileModify />} />
           <Route path="/newsletter/*" element={<Newsletter />} />
           <Route path="/admin/news-letters/*" element={<AdminLetters />} />
           <Route path="/admin/news-guide" element={<AdminNewsGuide />} />
@@ -85,7 +105,7 @@ function App() {
           <Route path="/admin/news-detail/:id" element={<AdminNewsDetail />} />
         </Routes>
       </div>
-  {!hide && !isStudy && !hideNewsletterNav && !isLogin && <BottomNav />}
+  {!hide && !isStudy && !hideNewsletterNav && !isLogin && !isProfileModify && !isProfilePayment && !isProfileContact && <BottomNav />}
     </>
   );
 }
