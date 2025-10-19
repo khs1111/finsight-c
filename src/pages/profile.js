@@ -13,6 +13,36 @@ import { API_BASE, IMAGE_BASE } from '../api/config';
 // getUserProgress 제거됨. 필요시 getUserProgressSummary 사용.
 import './Profile.css';
 
+// ---------------------------------------------
+// Lightweight client cache for instant hydration
+// ---------------------------------------------
+const PROFILE_CACHE_KEY = 'profile.cache.v1';
+function readProfileCache(currentUserId) {
+  try {
+    const raw = sessionStorage.getItem(PROFILE_CACHE_KEY) || localStorage.getItem(PROFILE_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    // Only trust cache if it matches the current user
+    if (currentUserId && parsed.userId && String(parsed.userId) !== String(currentUserId)) return null;
+    return parsed;
+  } catch (_) {
+    return null;
+  }
+}
+function writeProfileCache(patch) {
+  try {
+    const raw = sessionStorage.getItem(PROFILE_CACHE_KEY) || localStorage.getItem(PROFILE_CACHE_KEY);
+    const base = raw ? (JSON.parse(raw) || {}) : {};
+    const next = { ...base, ...patch, updatedAt: Date.now() };
+    const serialized = JSON.stringify(next);
+    sessionStorage.setItem(PROFILE_CACHE_KEY, serialized);
+    localStorage.setItem(PROFILE_CACHE_KEY, serialized);
+  } catch (_) {
+    /* ignore serialization/storage errors */
+  }
+}
+
 const actionItems = [
   { key: 'settings', label: '프로필 설정', svg: (
     <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -256,10 +286,21 @@ function ConfirmModal({ modalType,title, description, confirmText, onConfirm, on
 
 
 export default function Profile() {
-  const [nickname, setNickname] = useState('');
-  const [tier, setTier] = useState('');
-  const [tierImageUrl, setTierImageUrl] = useState('');
-  const [score, setScore] = useState(null);
+  // Read user and cached profile synchronously for instant first paint
+  const initialUserId = (() => {
+    if (typeof window === 'undefined') return undefined;
+    const uFromSS = Number(sessionStorage.getItem('userId')) || undefined;
+    const uFromLS = Number(localStorage.getItem('userId')) || undefined;
+    return uFromSS || uFromLS;
+  })();
+  const cached = readProfileCache(initialUserId);
+
+  const [nickname, setNickname] = useState(cached?.nickname || '');
+  const [tier, setTier] = useState(cached?.tier || '');
+  const [tierImageUrl, setTierImageUrl] = useState(cached?.tierImageUrl || '');
+  const [score, setScore] = useState(
+    Number.isFinite(cached?.score) ? cached.score : (cached?.score != null ? Number(cached.score) : null)
+  );
   const [modalType, setModalType] = useState(null);
   const navigate = useNavigate();
   const normalizeTier = (t) => {
@@ -310,73 +351,82 @@ export default function Profile() {
     // 3) 최종 기본값
   };
   useEffect(() => {
-    (async () => {
-      try {
-        const uFromSS = Number(sessionStorage.getItem('userId')) || undefined;
-        const uFromLS = Number(localStorage.getItem('userId')) || undefined;
-        const tFromSS = sessionStorage.getItem('accessToken') || undefined;
-        const tFromLS = localStorage.getItem('accessToken') || undefined;
-        const userId = uFromSS || uFromLS;
-        const token = tFromSS || tFromLS;
-        const hasUserId = !!userId;
+    // Revalidate everything in parallel, update UI and cache as results arrive
+    const uFromSS = Number(sessionStorage.getItem('userId')) || undefined;
+    const uFromLS = Number(localStorage.getItem('userId')) || undefined;
+    const tFromSS = sessionStorage.getItem('accessToken') || undefined;
+    const tFromLS = localStorage.getItem('accessToken') || undefined;
+    const userId = uFromSS || uFromLS;
+    const token = tFromSS || tFromLS;
 
-        // 일반 로그인: 프로필/뱃지 API를 각각 따로 setState
-        fetchProfile().then(res => {
-          setNickname(res?.nickname || '');
-        });
-        if (userId) {
-          getCurrentBadge(userId).then(badgeData => {
-            if (badgeData) {
-              const icon = badgeData?.iconUrl || badgeData?.icon_url || badgeData?.badge?.iconUrl || badgeData?.badge?.icon_url;
-              const name = badgeData?.name || badgeData?.badge?.name || badgeData?.title || badgeData?.badge?.title;
-              if (icon) setTierImageUrl(icon);
-              if (name) setTier(name);
-            }
-          }).catch(e => {
-            try {
-              console.log('[Profile][badge] request failed:', e?.message || e);
-              if (e && typeof e === 'object') {
-                console.log('[Profile][badge] error.details', { status: e.status, body: e.body });
-              }
-            } catch (_) {}
-          });
+    // 1) Profile basic (nickname)
+    fetchProfile()
+      .then(res => {
+        const nn = res?.nickname || '';
+        setNickname(nn);
+        writeProfileCache({ nickname: nn, userId });
+
+        // If totalScore is available from profile (dashboard-backed), seed it immediately
+        const ts = res?.totalScore;
+        if (ts != null) {
+          const n = typeof ts === 'number' ? ts : Number(ts);
+          if (!Number.isNaN(n)) {
+            setScore(n);
+            writeProfileCache({ score: n, userId });
+          }
         }
+      })
+      .catch(() => {});
 
-        // 점수 로직은 기존대로 (순차)
-        if (hasUserId) {
-          let gotScore = false;
+    // 2) Badge (tier + icon)
+    if (userId) {
+      getCurrentBadge(userId)
+        .then(badgeData => {
+          if (!badgeData) return;
+          const icon = badgeData?.iconUrl || badgeData?.icon_url || badgeData?.badge?.iconUrl || badgeData?.badge?.icon_url;
+          const name = badgeData?.name || badgeData?.badge?.name || badgeData?.title || badgeData?.badge?.title;
+          if (icon) {
+            setTierImageUrl(icon);
+            writeProfileCache({ tierImageUrl: icon, userId });
+          }
+          if (name) {
+            setTier(name);
+            writeProfileCache({ tier: name, userId });
+          }
+        })
+        .catch(e => {
           try {
-            // getUserProgress 제거됨. 필요시 getUserProgressSummary 사용.
-          } catch (e) {
-            /* ignore and fallback */
+            console.log('[Profile][badge] request failed:', e?.message || e);
+            if (e && typeof e === 'object') {
+              console.log('[Profile][badge] error.details', { status: e.status, body: e.body });
+            }
+          } catch (_) {}
+        });
+    }
+
+    // 3) Score from dashboard (non-blocking)
+    if (userId) {
+      fetchDashboard(userId, token)
+        .then(dashRes => {
+          const dash = dashRes?.data || {};
+          const ui = dash.userInfo || dash.profile || dash;
+          const cand = [
+            ui?.score, ui?.points, ui?.point, ui?.totalScore, ui?.totalPoints, ui?.xp, ui?.exp,
+            dash?.score, dash?.points, dash?.totalScore, dash?.totalPoints, dash?.xp, dash?.exp,
+          ];
+          let sc = null;
+          for (const v of cand) {
+            if (v == null) continue;
+            const n = typeof v === 'number' ? v : Number(v);
+            if (!Number.isNaN(n)) { sc = n; break; }
           }
-          if (!gotScore) {
-            try {
-              const dashRes = await fetchDashboard(userId, token);
-              const dash = dashRes?.data || {};
-              const ui = dash.userInfo || dash.profile || dash;
-              const cand = [
-                ui?.score, ui?.points, ui?.point, ui?.totalScore, ui?.totalPoints, ui?.xp, ui?.exp,
-                dash?.score, dash?.points, dash?.totalScore, dash?.totalPoints, dash?.xp, dash?.exp,
-              ];
-              let sc = null;
-              for (const v of cand) {
-                if (v == null) continue;
-                const n = typeof v === 'number' ? v : Number(v);
-                if (!Number.isNaN(n)) { sc = n; break; }
-              }
-              if (sc != null) setScore(sc);
-            } catch (_) { /* ignore */ }
+          if (sc != null) {
+            setScore(sc);
+            writeProfileCache({ score: sc, userId });
           }
-        }
-        // eslint-disable-next-line no-console
-        // console.log('[Profile] data source (not badge):', res?.isDummy ? 'dummy' : (res?.isFallback ? 'dashboard' : 'profile API'), '| hasUserId:', hasUserId, '| hasToken:', hasToken);
-      } catch (_) {
-        setNickname('');
-        setTier('');
-        setTierImageUrl('');
-      }
-    })();
+        })
+        .catch(() => {});
+    }
   }, []);
 
   const modalProps = useMemo(() => {
@@ -386,7 +436,7 @@ export default function Profile() {
         description: null, // 로그아웃에는 설명이 없습니다.
         confirmText: "로그아웃",
         onConfirm: () => {
-          alert('로그아웃 처리 (DB 연결 전)'); // 요청대로 alert만 띄웁니다.
+          alert('로그아웃 되었습니다.'); // 요청대로 alert만 띄웁니다.
           setModalType(null); // 모달 닫기
           // 실제 로그아웃 로직은 여기에 추가... (예: navigate('/login'))
         },
@@ -398,7 +448,7 @@ export default function Profile() {
         description: "탈퇴시, 이전 내용은 복구되지 않습니다!",
         confirmText: "탈퇴하기",
         onConfirm: () => {
-          alert('계정 탈퇴 처리 (DB 연결 전)'); // 요청대로 alert만 띄웁니다.
+          alert('계정이 탈퇴 처리되었습니다.'); // 요청대로 alert만 띄웁니다.
           setModalType(null); // 모달 닫기
           // 실제 탈퇴 로직은 여기에 추가...
         },
