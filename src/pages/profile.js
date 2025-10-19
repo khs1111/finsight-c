@@ -256,12 +256,9 @@ function ConfirmModal({ modalType,title, description, confirmText, onConfirm, on
 
 export default function Profile() {
   const [profile, setProfile] = useState({ nickname: '', tier: '', tierImageUrl: '' });
-<<<<<<< HEAD
   const [modalType, setModalType] = useState(null);
   const navigate = useNavigate();
-=======
   const [score, setScore] = useState(null);
->>>>>>> 387a89ef8b9ba3db915cb6fa565d58b80fbe93fd
   const normalizeTier = (t) => {
     const s = String(t || '').trim().toLowerCase();
     if (!s) return '';
