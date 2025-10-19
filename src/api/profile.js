@@ -50,13 +50,13 @@ export async function fetchProfile() {
     const userId = getUserId(); // getUserId()가 숫자 또는 null/undefined를 반환한다고 가정
     if (!userId) {
       // userId 없으면 기본값 반환
-      return { nickname: '안현진', tier: '브론즈', totalScore: 0, streak: 0 };
+      return { nickname: '피니', tier: '브론즈', totalScore: 0, streak: 0 };
     }
     // API 호출 시 Number()로 변환할 필요 없음 (getUserId가 이미 처리 가정)
     const dash = await http(`/dashboard?userId=${userId}`);
     console.log('[프로필][대시보드][응답]', dash);
     return {
-      nickname: dash?.userInfo?.nickname || '안현진',
+      nickname: dash?.userInfo?.nickname || '피니',
       tier: dash?.userInfo?.currentLevelTitle || '브론즈',
       totalScore: dash?.userInfo?.totalScore || 0,
       streak: dash?.userInfo?.streak || 0,
@@ -64,7 +64,7 @@ export async function fetchProfile() {
   } catch (error) {
     console.error('프로필 조회 실패:', error);
     return {
-      nickname: '안현진',
+      nickname: '피니',
       tier: '브론즈',
       totalScore: 0,
       streak: 0
@@ -254,4 +254,3 @@ export async function getCurrentBadge(userId) {
     throw err;
   }
 }
-
