@@ -66,11 +66,6 @@ export default function CompletionScreen({
   }, []);
 
   // 스택 계산 (FloatingQuizCTA 기본값과 동기화)
-  const baseBottom = navHeight + 16; // stackIndex=0 bottom
-  const buttonHeight = 60;
-  const gap = 16;
-  const topCTABottom = baseBottom + (buttonHeight + gap) * 1; // stackIndex=1
-  const premiumBubbleBottom = topCTABottom + buttonHeight + gap; // 위 CTA 위로 16px
   // 뷰포트 기반 레이아웃 계산
   const maxCardWidth = Math.min(360, vw - 32);
   const characterSize = vh <= 740 ? 180 : 240;
@@ -160,13 +155,7 @@ export default function CompletionScreen({
         </div>
       </div>
 
-      {/* 프리미엄 안내 말풍선  */}
-      <div className="completion-premium-wrap" style={{ bottom: premiumBubbleBottom }}>
-        <div className="completion-premium-box">
-          프리미엄 가입시, 틀린 문제를 다시 확인할 수 있어요!
-        </div>
-        <div className="completion-premium-tail" />
-      </div>
+     
 
       <FloatingQuizCTA
         stackIndex={0}
@@ -177,12 +166,21 @@ export default function CompletionScreen({
         style={{ pointerEvents: 'none' }}
         buttonStyle={{ pointerEvents:'auto' }}
       />
-      <FloatingQuizCTA
-        stackIndex={1}
-        label={score === 0 ? '다시하기' : '오답노트 확인하기'}
-        onClick={score === 0 ? onRetry : () => navigate('/study?tab=wrong')}
-        gradient
-      />
+      {score >= 3 ? (
+        <FloatingQuizCTA
+          stackIndex={1}
+          label="오답노트 확인하기"
+          onClick={() => navigate('/study?tab=wrong')}
+          gradient
+        />
+      ) : (
+        <FloatingQuizCTA
+          stackIndex={1}
+          label="다시풀기"
+          onClick={onRetry}
+          gradient
+        />
+      )}
     </div>
   );
 }

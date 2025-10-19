@@ -3,9 +3,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 
 import FloatingQuizCTA from './FloatingQuizCTA';
-import { getQuestions as apiGetQuestions, getSectorsWithSubsectors, getQuizIdForSelection, getSteppingProgress } from '../../api/explore';
-import { getProgress as getLevelProgress } from '../../api/levels';
-import { fetchCurrentBadgeByUser } from '../../api/profile';
+import { getQuestions as apiGetQuestions, getSectorsWithSubsectors, getQuizIdForSelection, getLevelProgress } from '../../api/explore';
+// import { fetchCurrentBadgeByUser } from '../../api/profile';
 import antCharacter from '../../assets/explore/stepant.png';
 import './ExploreMain.css';
 
@@ -18,7 +17,7 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
   const [selectedLevel, setSelectedLevel] = useState(propSelectedLevel || '초보자');
   const [selectedTopic, setSelectedTopic] = useState(initialTopic || '은행');
   const [selectedSubTopic, setSelectedSubTopic] = useState(initialSubTopic || '예금/적금');
-  const [totalQuestions, setTotalQuestions] = useState(0); // 서버에서 받아온 총 질문 수
+  const [, setTotalQuestions] = useState(0); // 서버에서 받아온 총 질문 수 (미사용)
   // 문제 리스트 로컬 저장
   const [, setQuestions] = useState([]);
   // 비동기 호출 로딩 상태
@@ -148,15 +147,12 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
   }, [selection]);
 
 
-  // ===== 백엔드 진행도/완료/배지 상태 =====
-  const [backendProgress, setBackendProgress] = useState(null); // { isCompleted, completionRate, totalQuizzes, completedQuizzes, totalScore, maxScore, completedAt, quizzes: [...], ... }
-  const [userProgress, setUserProgress] = useState(null); // 사용자 진행도 API 비활성화 상태
-  const [stepping, setStepping] = useState(null); // 징검다리 진행도 (steps, completionRate, currentStep)
-  // 서브섹터 진행도 API 비활성화 상태
-  const [, setProgressLoading] = useState(false); // ESLint: progressLoading 사용하지 않음
-  // 낙관적 진행도 사용 제거: 진행도/배지는 백엔드가 단일 진실원천
-  // userId는 localStorage에서 가져오거나, selection이 바뀔 때마다 갱신
-  // 진행도는 항상 최신 userId로 조회 (localStorage에서 직접 읽음)
+
+  // 진행도 상태: getLevelProgress 응답만 사용
+  const [progress, setProgress] = useState(null); // getLevelProgress 응답 전체
+  const [progressLoading, setProgressLoading] = useState(false); // 미사용, 추후 필요시 사용
+
+  // selection 변경 시 진행도 조회
   useEffect(() => {
     const { levelId } = selection || {};
     const userId = localStorage.getItem('userId') || undefined;
@@ -165,221 +161,63 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
     (async () => {
       setProgressLoading(true);
       try {
-        // 레벨 진행도 API 호출 제거
-        if (!cancelled) { setBackendProgress(null); try { window.__EXPLORE_MAIN_PROGRESS = null; } catch (_) {} }
-        // 서브섹터 진행도 API 호출 제거
-        // 사용자 진행도 API 호출 제거
-        if (!cancelled) setUserProgress(null);
-        // 징검다리 진행도 조회
-        try {
-          const data = await getSteppingProgress(Number(userId), Number(levelId));
-          if (!cancelled) setStepping(data);
-        } catch (e) {
-          if (!cancelled) setStepping(null);
-          try { console.warn('[ExploreMain] getSteppingProgress failed:', e?.message || e); } catch (_) {}
-        }
+        const data = await getLevelProgress(userId, levelId);
+        if (!cancelled) setProgress(data);
+      } catch (e) {
+        if (!cancelled) setProgress(null);
       } finally {
-        if (!cancelled) setProgressLoading(false);
+        setProgressLoading(false);
       }
     })();
     return () => { cancelled = true; };
   }, [selection]);
 
-  // 홈으로 돌아왔을 때도 최신화 보장: 마운트 직후 한 번 더 재조회
-  useEffect(() => {
-    const { levelId } = selection || {};
-    const userId = localStorage.getItem('userId') || undefined;
-    if (!levelId || !userId) return;
-    // 짧은 지연 후 재조회로 서버 집계 지연 대응
-    const t = setTimeout(async () => {}, 300);
-    return () => clearTimeout(t);
-  }, [selection]);
-
-  // 진행도/배지 최신화 유틸 (중복 호출 방지)
-  const __refreshRef = React.useRef({ inFlight: false, lastAt: 0 });
-  const refreshProgress = React.useCallback(async (reason = 'manual') => {
-    const now = Date.now();
-    const { inFlight, lastAt } = __refreshRef.current;
-    const cooldownMs = 1200;
-    if (inFlight || (now - lastAt) < cooldownMs) return;
-    const lid = selection?.levelId;
-    const uid = (() => { try { return Number(localStorage.getItem('userId')) || undefined; } catch { return undefined; } })();
-    if (!lid || !uid) return;
-    __refreshRef.current = { inFlight: true, lastAt: now };
-    try {
-      setProgressLoading(true);
-      const [progress, badge] = await Promise.allSettled([
-        getLevelProgress(lid, uid),
-        fetchCurrentBadgeByUser(uid)
-      ]);
-      const progVal = progress.status === 'fulfilled' ? (progress.value || null) : null;
-      const badgeVal = badge.status === 'fulfilled' ? (badge.value || null) : null;
-      setBackendProgress(progVal ? { ...progVal, currentBadge: (badgeVal || progVal?.currentBadge || null) } : (badgeVal ? { currentBadge: badgeVal } : null));
-      // 징검다리 진행도도 함께 업데이트
-      try {
-        const s = await getSteppingProgress(uid, lid);
-        setStepping(s || null);
-      } catch (_) { /* ignore */ }
-    } catch (_) {
-      // ignore
-    } finally {
-      setProgressLoading(false);
-      setTimeout(() => { __refreshRef.current.inFlight = false; __refreshRef.current.lastAt = Date.now(); }, 100);
-    }
-  }, [selection]);
-
   // fin:quiz-completed 이벤트 수신 시 진행도 재조회 (레벨/유저)
   useEffect(() => {
-    const handler = async () => { refreshProgress('fin:quiz-completed'); };
+    const handler = () => {
+      const { levelId } = selection || {};
+      const userId = localStorage.getItem('userId') || undefined;
+      if (!levelId || !userId) return;
+      setProgressLoading(true);
+      getLevelProgress(userId, levelId).then(data => setProgress(data)).finally(() => setProgressLoading(false));
+    };
     window.addEventListener('fin:quiz-completed', handler);
     return () => window.removeEventListener('fin:quiz-completed', handler);
-  }, [refreshProgress]);
+  }, [selection]);
 
-  // 진행도/완료/점수/배지 정보 파싱
-  // 화면 표시는 '문항 기준'을 우선: totalQuestions(4)이 있으면 그 값을 기준으로, 없을 때만 백엔드 합계 사용
-  // 총 문제 수는 질문 배열 기준(보통 4문항). 백엔드 합계는 사용하지 않음.
-  // 기본(문항 기반) 총 개수/진행도
-  const baseTotal = (typeof totalQuestions === 'number' && totalQuestions > 0) ? totalQuestions : 0;
-  const baseAnswered = 0; // 문항 기반 임시 진행도는 사용하지 않음
 
-  // 징검다리 진행도에서 단계/진행 파생
-  const steps = Array.isArray(stepping?.steps) ? stepping.steps : null;
-  const totalStagesFromSteps = steps ? steps.length : null;
-  const answeredFromSteps = steps ? steps.filter(s => {
-    const isDone = s.isCompleted || (Number(s.completedQuizzes) >= Number(s.totalQuizzes || 0) && Number(s.totalQuizzes || 0) > 0);
-    return !!isDone;
-  }).length : null;
-  const activeFromSteps = (() => {
-    if (!steps) return null;
-    // 우선 currentStep 사용 (1-based로 오는 경우가 많음)
-    if (Number.isFinite(Number(stepping?.currentStep))) {
-      const n = Number(stepping.currentStep);
-      const idx = n >= 1 ? n - 1 : n;
-      if (idx >= 0 && idx < steps.length) return idx;
-      // currentStep이 범위 밖이면 모든 완료 시 -1 반환
-      if (answeredFromSteps === steps.length) return -1;
-    }
-    // fallback: 첫 미완료 인덱스
-    const i = steps.findIndex(s => !(s.isCompleted || (Number(s.completedQuizzes) >= Number(s.totalQuizzes || 0) && Number(s.totalQuizzes || 0) > 0)));
-    return i === -1 ? -1 : i;
-  })();
-  // 사용자 전체 진행도에서 현재 선택(섹터/서브섹터/레벨)의 완료 여부 추출
-  const isCompletedByUser = useMemo(() => {
-    try {
-      if (!userProgress || !selection?.levelId) return false;
-      const sectorList = Array.isArray(userProgress.sectorProgress) ? userProgress.sectorProgress : [];
-      // 섹터/서브섹터는 ID 우선 매칭, 불가 시 이름으로 폴백
-      const sector = sectorList.find(s => {
-        if (selection.topicId != null && Number(s.sectorId) === Number(selection.topicId)) return true;
-        if (selectedTopic && s.sectorName && String(s.sectorName).trim() === String(selectedTopic).trim()) return true;
-        return false;
-      });
-      if (!sector) return false;
-      const subs = Array.isArray(sector.subsectors) ? sector.subsectors : [];
-      const sub = subs.find(ss => {
-        if (selection.subTopicId != null && Number(ss.subsectorId) === Number(selection.subTopicId)) return true;
-        if (selectedSubTopic && ss.subsectorName && String(ss.subsectorName).trim() === String(selectedSubTopic).trim()) return true;
-        return false;
-      });
-      if (!sub) return false;
-      const lvls = Array.isArray(sub.levels) ? sub.levels : [];
-      const lid = Number(selection.levelId);
-      const lvl = lvls.find(lv => {
-        if (Number(lv.levelId) === lid) return true;
-        const ln = String(lv.levelName || '').toLowerCase();
-        if (lid === 1 && /초|입문|beginner|easy/.test(ln)) return true;
-        if (lid === 2 && /중|intermediate|medium/.test(ln)) return true;
-        if (lid === 3 && /고|advanced|hard/.test(ln)) return true;
-        return false;
-      });
-      return !!lvl?.isCompleted;
-    } catch (_) { return false; }
-  }, [userProgress, selection, selectedTopic, selectedSubTopic]);
-
-  // 서브섹터 진행도에서 현재 레벨 완료 여부 판정
-  const isCompletedBySubsector = false; // 서브섹터 진행도 판정 비활성화
-
-  const isCompletedFromSteps = (typeof stepping?.completionRate === 'number' && stepping.completionRate >= 1)
-    || (Number(totalStagesFromSteps) > 0 && Number(answeredFromSteps) === Number(totalStagesFromSteps));
-  const isCompleted = isCompletedFromSteps || isCompletedByUser || isCompletedBySubsector || !!backendProgress?.isCompleted;
-
-  // 표시용 총 단계/진행 개수 및 진행률
-  const totalProblems = (totalStagesFromSteps ?? baseTotal);
-  const answeredCount = (answeredFromSteps != null
-    ? (isCompleted ? (totalStagesFromSteps ?? 0) : answeredFromSteps)
-    : (isCompleted ? baseTotal : baseAnswered));
-  // eslint-disable-next-line no-unused-vars
-  const _ = backendProgress?.totalScore ?? 0; // correctCount - 사용하지 않음
-  const progressPercent = (typeof stepping?.completionRate === 'number')
-    ? Math.max(0, Math.min(100, stepping.completionRate * 100))
-    : (totalProblems > 0 ? (answeredCount / totalProblems) * 100 : 0);
-  const badge = backendProgress?.currentBadge;
+  // 진행도 파생값: getLevelProgress 응답만 사용
+  const totalProblems = progress?.totalQuizzes ?? 0;
+  const answeredCount = progress?.completedQuizzes ?? 0;
+  const progressPercent = typeof progress?.completionRate === 'number' ? Math.max(0, Math.min(100, progress.completionRate * 100)) : 0;
+  const isCompleted = progress?.completionRate === 1.0 || progress?.isStepPassed === true;
+  const badge = progress?.currentBadge;
   const badgeIconUrl = badge?.iconUrl || badge?.icon_url || null;
-  // 진행도 숫자: 현재/다음 단계 표시 (예: 1 2 -> 2 3)
   const currentNumber = totalProblems > 0 ? Math.min(answeredCount + 1, totalProblems) : 1;
   const nextNumber = totalProblems > 0 ? Math.min(currentNumber + 1, totalProblems) : 2;
-  // 징검다리 단계 및 상태 배열
-  const totalStages = Math.max(0, totalProblems || 0);
-  const quizCompletionArr = steps
-    ? steps.map(s => !!(s.isCompleted || (Number(s.completedQuizzes) >= Number(s.totalQuizzes || 0) && Number(s.totalQuizzes || 0) > 0)))
+  const steps = Array.isArray(progress?.steps) ? progress.steps : [];
+  const totalStages = steps.length || totalProblems;
+  const quizCompletionArr = steps.length > 0
+    ? steps.map(s => !!s.isCompleted)
     : Array.from({ length: totalStages }, (_, i) => i < answeredCount);
-  // active 단계: currentStep 우선, 없으면 answeredCount 기반
-  const activeStage = (activeFromSteps != null)
-    ? activeFromSteps
-    : (answeredCount < totalStages ? answeredCount : -1);
+  const activeStage = typeof progress?.currentStep === 'number' ? progress.currentStep - 1 : (answeredCount < totalStages ? answeredCount : -1);
 
   // ===== DEBUG: 진행도 상세 로깅 및 전역 노출 =====
-  useEffect(() => {
-    try {
-      // 전역에 최신 진행도와 선택 상태를 노출하여 빠른 점검 가능
-      if (typeof window !== 'undefined') {
-        window.__EXPLORE_MAIN_PROGRESS = backendProgress || null;
-        window.__EXPLORE_MAIN_SELECTION = selection || null;
-        window.__EXPLORE_MAIN_PROGRESS_SUMMARY = {
-          isCompleted,
-          progressPercent: Math.round(progressPercent),
-          answeredCount,
-          totalProblems,
-          totalStages,
-          activeStage,
-        };
-      }
 
-      // 콘솔에 사람이 읽기 쉬운 형태로 출력
-      // 너무 시끄럽지 않도록 그룹 콜랩스 사용
-      // 필요시 window.__FIN_DEBUG=true 로 강제 오픈
-      const title = `📊 [ExploreMain] 진행도 업데이트 (answered ${answeredCount}/${totalProblems}, ${Math.round(progressPercent)}%, completed=${isCompleted})`;
-      const collapse = !(typeof window !== 'undefined' && window.__FIN_DEBUG);
-      const group = collapse ? console.groupCollapsed : console.group;
-      group(title);
-      console.log('selection (IDs)', selection);
-      console.log('backendProgress raw', backendProgress);
-      console.log('derived:', {
-        isCompleted,
-        progressPercent,
-        answeredCount,
-        totalProblems,
-        totalStages,
-        activeStage,
-      });
-      console.log('quizCompletionArr', quizCompletionArr);
-      console.groupEnd();
-    } catch (e) {
-      // 로깅 도중 오류로 인해 렌더가 막히지 않도록 안전 처리
-    }
-  }, [backendProgress, selection, totalProblems, answeredCount, totalStages, activeStage, progressPercent, isCompleted, quizCompletionArr]);
+  // 진행도 상태 디버깅
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('📊 [ExploreMain] 진행도 업데이트 (answered', answeredCount + '/' + totalProblems + ',', progressPercent + '%, completed=' + isCompleted + ')');
+    // eslint-disable-next-line no-console
+    console.log('progress raw', progress);
+    // eslint-disable-next-line no-console
+    console.log('derived:', { isCompleted, progressPercent, answeredCount, totalProblems, totalStages, activeStage, quizCompletionArr });
+  }, [progress, selection, totalProblems, answeredCount, totalStages, activeStage, progressPercent, isCompleted, quizCompletionArr]);
 
   // 문제 제출 시 로컬 임시 진행도 반영 제거 (백엔드 이벤트 기반으로만 새로고침)
 
-  // 레벨 완료 시 백엔드 재조회만 수행 (낙관적 UI 제거)
-  useEffect(() => {
-    const handler = async () => {
-      try { /* no optimistic UI */ }
-      finally { refreshProgress('fin:level-completed'); }
-    };
-    window.addEventListener('fin:level-completed', handler);
-    return () => window.removeEventListener('fin:level-completed', handler);
-  }, [totalProblems, refreshProgress]);
+
+  // 레벨 완료 시 별도 리프레시 불필요: 진행도는 getLevelProgress로만 관리
 
   return (
     <div

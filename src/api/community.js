@@ -1,5 +1,109 @@
+
 import axios from 'axios';
 import { API_BASE as BASE_URL } from './config';
+// --------------------
+// Like & Comment APIs (fetch version for direct use)
+// --------------------
+
+// 좋아요 토글
+export async function togglePostLike(userId, postId) {
+	const response = await fetch(`/api/community/posts/${postId}/like?userId=${userId}`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		}
+	});
+	if (!response.ok) {
+		throw new Error('좋아요 처리 실패');
+	}
+	return await response.json();
+}
+
+// 좋아요 상태 확인
+export async function getPostLikeStatus(userId, postId) {
+	const response = await fetch(`/api/community/posts/${postId}/like?userId=${userId}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+		}
+	});
+	if (!response.ok) {
+		throw new Error('좋아요 상태 조회 실패');
+	}
+	return await response.json();
+}
+
+// 댓글 작성
+export async function createComment(userId, postId, content) {
+	const response = await fetch(`/api/community/posts/${postId}/comments?userId=${userId}`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ content })
+	});
+	if (!response.ok) {
+		throw new Error('댓글 작성 실패');
+	}
+	return await response.json();
+}
+
+// 댓글 목록 조회
+export async function getPostComments(postId, page = 0, size = 20) {
+	const response = await fetch(`/api/community/posts/${postId}/comments?page=${page}&size=${size}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+		}
+	});
+	if (!response.ok) {
+		throw new Error('댓글 목록 조회 실패');
+	}
+	return await response.json();
+}
+
+// 댓글 수정
+export async function updateComment(userId, commentId, content) {
+	const response = await fetch(`/api/community/posts/comments/${commentId}?userId=${userId}`, {
+		method: 'PUT',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ content })
+	});
+	if (!response.ok) {
+		throw new Error('댓글 수정 실패');
+	}
+	return await response.json();
+}
+
+// 댓글 삭제
+export async function deleteComment(userId, commentId) {
+	const response = await fetch(`/api/community/posts/comments/${commentId}?userId=${userId}`, {
+		method: 'DELETE',
+		headers: {
+			'Content-Type': 'application/json',
+		}
+	});
+	if (!response.ok) {
+		throw new Error('댓글 삭제 실패');
+	}
+	return await response.text();
+}
+
+// 사용자 댓글 목록 조회
+export async function getUserComments(userId, page = 0, size = 20) {
+	const response = await fetch(`/api/community/posts/comments/user/${userId}?page=${page}&size=${size}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+		}
+	});
+	if (!response.ok) {
+		throw new Error('사용자 댓글 목록 조회 실패');
+	}
+	return await response.json();
+}
 
 // Axios instance with JWT token support
 export function getAxios(token) {
@@ -50,11 +154,19 @@ export const fetchMyCommunityPosts = (token) => getAxios(token).get('/community/
 // Wrong Note (오답 노트) APIs
 // --------------------
 
-// 오답 노트 목록 조회 (supports pagination & filtering)
-export function fetchWrongNotes({ userId, page = 0, size = 20, filter = 'all', token }) {
-	return getAxios(token).get(`/wrong-notes`, {
-		params: { userId, page, size, filter }
+// 오답 노트 목록 조회 (fetch version)
+export async function getWrongNotes(userId, page = 0, size = 20, filter = 'all') {
+	const response = await fetch(`/api/wrong-notes?userId=${userId}&page=${page}&size=${size}&filter=${filter}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+		}
 	});
+	if (!response.ok) {
+		throw new Error('오답노트 조회 실패');
+	}
+	const wrongNotes = await response.json();
+	return wrongNotes;
 }
 
 // 오답 노트 상세 조회

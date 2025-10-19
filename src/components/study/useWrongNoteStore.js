@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchWrongNoteStatistics, fetchWrongNotes } from '../../api/community';
+import { getWrongNoteStatistics, getWrongNotes } from '../../api/explore';
 
 // In-memory wrong note (틀린문제) store
 // Each item: { id, question, userAnswer, correctAnswer, explanation?, addedAt }
@@ -29,11 +29,11 @@ export function useWrongNoteStore() {
         const token = localStorage.getItem('accessToken');
         const userId = localStorage.getItem('userId') || undefined;
         // 1) stats (normalize to { total, byCategory: [{category, count}] })
-        const { data: statData } = await fetchWrongNoteStatistics(userId, token);
-        if (mounted && statData) setStats(normalizeStats(statData));
-        // 2) list (first page)
-        const { data: listResp } = await fetchWrongNotes({ userId, page: 0, size: 50, filter: 'all', token });
-        const items = Array.isArray(listResp?.items) ? listResp.items : Array.isArray(listResp) ? listResp : [];
+  const statData = await getWrongNoteStatistics(userId);
+  if (mounted && statData) setStats(normalizeStats(statData));
+  // 2) list (first page)
+  const listResp = await getWrongNotes(userId, 0, 50, 'all');
+  const items = Array.isArray(listResp?.items) ? listResp.items : Array.isArray(listResp) ? listResp : [];
         if (mounted) {
           // Merge with existing local state (avoid losing locally added notes)
           setWrongState(prev => {

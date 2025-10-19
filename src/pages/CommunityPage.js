@@ -2,6 +2,7 @@
 // - 게시물 피드 / 랭크 필터 / 글쓰기 진입 FAB
 // - 카테고리(오늘의 뉴스, 시황 등) 상태 관리
 import React, { useState, useEffect } from 'react';
+import CommentDropdown from '../components/community/CommentDropdown';
 import './StudyPage.css';
 import './CommunityPage.css';
 import RankFilterDropdown from '../components/community/RankFilterDropdown';
@@ -37,6 +38,7 @@ export default function CommunityPage() {
   const [category, setCategory] = useState('자유게시판'); // 기본 탭: 자유게시판
   const [posts, setPosts] = useState([]);
   const [likedMap, setLikedMap] = useState(() => new Map()); // postId -> boolean
+  const [openCommentPostId, setOpenCommentPostId] = useState(null); // 드롭다운 열린 postId
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -220,69 +222,144 @@ export default function CommunityPage() {
               const liked = !!likedMap.get(post.id);
               const tierText = resolveTierText(post.author || {});
               return (
-                <div key={post.id} className="community-feed-card">
-                  <div className="feed-card-header">
-                    <div className="avatar-wrap">
-                      <img src={post.author?.profileImage || defaultAvatar} alt="프로필" className="feed-card-profile" />
-                      {/* 티어 배지: 프로필 오른쪽 아래 오버레이 (백엔드 아이콘 우선, 없으면 스타) */}
-                      {post.author?.badge?.iconUrl ? (
-                        <span className="avatar-tier-badge" aria-label={post.author?.badge?.name || '배지'} title={post.author?.badge?.name || undefined}>
-                          <img src={post.author.badge.iconUrl} alt={post.author?.badge?.name || 'badge'} />
-                        </span>
-                      ) : (
-                        tierText && (
-                          <span className="avatar-tier-badge is-star" aria-label={`티어 ${tierText}`} title={tierText}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-                              <defs>
-                                <linearGradient id="tierGoldGrad" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#FFCD42"/>
-                                  <stop offset="35%" stopColor="#FFBC02"/>
-                                  <stop offset="100%" stopColor="#B94D00"/>
-                                </linearGradient>
-                                <filter id="tierShadow" x="-50%" y="-50%" width="200%" height="200%">
-                                  <feDropShadow dx="0" dy="1" stdDeviation="0.6" floodColor="rgba(0,0,0,0.35)"/>
-                                </filter>
-                              </defs>
-                              <path d="M12 2l2.834 5.744 6.336.92-4.585 4.47 1.082 6.312L12 16.9l-5.667 2.946 1.082-6.312L2.83 8.664l6.336-.92L12 2z" fill="url(#tierGoldGrad)" stroke="#FFFFFF" strokeWidth="1.2" filter="url(#tierShadow)"/>
-                            </svg>
+                <React.Fragment key={post.id}>
+                  <div className="community-feed-card">
+                    <div className="feed-card-header" style={{ position: 'relative' }}>
+                      <div className="avatar-wrap">
+                        <img src={post.author?.profileImage || defaultAvatar} alt="프로필" className="feed-card-profile" />
+                        {/* 티어 배지: 프로필 오른쪽 아래 오버레이 (백엔드 아이콘 우선, 없으면 스타) */}
+                        {post.author?.badge?.iconUrl ? (
+                          <span className="avatar-tier-badge" aria-label={post.author?.badge?.name || '배지'} title={post.author?.badge?.name || undefined}>
+                            <img src={post.author.badge.iconUrl} alt={post.author?.badge?.name || 'badge'} />
                           </span>
-                        )
-                      )}
-                    </div>
-                    <div className="feed-card-author-col">
-                      <div className="feed-card-author-row">
-                        <span className="feed-card-nickname">{post.author?.nickname || '익명'}</span>
+                        ) : (
+                          tierText && (
+                            <span className="avatar-tier-badge is-star" aria-label={`티어 ${tierText}`} title={tierText}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                                <defs>
+                                  <linearGradient id="tierGoldGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#FFCD42"/>
+                                    <stop offset="35%" stopColor="#FFBC02"/>
+                                    <stop offset="100%" stopColor="#B94D00"/>
+                                  </linearGradient>
+                                  <filter id="tierShadow" x="-50%" y="-50%" width="200%" height="200%">
+                                    <feDropShadow dx="0" dy="1" stdDeviation="0.6" floodColor="rgba(0,0,0,0.35)"/>
+                                  </filter>
+                                </defs>
+                                <path d="M12 2l2.834 5.744 6.336.92-4.585 4.47 1.082 6.312L12 16.9l-5.667 2.946 1.082-6.312L2.83 8.664l6.336-.92L12 2z" fill="url(#tierGoldGrad)" stroke="#FFFFFF" strokeWidth="1.2" filter="url(#tierShadow)"/>
+                              </svg>
+                            </span>
+                          )
+                        )}
                       </div>
-                      <div className="feed-card-date-small">{formatKDate(post.createdAt)}</div>
+                      <div className="feed-card-author-col">
+                        <div className="feed-card-author-row">
+                          <span className="feed-card-nickname">{post.author?.nickname || '익명'}</span>
+                        </div>
+                        <div className="feed-card-date-small">{formatKDate(post.createdAt)}</div>
+                      </div>
+                      {/* 신고/삭제 버튼: 카드 오른쪽 상단 */}
+                      <div style={{ position: 'absolute', top: 0, right: 0, display: 'flex', gap: 4 }}>
+                        <button
+                          type="button"
+                          className="feed-card-report-btn"
+                          aria-label="신고"
+                          style={{ background: 'none', border: 'none', padding: 8, cursor: 'pointer' }}
+                          onClick={() => {
+                            const reason = window.prompt('신고 사유를 입력해 주세요. (예: 욕설, 광고, 도배 등)');
+                            if (reason && reason.trim()) {
+                              window.alert('신고가 접수되었습니다. 감사합니다.');
+                            }
+                          }}
+                        >
+                          {/* 신고(Report) 아이콘 - 깃발 모양 */}
+                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 3V17" stroke="#FF4D4F" strokeWidth="1.5" strokeLinecap="round"/>
+                            <path d="M5 4H16L14.5 8L16 12H5" stroke="#FF4D4F" strokeWidth="1.5" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                        {(() => {
+                          const userId = localStorage.getItem('userId');
+                          const authorId = post.author?.id || post.author_id;
+                          if (userId && String(userId) === String(authorId)) {
+                            return (
+                              <button
+                                type="button"
+                                className="feed-card-delete-btn"
+                                aria-label="삭제"
+                                style={{ background: 'none', border: 'none', padding: 8, cursor: 'pointer' }}
+                                onClick={async () => {
+                                  if (!window.confirm('정말 이 게시글을 삭제하시겠습니까?')) return;
+                                  const userId = localStorage.getItem('userId');
+                                  try {
+                                    await deletePost(userId, post.id);
+                                    setPosts(prev => prev.filter(p => p.id !== post.id));
+                                    window.alert('게시글이 삭제되었습니다.');
+                                  } catch (e) {
+                                    window.alert('게시글 삭제에 실패했습니다.');
+                                  }
+                                }}
+                              >
+                                {/* 삭제(휴지통) 아이콘 */}
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <rect x="5" y="7" width="10" height="8" rx="2" stroke="#999" strokeWidth="1.5"/>
+                                  <path d="M8 9V13" stroke="#999" strokeWidth="1.2" strokeLinecap="round"/>
+                                  <path d="M12 9V13" stroke="#999" strokeWidth="1.2" strokeLinecap="round"/>
+                                  <path d="M3 7H17" stroke="#999" strokeWidth="1.5" strokeLinecap="round"/>
+                                  <path d="M8.5 4H11.5C12.0523 4 12.5 4.44772 12.5 5V5.5H7.5V5C7.5 4.44772 7.94772 4 8.5 4Z" stroke="#999" strokeWidth="1.2"/>
+                                </svg>
+                              </button>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                      {/* 인라인 티어 라벨 제거: 오버레이 배지로 대체 */}
                     </div>
-                    {/* 인라인 티어 라벨 제거: 오버레이 배지로 대체 */}
-                  </div>
-                  {/* 본문 텍스트 */}
-                  <div className="feed-card-content">{post.body}</div>
-                  <div className="feed-card-actions">
-                    <button type="button" className="action" onClick={() => toggleLike(post)} aria-label={liked ? '좋아요 취소' : '좋아요'}>
-                      <span className="icon" aria-hidden="true">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          {/* Red fill behind when liked */}
-                          {liked && (
-                            <path d="M8.06683 13.8667C7.7335 13.8667 7.3335 13.7333 7.06683 13.4667C2.7335 9.66667 2.66683 9.6 2.66683 9.53333L2.60016 9.46667C1.80016 8.66667 1.3335 7.53333 1.3335 6.4V6.26667C1.40016 3.86667 3.3335 2 5.7335 2C6.46683 2 7.46683 2.4 8.06683 3.2C8.66683 2.4 9.73349 2 10.4668 2C12.8668 2 14.7335 3.86667 14.8668 6.26667V6.4C14.8668 7.6 14.4002 8.66667 13.6002 9.53333L13.5335 9.6C13.4668 9.66667 12.9335 10.1333 9.13349 13.5333C8.80016 13.7333 8.46683 13.8667 8.06683 13.8667ZM3.66683 9.33333C3.9335 9.6 5.26683 10.5333 7.7335 12.6667C7.9335 12.8667 8.20016 12.8667 8.40016 12.6667C10.9335 10.4 12.4002 9.13333 12.7335 8.86667L12.8002 8.8C13.4668 8.13333 13.8002 7.26667 13.8002 6.4V6.26667C13.7335 4.4 12.2668 3 10.4002 3C9.9335 3 9.00016 3.33333 8.66683 4.06667C8.5335 4.33333 8.26683 4.46667 8.00016 4.46667C7.7335 4.46667 7.46683 4.33333 7.3335 4.06667C7.00016 3.4 6.13349 3 5.60016 3C3.80016 3 2.26683 4.46667 2.20016 6.26667V6.46667C2.20016 7.33333 2.60016 8.2 3.20016 8.8L3.66683 9.33333Z" fill="#FF4D4F"/>
-                          )}
-                          {/* Grey outline on top */}
-                          <path d="M8.06683 13.8667C7.7335 13.8667 7.3335 13.7333 7.06683 13.4667C2.7335 9.66667 2.66683 9.6 2.66683 9.53333L2.60016 9.46667C1.80016 8.66667 1.3335 7.53333 1.3335 6.4V6.26667C1.40016 3.86667 3.3335 2 5.7335 2C6.46683 2 7.46683 2.4 8.06683 3.2C8.66683 2.4 9.73349 2 10.4668 2C12.8668 2 14.7335 3.86667 14.8668 6.26667V6.4C14.8668 7.6 14.4002 8.66667 13.6002 9.53333L13.5335 9.6C13.4668 9.66667 12.9335 10.1333 9.13349 13.5333C8.80016 13.7333 8.46683 13.8667 8.06683 13.8667ZM3.66683 9.33333C3.9335 9.6 5.26683 10.5333 7.7335 12.6667C7.9335 12.8667 8.20016 12.8667 8.40016 12.6667C10.9335 10.4 12.4002 9.13333 12.7335 8.86667L12.8002 8.8C13.4668 8.13333 13.8002 7.26667 13.8002 6.4V6.26667C13.7335 4.4 12.2668 3 10.4002 3C9.9335 3 9.00016 3.33333 8.66683 4.06667C8.5335 4.33333 8.26683 4.46667 8.00016 4.46667C7.7335 4.46667 7.46683 4.33333 7.3335 4.06667C7.00016 3.4 6.13349 3 5.60016 3C3.80016 3 2.26683 4.46667 2.20016 6.26667V6.46667C2.20016 7.33333 2.60016 8.2 3.20016 8.8L3.66683 9.33333Z" fill="none" stroke="#999999" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </span>
-                      <span className="count" aria-live="polite">{post.likeCount ?? 0}</span>
-                    </button>
-                    <div className="action" aria-label="댓글">
-                      <span className="icon" aria-hidden="true">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path fillRule="evenodd" clipRule="evenodd" d="M6.33345 1.47975C6.78698 1.38226 7.24956 1.33309 7.71345 1.33308C9.56804 1.32402 11.3355 2.11906 12.5592 3.51273C13.7828 4.9064 14.3424 6.76193 14.0935 8.59975C13.6935 11.6664 10.6668 14.1464 7.57345 14.1464H3.13345C2.75603 14.1466 2.40627 13.9485 2.21229 13.6247C2.01831 13.301 2.00863 12.8991 2.18679 12.5664L2.36679 12.2198C2.54593 11.8859 2.53322 11.4817 2.33345 11.1598C1.21459 9.40082 1.02249 7.20718 1.81862 5.28056C2.61474 3.35394 4.29931 1.93578 6.33345 1.47975ZM7.52012 13.1397C10.2379 13.0969 12.5492 11.1452 13.0468 8.47308C13.2728 6.92447 12.8073 5.35472 11.7735 4.17975C10.7494 3.00793 9.26965 2.33487 7.71345 2.33308C7.31932 2.33384 6.92625 2.37404 6.54012 2.45308C4.82355 2.83502 3.39997 4.02793 2.72361 5.65121C2.04725 7.27448 2.20261 9.12528 3.14012 10.6131C3.53898 11.2397 3.56705 12.0332 3.21345 12.6864L3.03345 13.0264C3.0188 13.0487 3.0188 13.0775 3.03345 13.0997C3.06012 13.1398 3.10012 13.1397 3.10012 13.1397H7.52012Z" fill="#999999" />
-                        </svg>
-                      </span>
-                      <span className="count">{post.commentCount ?? 0}</span>
+                    {/* 본문 텍스트 */}
+                    <div className="feed-card-content">{post.body}</div>
+                    <div className="feed-card-actions">
+                      <button type="button" className="action" onClick={() => toggleLike(post)} aria-label={liked ? '좋아요 취소' : '좋아요'}>
+                        <span className="icon" aria-hidden="true">
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                              d="M8.06683 13.8667C7.7335 13.8667 7.3335 13.7333 7.06683 13.4667C2.7335 9.66667 2.66683 9.6 2.66683 9.53333L2.60016 9.46667C1.80016 8.66667 1.3335 7.53333 1.3335 6.4V6.26667C1.40016 3.86667 3.3335 2 5.7335 2C6.46683 2 7.46683 2.4 8.06683 3.2C8.66683 2.4 9.73349 2 10.4668 2C12.8668 2 14.7335 3.86667 14.8668 6.26667V6.4C14.8668 7.6 14.4002 8.66667 13.6002 9.53333L13.5335 9.6C13.4668 9.66667 12.9335 10.1333 9.13349 13.5333C8.80016 13.7333 8.46683 13.8667 8.06683 13.8667ZM3.66683 9.33333C3.9335 9.6 5.26683 10.5333 7.7335 12.6667C7.9335 12.8667 8.20016 12.8667 8.40016 12.6667C10.9335 10.4 12.4002 9.13333 12.7335 8.86667L12.8002 8.8C13.4668 8.13333 13.8002 7.26667 13.8002 6.4V6.26667C13.7335 4.4 12.2668 3 10.4002 3C9.9335 3 9.00016 3.33333 8.66683 4.06667C8.5335 4.33333 8.26683 4.46667 8.00016 4.46667C7.7335 4.46667 7.46683 4.33333 7.3335 4.06667C7.00016 3.4 6.13349 3 5.60016 3C3.80016 3 2.26683 4.46667 2.20016 6.26667V6.46667C2.20016 7.33333 2.60016 8.2 3.20016 8.8L3.66683 9.33333Z"
+                              fill={liked ? "#FF4D4F" : "#E0E0E0"}
+                              stroke={liked ? "#FF4D4F" : "#999999"}
+                              strokeWidth="1.2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
+                        <span className="count" aria-live="polite">{post.likeCount ?? 0}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="action"
+                        aria-label="댓글"
+                        onClick={() => setOpenCommentPostId(openCommentPostId === post.id ? null : post.id)}
+                      >
+                        <span className="icon" aria-hidden="true">
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path fillRule="evenodd" clipRule="evenodd" d="M6.33345 1.47975C6.78698 1.38226 7.24956 1.33309 7.71345 1.33308C9.56804 1.32402 11.3355 2.11906 12.5592 3.51273C13.7828 4.9064 14.3424 6.76193 14.0935 8.59975C13.6935 11.6664 10.6668 14.1464 7.57345 14.1464H3.13345C2.75603 14.1466 2.40627 13.9485 2.21229 13.6247C2.01831 13.301 2.00863 12.8991 2.18679 12.5664L2.36679 12.2198C2.54593 11.8859 2.53322 11.4817 2.33345 11.1598C1.21459 9.40082 1.02249 7.20718 1.81862 5.28056C2.61474 3.35394 4.29931 1.93578 6.33345 1.47975ZM7.52012 13.1397C10.2379 13.0969 12.5492 11.1452 13.0468 8.47308C13.2728 6.92447 12.8073 5.35472 11.7735 4.17975C10.7494 3.00793 9.26965 2.33487 7.71345 2.33308C7.31932 2.33384 6.92625 2.37404 6.54012 2.45308C4.82355 2.83502 3.39997 4.02793 2.72361 5.65121C2.04725 7.27448 2.20261 9.12528 3.14012 10.6131C3.53898 11.2397 3.56705 12.0332 3.21345 12.6864L3.03345 13.0264C3.0188 13.0487 3.0188 13.0775 3.03345 13.0997C3.06012 13.1398 3.10012 13.1397 3.10012 13.1397H7.52012Z" fill="#999999" />
+                          </svg>
+                        </span>
+                        <span className="count">{post.commentCount ?? 0}</span>
+                      </button>
                     </div>
                   </div>
-                </div>
+                  {/* 카드 아래에 드롭다운 분리 렌더링 */}
+                  {openCommentPostId === post.id && (
+                    <div className="community-comment-dropdown-row">
+                      <CommentDropdown
+                        postId={post.id}
+                        open={openCommentPostId === post.id}
+                        onClose={() => setOpenCommentPostId(null)}
+                      />
+                    </div>
+                  )}
+                </React.Fragment>
               );
             })}
           </div>
@@ -300,3 +377,19 @@ export default function CommunityPage() {
 }
 
 // 카테고리 칩 스타일은 CommunityPage.css의 .community-category-row, .cat-chip, .cat-chip.active를 사용합니다.
+
+// fetch 기반 게시글 삭제 함수 (API 명세에 맞게 복원)
+async function deletePost(userId, postId) {
+  const response = await fetch(`/api/community/posts/${postId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
+  if (!response.ok) {
+    throw new Error('포스트 삭제 실패');
+  }
+  const result = await response.text();
+  console.log('포스트 삭제 완료:', result);
+  return result;
+}

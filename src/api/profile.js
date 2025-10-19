@@ -92,8 +92,8 @@ export async function fetchProfile() {
   // 3) 최종 안전 폴백
   return {
     data: {
-      nickname: sessionStorage.getItem('username') || '퍼니의 동료',
-      tier: 'EMERALD',
+      nickname: sessionStorage.getItem('username'),
+      tier: 'Bronze',
       tierImageUrl: '',
     },
     isDummy: true,

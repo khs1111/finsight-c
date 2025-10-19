@@ -1,3 +1,8 @@
+/* 댓글 드롭다운과 카드 사이 여백 제거 */
+.community-comment-dropdown-row {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
 /* 커뮤니티 피드 카드 리스트 */
 .community-feed-list {
   display: flex;

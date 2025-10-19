@@ -18,7 +18,7 @@ import "./QuizQuestion.css";
 import ProgressHeader from "./ProgressHeader";
 import q4ArticlePng from "../../assets/explore/q4-article.png";
 // getKeyPoints 제거: 문제 객체에 포함된 solvingKeypointsMd / teachingExplainerMd 사용
-import { completeQuiz, submitAnswer } from "../../api/explore";
+import { completeQuiz, submitAnswer, retryQuiz } from "../../api/explore";
 
 /**
  * 🎯 QuizQuestion 컴포넌트
@@ -52,6 +52,10 @@ export default function QuizQuestion({ current,
   // Per-question submission dedupe set: avoid duplicate submits for the same (user, quiz, question)
   const submittedSetRef = useRef(new Set());
 
+  // Quiz retry state
+  const [quizResult, setQuizResult] = useState(null); // { passed, correctAnswers, totalQuestions }
+  const [retrying, setRetrying] = useState(false);
+
   const getUserKey = () => {
     try {
       const uid = sessionStorage.getItem('userId') || localStorage.getItem('userId') || 'guest';
@@ -69,8 +73,11 @@ export default function QuizQuestion({ current,
       const key = `${getUserKey()}:${quizId}:${qId}`;
       if (submittedSetRef.current.has(key)) return;
       submittedSetRef.current.add(key);
-      // Best-effort fire-and-forget; backend will persist per-question attempt
-      await submitAnswer({ quizId, questionId: qId, selectedOptionId: sel });
+      // Debug: log POST payload
+      const payload = { quizId, questionId: qId, selectedOptionId: sel };
+      console.log('[QuizQuestion][submitAnswer][POST]', payload);
+      const resp = await submitAnswer(payload);
+      console.log('[QuizQuestion][submitAnswer][RESPONSE]', resp);
     } catch (e) {
       const isProd = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production';
       const dbg = typeof window !== 'undefined' && (window.__FIN_DEBUG || window.__QUIZ_DEBUG);
@@ -81,6 +88,26 @@ export default function QuizQuestion({ current,
   };
   
   // 🎓 학습 모드 관련 상태
+  // Retry quiz handler
+  const handleRetryQuiz = async () => {
+    if (!quizId) return;
+    setRetrying(true);
+    try {
+      const userId = getUserKey();
+      console.log('[QuizQuestion][retryQuiz][POST]', { quizId, userId });
+      const resp = await retryQuiz(quizId, userId);
+      console.log('[QuizQuestion][retryQuiz][RESPONSE]', resp);
+      // Reset state for retry
+      submittedSetRef.current = new Set();
+      setQuizResult(null);
+      setCurrent(0);
+      if (typeof onComplete === 'function') onComplete(null); // signal reset
+    } catch (e) {
+      console.warn('[QuizQuestion] retryQuiz failed:', e?.message || e);
+    } finally {
+      setRetrying(false);
+    }
+  };
   const [showLearning, setShowLearning] = useState(false);        // 학습 모드 표시 여부
   const [showHint, setShowHint] = useState(false);               // 힌트 표시 여부
   const [learningText, setLearningText] = useState("");          // 학습 모드 텍스트
@@ -660,79 +687,6 @@ export default function QuizQuestion({ current,
   // 완료 POST 중복 방지
   const completionPostedRef = useRef(false);
 
-  const buildCompletionSummary = () => {
-    const qList = Array.isArray(questions) ? questions : [];
-    const resList = Array.isArray(allResults) && allResults.length === qList.length ? allResults : [];
-    const totalQuestions = qList.length;
-    const correctAnswers = qList.reduce((acc, q, idx) => {
-      const r = resList[idx];
-      let isCorrect = null;
-      if (r && typeof r.serverCorrect === 'boolean') isCorrect = r.serverCorrect;
-      else if (r && typeof r.correct === 'boolean') isCorrect = r.correct;
-      if (isCorrect == null) {
-        let correctIndex = -1;
-        if (Array.isArray(q?.options)) {
-          const byFlag = q.options.findIndex(o => o && o.isCorrect === true);
-          if (byFlag >= 0) correctIndex = byFlag;
-          else if (q?.correctOptionId != null) {
-            const cidStr = String(q.correctOptionId);
-            const byStr = q.options.findIndex(o => String(o?.id) === cidStr);
-            if (byStr >= 0) correctIndex = byStr;
-            else if (Number.isFinite(Number(cidStr))) {
-              const cidNum = Number(cidStr);
-              const byNum = q.options.findIndex(o => Number(o?.id) === cidNum);
-              if (byNum >= 0) correctIndex = byNum;
-            }
-          }
-        }
-        isCorrect = (r?.selected != null && correctIndex >= 0 && r.selected === correctIndex);
-      }
-      return acc + (isCorrect ? 1 : 0);
-    }, 0);
-    const answers = qList.map((q, idx) => {
-      const r = resList[idx] || {};
-      const selectedIndex = (typeof r.selected === 'number') ? r.selected : null;
-      const selectedOptionId = (selectedIndex != null && Array.isArray(q?.options) && q.options[selectedIndex])
-        ? (q.options[selectedIndex].id ?? (selectedIndex + 1))
-        : (r.selected ?? null);
-      let correctIndex = -1;
-      if (Array.isArray(q?.options)) {
-        const byFlag = q.options.findIndex(o => o && o.isCorrect === true);
-        if (byFlag >= 0) correctIndex = byFlag;
-        else if (q?.correctOptionId != null) {
-          const cidStr = String(q.correctOptionId);
-          const byStr = q.options.findIndex(o => String(o?.id) === cidStr);
-          if (byStr >= 0) correctIndex = byStr;
-          else if (Number.isFinite(Number(cidStr))) {
-            const cidNum = Number(cidStr);
-            const byNum = q.options.findIndex(o => Number(o?.id) === cidNum);
-            if (byNum >= 0) correctIndex = byNum;
-          }
-        }
-      }
-      const isCorrect = (r && typeof r.serverCorrect === 'boolean') ? r.serverCorrect
-        : (typeof r.correct === 'boolean' ? r.correct : (selectedIndex != null && correctIndex >= 0 && selectedIndex === correctIndex));
-      const correctOptionId = (correctIndex >= 0 && Array.isArray(q?.options) && q.options[correctIndex]) ? q.options[correctIndex].id : (r?.serverCorrectOptionId ?? null);
-      return {
-        questionId: q?.id ?? q?.questionIdRaw ?? idx + 1,
-        selectedOptionId: selectedOptionId ?? null,
-        isCorrect,
-        correctOptionId: correctOptionId ?? null,
-        selectedIndex,
-        correctIndex: (correctIndex >= 0 ? correctIndex : null),
-      };
-    });
-    const scorePercent = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
-    return {
-      totalQuestions,
-      correctAnswers,
-      score: scorePercent,
-      scorePercent,
-      passed: scorePercent >= 60,
-      answers,
-    };
-  };
-
   const handleNext = async () => {
     if (current + 1 < questionList.length) {
       setCurrent(current + 1);
@@ -742,23 +696,18 @@ export default function QuizQuestion({ current,
           const uid = localStorage.getItem('userId') || undefined;
           const token = localStorage.getItem('accessToken') || undefined;
           if (quizId != null) {
-            const summary = buildCompletionSummary();
-            console.log('[QuizQuestion][Complete] posting summary', { quizId, summary });
             completionPostedRef.current = true;
-            // 사양 확정: 완료 시에는 per-question 개별 제출을 선호하고, 완료만 서버에 기록
-            // → 위 진행 중에 safeSubmitCurrentQuestion로 문항별 제출을 이미 수행했으므로 여기서는 생략
-            // (일부 백엔드는 /quizzes/{id}/submit-answer를 제공하지 않아 404가 발생하므로 호출 제거)
-            // 1) 완료/진행도 업데이트 (서버 기록용)
+            // Debug: log completeQuiz POST
+            console.log('[QuizQuestion][completeQuiz][POST]', { quizId, userId: uid });
             try {
-              const completeResp = await completeQuiz(quizId, uid, token, summary);
-              try { console.log('[QuizQuestion][Complete][complete][response]', completeResp); } catch (_) {}
+              const completeResp = await completeQuiz(quizId, uid, token);
+              try { console.log('[QuizQuestion][completeQuiz][RESPONSE]', completeResp); } catch (_) {}
               try {
                 // 백엔드 기록 완료 후 전역 이벤트로 진행도/배지 재조회 트리거
                 window.dispatchEvent(new CustomEvent('fin:quiz-completed', {
                   detail: {
                     quizId,
                     userId: uid,
-                    summary,
                     result: completeResp || null,
                   }
                 }));
@@ -1138,22 +1087,33 @@ export default function QuizQuestion({ current,
         ref={buttonRef}
         className="quiz-question-bottom-btn-wrap"
       >
-        <button
-          disabled={selected === null}
-          onClick={async () => {
-            if (!showResult) {
-              // Step 1: per-question submit (guarded against duplicates)
-              await safeSubmitCurrentQuestion();
-              // Then continue existing check flow
-              onCheck();
-            } else {
-              handleNext();
-            }
-          }}
-          className="quiz-question-bottom-btn"
-        >
-          {showResult ? "다음" : "채점하기"}
-        </button>
+        {/* Retry button if quiz failed */}
+        {quizResult && quizResult.passed === false ? (
+          <button
+            disabled={retrying}
+            onClick={handleRetryQuiz}
+            className="quiz-question-bottom-btn retry"
+          >
+            {retrying ? "다시풀기 중..." : "다시풀기"}
+          </button>
+        ) : (
+          <button
+            disabled={selected === null}
+            onClick={async () => {
+              if (!showResult) {
+                // Step 1: per-question submit (guarded against duplicates)
+                await safeSubmitCurrentQuestion();
+                // Then continue existing check flow
+                onCheck();
+              } else {
+                handleNext();
+              }
+            }}
+            className="quiz-question-bottom-btn"
+          >
+            {showResult ? "다음" : "채점하기"}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,85 @@
+.comment-dropdown.ig-style {
+  background: #fff;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  margin-top: -16px;
+  padding: 0 0 8px 0;
+  border-top: 1px solid #eee;
+  position: relative;
+  z-index: 2;
+}
+.comment-dropdown-list {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 8px 16px 0 16px;
+}
+.comment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.comment-author {
+  font-weight: 600;
+  color: #262626;
+  margin-right: 4px;
+}
+.comment-content {
+  color: #222;
+  word-break: break-all;
+}
+.comment-date {
+  color: #bbb;
+  font-size: 12px;
+  margin-left: auto;
+}
+.comment-form.ig-style {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid #eee;
+  padding: 8px 12px 0 12px;
+  background: #fff;
+  border-radius: 0 0 12px 12px;
+  gap: 8px;
+}
+.comment-form.ig-style input[type="text"] {
+  flex: 1;
+  border: none;
+  background: #f7f7f7;
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 15px;
+  outline: none;
+  margin-right: 8px;
+}
+.ig-submit-btn {
+  background: none;
+  border: none;
+  color: #0095f6;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 0 8px;
+  transition: color 0.2s;
+}
+.ig-submit-btn:disabled {
+  color: #b2dffc;
+  cursor: not-allowed;
+}
+.close-btn {
+  background: none;
+  border: none;
+  color: #bbb;
+  font-size: 20px;
+  margin-left: 4px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+.comment-loading, .comment-error, .comment-empty {
+  color: #888;
+  font-size: 14px;
+  padding: 12px 0;
+  text-align: center;
+}

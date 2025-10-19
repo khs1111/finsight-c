@@ -1,7 +1,7 @@
 import { useWrongNoteStore } from './useWrongNoteStore';
 import Illustration from '../../assets/study/wrongNoteIllustration.svg';
 
-const CATEGORY_ORDER = ['은행', '투자', '세금/절세', '암호화폐'];
+const CATEGORY_ORDER = ['은행', '카드', '세금/절세', '투자'];
 
 export default function WrongNoteSection() {
   const { wrongNotes, loading, error, stats } = useWrongNoteStore();
@@ -12,6 +12,8 @@ export default function WrongNoteSection() {
   }));
   const empty = !loading && total === 0;
 
+  // 통계 시각화: 카테고리별 비율
+  const statList = (stats?.byCategory && Array.isArray(stats.byCategory)) ? stats.byCategory : [];
   return (
     <div className="wrongnote-wrapper" role="region" aria-label="오답노트">
       <div className="wrongnote-header-block">
@@ -21,6 +23,27 @@ export default function WrongNoteSection() {
           <img src={Illustration} alt="오답 일러스트" className="wrongnote-float-illust" />
         )}
       </div>
+      {/* 통계 시각화 영역 */}
+      {!empty && statList.length > 0 && (
+        <div className="wrongnote-stats-block">
+          <h4 className="wrongnote-stats-title">카테고리별 오답 통계</h4>
+          <ul className="wrongnote-stats-list">
+            {statList.map((item) => {
+              const percent = total > 0 ? Math.round((item.count / total) * 100) : 0;
+              return (
+                <li key={item.category} className="wrongnote-stats-item">
+                  <span className="stat-cat">{item.category}</span>
+                  <span className="stat-bar-wrap">
+                    <span className="stat-bar" style={{width: percent + '%', background: '#FFBC02', display: 'inline-block', height: 8, borderRadius: 4}}></span>
+                  </span>
+                  <span className="stat-count">{item.count}개</span>
+                  <span className="stat-percent">({percent}%)</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
       {loading ? (
         <div className="wrongnote-empty"><p>불러오는 중...</p></div>
       ) : empty ? (

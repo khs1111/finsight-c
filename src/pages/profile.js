@@ -9,7 +9,7 @@ import DiamondBadge from '../assets/tier/diamond.png';
 import MasterBadge from '../assets/tier/master.png';
 import { fetchProfile, fetchProfileActivity, fetchDashboard, getCurrentBadge } from '../api/profile';
 import { API_BASE, IMAGE_BASE } from '../api/config';
-import { getUserProgress } from '../api/explore';
+// getUserProgress 제거됨. 필요시 getUserProgressSummary 사용.
 import './Profile.css';
 
 const actionItems = [
@@ -221,7 +221,9 @@ function Calendar() {
 }
 
 export default function Profile() {
-  const [profile, setProfile] = useState({ nickname: '', tier: '', tierImageUrl: '' });
+  const [nickname, setNickname] = useState('');
+  const [tier, setTier] = useState('');
+  const [tierImageUrl, setTierImageUrl] = useState('');
   const [score, setScore] = useState(null);
   const normalizeTier = (t) => {
     const s = String(t || '').trim().toLowerCase();
@@ -273,29 +275,66 @@ export default function Profile() {
   useEffect(() => {
     (async () => {
       try {
-  const res = await fetchProfile();
-  const uFromSS = Number(sessionStorage.getItem('userId')) || undefined;
-  const uFromLS = Number(localStorage.getItem('userId')) || undefined;
-  const tFromSS = sessionStorage.getItem('accessToken') || undefined;
-  const tFromLS = localStorage.getItem('accessToken') || undefined;
-  const userId = uFromSS || uFromLS;
-  const token = tFromSS || tFromLS;
+        const isGuest = sessionStorage.getItem('guest') === '1';
+        const cachedNickname = sessionStorage.getItem('username');
+        const uFromSS = Number(sessionStorage.getItem('userId')) || undefined;
+        const uFromLS = Number(localStorage.getItem('userId')) || undefined;
+        const tFromSS = sessionStorage.getItem('accessToken') || undefined;
+        const tFromLS = localStorage.getItem('accessToken') || undefined;
+        const userId = uFromSS || uFromLS;
+        const token = tFromSS || tFromLS;
   const hasUserId = !!userId;
-  const hasToken = !!token;
-        // Prefer score from user progress; fallback to dashboard if missing
+
+        if (isGuest && cachedNickname) {
+          setNickname(cachedNickname);
+          // 티어(뱃지)는 비동기로 따로
+          if (userId) {
+            getCurrentBadge(userId).then(badgeData => {
+              if (badgeData) {
+                const icon = badgeData?.iconUrl || badgeData?.icon_url || badgeData?.badge?.iconUrl || badgeData?.badge?.icon_url;
+                const name = badgeData?.name || badgeData?.badge?.name || badgeData?.title || badgeData?.badge?.title;
+                if (icon) setTierImageUrl(icon);
+                if (name) setTier(name);
+              }
+            }).catch(e => {
+              try {
+                console.log('[Profile][badge] request failed:', e?.message || e);
+                if (e && typeof e === 'object') {
+                  console.log('[Profile][badge] error.details', { status: e.status, body: e.body });
+                }
+              } catch (_) {}
+            });
+          }
+          return;
+        }
+
+        // 일반 로그인: 프로필/뱃지 API를 각각 따로 setState
+        fetchProfile().then(res => {
+          setNickname(res?.data?.nickname || '');
+        });
+        if (userId) {
+          getCurrentBadge(userId).then(badgeData => {
+            if (badgeData) {
+              const icon = badgeData?.iconUrl || badgeData?.icon_url || badgeData?.badge?.iconUrl || badgeData?.badge?.icon_url;
+              const name = badgeData?.name || badgeData?.badge?.name || badgeData?.title || badgeData?.badge?.title;
+              if (icon) setTierImageUrl(icon);
+              if (name) setTier(name);
+            }
+          }).catch(e => {
+            try {
+              console.log('[Profile][badge] request failed:', e?.message || e);
+              if (e && typeof e === 'object') {
+                console.log('[Profile][badge] error.details', { status: e.status, body: e.body });
+              }
+            } catch (_) {}
+          });
+        }
+
+        // 점수 로직은 기존대로 (순차)
         if (hasUserId) {
           let gotScore = false;
           try {
-            const up = await getUserProgress(userId, token);
-            const candUP = [
-              up?.totalScore, up?.score, up?.points, up?.totalPoints, up?.xp, up?.exp,
-              up?.progress?.totalScore, up?.progress?.score, up?.progress?.points,
-            ];
-            for (const v of candUP) {
-              if (v == null) continue;
-              const n = typeof v === 'number' ? v : Number(v);
-              if (!Number.isNaN(n)) { setScore(n); gotScore = true; break; }
-            }
+            // getUserProgress 제거됨. 필요시 getUserProgressSummary 사용.
           } catch (e) {
             /* ignore and fallback */
           }
@@ -318,51 +357,19 @@ export default function Profile() {
             } catch (_) { /* ignore */ }
           }
         }
-        try {
-          // eslint-disable-next-line no-console
-          console.log('[Profile] data source (not badge):', res?.isDummy ? 'dummy' : (res?.isFallback ? 'dashboard' : 'profile API'), '| hasUserId:', hasUserId, '| hasToken:', hasToken);
-        } catch (_) {}
-        // 프로필 응답에서는 배지(tier) 정보를 사용하지 않는다. 닉네임만 반영.
-        const base = {
-          nickname: res?.data?.nickname || '',
-          tier: '',
-          tierImageUrl: '',
-        };
-        // 현재 배지 단건 조회로 아이콘 URL 확정 (문서 스펙: GET /api/badges/user/{id}/current)
-        try {
-          if (userId) {
-            try { console.log('[Profile][badge] requesting via api/profile.getCurrentBadge'); } catch (_) {}
-            try {
-              const data = await getCurrentBadge(userId);
-              try { console.log('[Profile][badge] endpoint result:', data); } catch (_) {}
-              const icon = data?.iconUrl || data?.icon_url || data?.badge?.iconUrl || data?.badge?.icon_url;
-              const name = data?.name || data?.badge?.name || data?.title || data?.badge?.title;
-              if (icon) {
-                base.tierImageUrl = icon; // 상대경로여도 OK, 렌더링에서 절대화 처리됨
-              }
-              if (!base.tier && name) {
-                base.tier = name;
-              }
-            } catch (e) {
-              try {
-                console.log('[Profile][badge] request failed:', e?.message || e);
-                if (e && typeof e === 'object') {
-                  console.log('[Profile][badge] error.details', { status: e.status, body: e.body });
-                }
-              } catch (_) {}
-            }
-          }
-        } catch (_) {}
-        setProfile(base);
+        // eslint-disable-next-line no-console
+        // console.log('[Profile] data source (not badge):', res?.isDummy ? 'dummy' : (res?.isFallback ? 'dashboard' : 'profile API'), '| hasUserId:', hasUserId, '| hasToken:', hasToken);
       } catch (_) {
-        setProfile({ nickname: '', tier: '', tierImageUrl: '' });
+        setNickname('');
+        setTier('');
+        setTierImageUrl('');
       }
     })();
   }, []);
   // 화면 표시용 닉네임/티어: 백엔드 닉네임 우선, 비어있으면 게스트 기본값
-  const displayNickname = (profile?.nickname && String(profile.nickname).trim());
-  const displayTier = normalizeTier(profile.tier);
-  const tierIconSrc = tierImageFor(displayTier, profile.tierImageUrl);
+  const displayNickname = (nickname && String(nickname).trim());
+  const displayTier = normalizeTier(tier);
+  const tierIconSrc = tierImageFor(displayTier, tierImageUrl);
   const displayScore = useMemo(() => {
     if (score == null || !isFinite(score)) return '-';
     const n = Math.round(Number(score));

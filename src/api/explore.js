@@ -366,122 +366,39 @@ export const getLevelQuizzes = async (levelId, userId, token) => {
   }
 };
 
-// 4. 레벨별 진행도 조회
-export const getLevelProgress = async (levelId, userId, token) => {
-  const uid = withUserId(userId);
-  const lid = coerceLevelId(levelId);
-  try {
-    const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
-    const data = await http(`/levels/${lid}/progress${qs}`, {}, token);
-    try {
-      console.log('[Progress] getLevelProgress URL:', `/levels/${lid}/progress${qs}`);
-      console.log('[Progress] getLevelProgress raw:', data);
-      const summary = data && typeof data === 'object' ? {
-        isCompleted: !!data.isCompleted,
-        completionRate: Number(data.completionRate ?? data.rate ?? 0),
-        completedQuizzes: Number(data.completedQuizzes ?? data.done ?? 0),
-        totalQuizzes: Number(data.totalQuizzes ?? data.total ?? 0),
-        quizzesSample: Array.isArray(data.quizzes) ? data.quizzes.slice(0, 5).map(q => ({ id: q.id, isCompleted: !!q.isCompleted })) : [],
-      } : null;
-      console.log('[Progress] getLevelProgress summary:', summary);
-      if (typeof window !== 'undefined') {
-        window.__LEVEL_PROGRESS_LAST = { url: `/levels/${lid}/progress${qs}`, raw: data, summary };
-      }
-    } catch (_) {}
-    return data;
-  } catch {
-    return null;
+
+// 레벨별 징검다리 진행률 조회
+export async function getLevelProgress(userId, levelId) {
+  const response = await fetch(`/api/progress/user/${userId}/level/${levelId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
+  if (!response.ok) {
+    throw new Error('진행률 조회 실패');
   }
-};
+  const progress = await response.json();
+  console.log('징검다리 진행률:', progress);
+  return progress;
+}
 
-// 4b. 서브섹터 진행도 조회: GET /api/subsectors/{id}/progress?userId=
-export const getSubsectorProgress = async (subsectorId, userId, token) => {
-  const uid = withUserId(userId);
-  const sid = Number(subsectorId);
-  if (!Number.isFinite(sid)) return null;
-  try {
-    const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
-    const data = await http(`/subsectors/${sid}/progress${qs}`, {}, token);
-    try {
-      console.log('[Progress] getSubsectorProgress raw:', data);
-      if (typeof window !== 'undefined') {
-        window.__SUBSECTOR_PROGRESS_LAST = { subsectorId: sid, userId: uid, raw: data };
-      }
-    } catch (_) {}
-    return data;
-  } catch (e) {
-    console.warn('[Progress] getSubsectorProgress failed:', e?.message || e);
-    return null;
+
+// 사용자 전체 진행률 요약 조회
+export async function getUserProgressSummary(userId) {
+  const response = await fetch(`/api/progress/user/${userId}/summary`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
+  if (!response.ok) {
+    throw new Error('진행률 요약 조회 실패');
   }
-};
-
-// 7️⃣ 사용자 전체 진행 상황 조회: GET /api/users/{userId}/progress
-export const getUserProgress = async (userId, token) => {
-  const uid = withUserId(userId);
-  if (!uid) return null;
-  try {
-    const data = await http(`/users/${encodeURIComponent(uid)}/progress`, {}, token);
-    try {
-      console.log('[UserProgress] /users/{id}/progress raw:', data);
-      if (typeof window !== 'undefined') {
-        window.__USER_PROGRESS_LAST = { userId: uid, raw: data };
-      }
-    } catch (_) {}
-    return data;
-  } catch (e) {
-    console.warn('[UserProgress] fetch failed:', e?.message || e);
-    return null;
-  }
-};
-
-// Stepping progress (per spec): GET /api/progress/user/{userId}/level/{levelId}
-export const getSteppingProgress = async (userId, levelId, token) => {
-  const uid = withUserId(userId);
-  const lid = coerceLevelId(levelId);
-  if (!uid || !Number.isFinite(lid)) throw new Error('Invalid userId or levelId');
-  const path = `/progress/user/${encodeURIComponent(uid)}/level/${lid}`;
-  const raw = await http(path, {}, token);
-  // Normalize to expected shape
-  const asNum = (v) => (v == null ? undefined : (Number.isFinite(Number(v)) ? Number(v) : undefined));
-  const toBool = (v) => (typeof v === 'boolean' ? v : (typeof v === 'number' ? v === 1 : (typeof v === 'string' ? /^(true|y|yes|1)$/i.test(v) : undefined)));
-  const steps = Array.isArray(raw?.steps) ? raw.steps.map(s => ({
-    stepNumber: asNum(s.stepNumber ?? s.number ?? s.step) ?? undefined,
-    stepTitle: s.stepTitle ?? s.title ?? undefined,
-    completedQuizzes: asNum(s.completedQuizzes ?? s.completed ?? s.done) ?? 0,
-    totalQuizzes: asNum(s.totalQuizzes ?? s.total) ?? 0,
-    passedQuizzes: asNum(s.passedQuizzes ?? s.passed) ?? undefined,
-    failedQuizzes: asNum(s.failedQuizzes ?? s.failed) ?? undefined,
-    isCompleted: !!toBool(s.isCompleted ?? (asNum(s.completedQuizzes ?? s.completed) >= asNum(s.totalQuizzes ?? s.total))),
-    isPassed: !!toBool(s.isPassed),
-    passRate: (typeof s.passRate === 'number' ? s.passRate : undefined),
-    stepDescription: s.stepDescription ?? s.description ?? undefined,
-  })) : [];
-  const result = {
-    levelId: asNum(raw?.levelId) ?? lid,
-    levelNumber: asNum(raw?.levelNumber) ?? undefined,
-    levelTitle: raw?.levelTitle ?? raw?.title ?? undefined,
-    totalQuizzes: asNum(raw?.totalQuizzes ?? raw?.total) ?? 0,
-    completedQuizzes: asNum(raw?.completedQuizzes ?? raw?.completed ?? raw?.done) ?? 0,
-    passedQuizzes: asNum(raw?.passedQuizzes ?? raw?.passed) ?? undefined,
-    completionRate: (typeof raw?.completionRate === 'number' ? raw.completionRate : (asNum(raw?.totalQuizzes) ? (asNum(raw?.completedQuizzes) || 0) / asNum(raw?.totalQuizzes) : undefined)),
-    passRate: (typeof raw?.passRate === 'number' ? raw.passRate : undefined),
-    steps,
-    isStepPassed: toBool(raw?.isStepPassed),
-    currentStep: asNum(raw?.currentStep) ?? undefined,
-  };
-  try { console.log('[SteppingProgress]', result); } catch (_) {}
-  return result;
-};
-
-// User progress summary: GET /api/progress/user/{userId}/summary
-export const getUserProgressSummary2 = async (userId, token) => {
-  const uid = withUserId(userId);
-  if (!uid) throw new Error('Invalid userId');
-  const path = `/progress/user/${encodeURIComponent(uid)}/summary`;
-  const raw = await http(path, {}, token);
-  try { console.log('[UserProgressSummary]', raw); } catch (_) {}
-  return raw;
-};
+  const summary = await response.json();
+  console.log('진행률 요약:', summary);
+  return summary;
+}
 
 // 레벨 상세 정보 조회: desc/goal/levelNumber/title 등 보강용
 export const getLevelDetail = async (levelId) => {
@@ -1351,71 +1268,47 @@ export const completeQuiz = async (quizId, userId, token, completionData) => {
     ...(jwt ? { Authorization: `Bearer ${jwt}` } : {})
   };
 
-  // Merge completion summary data (optional) for server-side recording
-  const summary = completionData && typeof completionData === 'object' ? completionData : undefined;
-  const derived = summary ? {
-    totalQuestions: summary.totalQuestions ?? summary.total ?? undefined,
-    correctAnswers: summary.correctAnswers ?? summary.correct ?? undefined,
-    score: summary.score ?? summary.scorePercent ?? undefined,
-    scorePercent: summary.scorePercent ?? summary.score ?? undefined,
-    passed: typeof summary.passed === 'boolean' ? summary.passed : undefined,
-    answers: Array.isArray(summary.answers) ? summary.answers : undefined,
-  } : {};
-  const reqBody = { quizId: id, userId: uid, user_id: uid, ...derived, summary: summary || undefined };
-  const body = JSON.stringify(reqBody);
-
-  // Helper: normalize backend response into expected shape
-  const normalize = (resp) => {
-    const asNum = (v) => (v == null ? undefined : (Number.isFinite(Number(v)) ? Number(v) : undefined));
-    const totalQuestions = asNum(resp?.totalQuestions ?? resp?.total ?? summary?.totalQuestions ?? summary?.total);
-    const correctAnswers = asNum(resp?.correctAnswers ?? resp?.correct ?? resp?.correctCount ?? summary?.correctAnswers ?? summary?.correct);
-    // Some backends return score same as correctAnswers or percent; prefer explicit score
-    const score = asNum(resp?.score) ?? asNum(correctAnswers);
-    const passed = typeof resp?.passed === 'boolean' ? resp.passed
-                  : (typeof summary?.passed === 'boolean' ? summary.passed : undefined);
-    const message = resp?.message ?? (
-      totalQuestions != null && correctAnswers != null
-        ? `${passed ? '축하합니다! ' : ''}${totalQuestions}문제 중 ${correctAnswers}문제를 맞혔습니다.`
-        : undefined
-    );
-    return {
-      quizId: asNum(resp?.quizId ?? resp?.id) ?? id,
-      userId: asNum(resp?.userId ?? resp?.user_id) ?? uid,
-      totalQuestions: totalQuestions ?? (Array.isArray(summary?.answers) ? summary.answers.length : undefined),
-      correctAnswers: correctAnswers ?? asNum(score),
-      passed: typeof passed === 'boolean' ? passed : (totalQuestions != null && correctAnswers != null ? correctAnswers >= totalQuestions : undefined),
-      score: score ?? correctAnswers ?? 0,
-      message,
-      // Preserve raw for debugging if needed
-      _raw: resp
-    };
-  };
-
+  // body 없이 POST (API 명세대로)
   let resp;
-  // 1) 스펙: POST /quizzes/{id}/complete?userId=
   try {
-    resp = await http(`/quizzes/${id}/complete${qs}`, { method: 'POST', headers, body }, jwt);
+    resp = await http(`/quizzes/${id}/complete${qs}`, { method: 'POST', headers }, jwt);
   } catch (e1) {
-    // 2) 변형: POST /quizzes/{id}/complete (body에 userId 포함)
     try {
-      resp = await http(`/quizzes/${id}/complete`, { method: 'POST', headers, body }, jwt);
+      resp = await http(`/quizzes/${id}/complete`, { method: 'POST', headers }, jwt);
     } catch (e2) {
-      // 3) 변형: POST /quizzes/complete (body에 quizId,userId)
       try {
-        resp = await http(`/quizzes/complete`, { method: 'POST', headers, body }, jwt);
+        resp = await http(`/quizzes/complete`, { method: 'POST', headers }, jwt);
       } catch (e3) {
-        // 4) 구버전: POST /quizzes/{id}/done
         try {
-          resp = await http(`/quizzes/${id}/done${qs}`, { method: 'POST', headers, body }, jwt);
+          resp = await http(`/quizzes/${id}/done${qs}`, { method: 'POST', headers }, jwt);
         } catch (e4) {
-          // 마지막 실패 시 최초 에러 전달
           throw e1;
         }
       }
     }
   }
 
-  const result = normalize(resp);
+  // 응답 정규화
+  const asNum = (v) => (v == null ? undefined : (Number.isFinite(Number(v)) ? Number(v) : undefined));
+  const totalQuestions = asNum(resp?.totalQuestions ?? resp?.total);
+  const correctAnswers = asNum(resp?.correctAnswers ?? resp?.correct ?? resp?.correctCount);
+  const score = asNum(resp?.score) ?? asNum(correctAnswers);
+  const passed = typeof resp?.passed === 'boolean' ? resp.passed : undefined;
+  const message = resp?.message ?? (
+    totalQuestions != null && correctAnswers != null
+      ? `${passed ? '축하합니다! ' : ''}${totalQuestions}문제 중 ${correctAnswers}문제를 맞혔습니다.`
+      : undefined
+  );
+  const result = {
+    quizId: asNum(resp?.quizId ?? resp?.id) ?? id,
+    userId: asNum(resp?.userId ?? resp?.user_id) ?? uid,
+    totalQuestions,
+    correctAnswers,
+    passed,
+    score: score ?? correctAnswers ?? 0,
+    message,
+    _raw: resp
+  };
   try {
     const dbg = typeof window !== 'undefined' && (window.__QUIZ_DEBUG || window.__FIN_DEBUG);
     if (dbg) console.log('퀴즈 완료:', result);
@@ -1463,3 +1356,113 @@ export const submitQuizAnswer = async (quizId, userId, answers, token) => {
     return await http(`/quizzes/${id}/submit-answer${qs}`, { method: 'POST', headers, body: JSON.stringify(body), silent: false }, token);
   }
 };
+
+// 퀴즈 다시풀기: POST /api/quizzes/{id}/retry?userId=...
+export const retryQuiz = async (quizId, userId, token) => {
+  const id = Number(quizId);
+  if (!Number.isFinite(id)) throw new Error('Invalid quizId for retryQuiz');
+  const uid = userId ?? localStorage.getItem('userId');
+  const qs = uid ? `?userId=${encodeURIComponent(uid)}` : '';
+  const jwt = token ?? localStorage.getItem('accessToken') ?? undefined;
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(jwt ? { Authorization: `Bearer ${jwt}` } : {})
+  };
+  try {
+    return await http(`/quizzes/${id}/retry${qs}`, { method: 'POST', headers }, jwt);
+  } catch (e) {
+    throw e;
+  }
+};
+
+  // =============================
+  // 오답노트 API
+  // =============================
+
+  // 오답노트 목록 조회 (필터링, 페이징)
+  export async function getWrongNotes(userId, page = 0, size = 20, filter = 'all') {
+    const response = await fetch(`/api/wrong-notes?userId=${userId}&page=${page}&size=${size}&filter=${filter}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    if (!response.ok) {
+      throw new Error('오답노트 조회 실패');
+    }
+    const wrongNotes = await response.json();
+    console.log('오답노트 목록:', wrongNotes);
+    return wrongNotes;
+  }
+
+  // 특정 오답노트 상세 조회
+  export async function getWrongNote(userId, noteId) {
+    const response = await fetch(`/api/wrong-notes/${noteId}?userId=${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    if (!response.ok) {
+      throw new Error('오답노트 상세 조회 실패');
+    }
+    const wrongNote = await response.json();
+    console.log('오답노트 상세:', wrongNote);
+    return wrongNote;
+  }
+
+  // 개인 메모 업데이트
+  export async function updatePersonalNote(userId, noteId, personalNoteMd) {
+    const response = await fetch(`/api/wrong-notes/${noteId}/personal-note?userId=${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: personalNoteMd
+    });
+    if (!response.ok) {
+      throw new Error('개인 메모 업데이트 실패');
+    }
+    const updatedNote = await response.json();
+    console.log('개인 메모 업데이트 완료:', updatedNote);
+    return updatedNote;
+  }
+
+  // 해결 상태 토글
+  export async function toggleResolved(userId, noteId) {
+    const response = await fetch(`/api/wrong-notes/${noteId}/toggle-resolved?userId=${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    if (!response.ok) {
+      throw new Error('해결 상태 변경 실패');
+    }
+    const updatedNote = await response.json();
+    console.log('해결 상태 변경 완료:', updatedNote);
+    return updatedNote;
+  }
+
+  // 복습 완료 처리
+  export async function markAsReviewed(userId, noteId) {
+    const response = await fetch(`/api/wrong-notes/${noteId}/mark-reviewed?userId=${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    if (!response.ok) {
+      throw new Error('복습 완료 처리 실패');
+    }
+    const updatedNote = await response.json();
+    console.log('복습 완료 처리 완료:', updatedNote);
+    return updatedNote;
+  }
+
+  // 오답노트 통계 조회
+  // 오답노트 통계 API는 서버에 없으므로, 목록 조회만 사용하고 통계는 직접 계산하거나 기본값 반환
+  export async function getWrongNoteStatistics(userId) {
+    // 목록 조회만 사용
+    return { total: 0, byCategory: [] };
+  }
