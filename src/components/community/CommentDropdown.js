@@ -55,12 +55,27 @@ export default function CommentDropdown({ postId, open, onClose }) {
         ) : comments.length === 0 ? (
           <div className="comment-empty">아직 댓글이 없습니다.</div>
         ) : (
-          <ul>
+          <ul className="comment-list">
             {comments.map(c => (
-              <li key={c.id || c.commentId} className="comment-item">
-                <span className="comment-author">{c.author?.nickname || '익명'}</span>
-                <span className="comment-content">{c.content}</span>
-                <span className="comment-date">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</span>
+              <li key={c.id || c.commentId} className="comment-item" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span className="comment-author" style={{ fontWeight: 700, fontSize: 15 }}>{c.author?.nickname || '익명'}</span>
+                  {c.author?.badge && c.author.badge.imageUrl && (
+                    <img
+                      src={c.author.badge.imageUrl}
+                      alt={c.author.badge.name || c.author.badge.tier || '티어'}
+                      style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', marginRight: 4, verticalAlign: 'middle', background: '#f5f5f7', border: '1px solid #eee' }}
+                      className="comment-badge-img"
+                    />
+                  )}
+                  {c.author?.badge && !c.author.badge.imageUrl && (
+                    <span className="comment-badge" style={{ background: '#f5f5f7', color: '#6c6c6c', borderRadius: 8, fontSize: 13, padding: '2px 8px', marginRight: 4, fontWeight: 500 }}>
+                      {c.author.badge.name || c.author.badge.tier || '뱃지'}
+                    </span>
+                  )}
+                  <span className="comment-date" style={{ color: '#aaa', fontSize: 12, marginLeft: 4 }}>{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</span>
+                </div>
+                <div className="comment-content" style={{ whiteSpace: 'pre-line', wordBreak: 'break-word', fontSize: 15, marginTop: 2, lineHeight: 1.6, color: '#222' }}>{c.body}</div>
               </li>
             ))}
           </ul>

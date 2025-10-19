@@ -35,35 +35,37 @@ export async function getPostLikeStatus(userId, postId) {
 	return await response.json();
 }
 
-// 댓글 작성
+// community.js 수정
 export async function createComment(userId, postId, content) {
-		const token = localStorage.getItem('accessToken');
-		const headers = { 'Content-Type': 'application/json' };
-		if (token) headers['Authorization'] = `Bearer ${token}`;
-		const response = await fetch(`${BASE_URL}/community/posts/${postId}/comments?userId=${userId}`, {
-			method: 'POST',
-			headers,
-			body: JSON.stringify({ content })
-		});
-		if (!response.ok) {
-			throw new Error('댓글 작성 실패');
-		}
-		return await response.json();
+    const token = localStorage.getItem('accessToken');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(`${BASE_URL}/community/posts/${postId}/comments?userId=${userId}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ body: content })  // "content" → "body"로 변경
+    });
+    if (!response.ok) {
+        throw new Error('댓글 작성 실패');
+    }
+    return await response.json();
 }
 
 // 댓글 목록 조회
 export async function getPostComments(postId, page = 0, size = 20) {
-	 const token = localStorage.getItem('accessToken');
-	 const headers = { 'Content-Type': 'application/json' };
-	 if (token) headers['Authorization'] = `Bearer ${token}`;
+		const token = localStorage.getItem('accessToken');
+		const headers = { 'Content-Type': 'application/json' };
+		if (token) headers['Authorization'] = `Bearer ${token}`;
 		const response = await fetch(`${BASE_URL}/community/posts/${postId}/comments?page=${page}&size=${size}`, {
 		 method: 'GET',
 		 headers
-	 });
-	if (!response.ok) {
-		throw new Error('댓글 목록 조회 실패');
-	}
-	return await response.json();
+		});
+		if (!response.ok) {
+		 throw new Error('댓글 목록 조회 실패');
+		}
+		const data = await response.json();
+		console.log('[커뮤니티][댓글목록][응답]', data);
+		return data;
 }
 
 // 댓글 수정
@@ -135,8 +137,15 @@ export const fetchCommunityPosts = ({ category, tier, page = 0, size = 20 } = {}
 			page,
 			size,
 		}
+	}).then(res => {
+		console.log('[커뮤니티][글목록][응답]', res?.data ?? res);
+		return res;
 	});
-export const createCommunityPost = (data, token) => getAxios(token).post('/community/posts', data);
+export const createCommunityPost = (data, token) =>
+	getAxios(token).post('/community/posts', data).then(res => {
+		console.log('[커뮤니티][글작성][응답]', res?.data ?? res);
+		return res;
+	});
 export const fetchCommunityPostDetail = (postId, token) => getAxios(token).get(`/community/posts/${postId}`);
 export const createCommunityComment = (postId, data, token) => getAxios(token).post(`/community/posts/${postId}/comments`, data);
 export const likeCommunityPost = (postId, token) => getAxios(token).post(`/community/posts/${postId}/like`);

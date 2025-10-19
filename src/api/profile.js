@@ -62,7 +62,7 @@ export async function fetchProfile() {
   const dash = await http(`/dashboard?userId=${userId}`);
   console.log('[프로필][대시보드][응답]', dash);
     return {
-      nickname: dash?.userInfo?.nickname || '피니',
+      nickname: dash?.userInfo?.nickname ,
       tier: dash?.userInfo?.currentLevelTitle || '브론즈',
       totalScore: dash?.userInfo?.totalScore || 0,
       streak: dash?.userInfo?.streak || 0,
