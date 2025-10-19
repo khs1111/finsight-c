@@ -75,9 +75,9 @@
 
   white-space: nowrap;
   font-family: Roboto, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
-  font-size: 22px;
+  font-size: 18px;
   font-style: normal;
-  font-weight: 400;
+  font-weight: 700;
   line-height: normal;
   pointer-events: none; /* 제목이 클릭되지 않도록 함 (뒤로가기 버튼이 정상 동작) */
 
