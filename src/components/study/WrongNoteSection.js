@@ -1,12 +1,12 @@
 
 import { useWrongNoteStore } from './useWrongNoteStore';
 import Illustration from '../../assets/study/wrongNoteIllustration.svg';
-import WrongNoteList from '../../pages/WrongNoteList';
+
 
 
 export default function WrongNoteSection() {
   const { wrongNotes, loading, error, stats } = useWrongNoteStore();
-  const total = stats?.total ?? wrongNotes.length;
+  const total = stats?.totalCount ?? stats?.total ?? wrongNotes.length;
   const empty = !loading && total === 0;
 
   // 통계 시각화: 카테고리별 비율
@@ -15,7 +15,7 @@ export default function WrongNoteSection() {
     <div className="wrongnote-wrapper" role="region" aria-label="오답노트">
       <div className="wrongnote-header-block">
         <h2 className="wrongnote-title-line">틀린 문제를 정리해보았어요!</h2>
-        {!empty && <div className="wrongnote-total-overlay">총 {total}개</div>}
+  {!empty && <div className="wrongnote-total-overlay">총 {total}개</div>}
         {!empty && (
           <img src={Illustration} alt="오답 일러스트" className="wrongnote-float-illust" />
         )}
@@ -52,8 +52,14 @@ export default function WrongNoteSection() {
       ) : (
         <>
           {error && <div className="error-text">서버 통신 오류: {error}</div>}
-          {/* 오답노트 카드 UI */}
-          <WrongNoteList wrongNotes={wrongNotes} statistics={{ totalCount: total }} />
+          {/* 틀린문제 리스트 카드 UI */}
+          <div className="wrongnote-card-list">
+            {wrongNotes.map(note => (
+              <div key={note.id} className="wrongnote-card">
+                <div className="wrongnote-card-question">{note.questionText}</div>
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>

@@ -155,15 +155,17 @@ export default function ExploreMain({ onStart, selectedLevel: propSelectedLevel,
   const [progress, setProgress] = useState(null); // getLevelProgress 응답 전체
   // 진행도 로딩 상태 미사용 변수 삭제
 
-  // selection 변경 시 진행도 조회
+  // selection 변경 시 진행도 조회 (퀴즈는 기존대로, 진행도만 조합별 고유 레벨 ID 사용)
   useEffect(() => {
-    const { levelId } = selection || {};
+    const { topicId, subTopicId, levelId } = selection || {};
     const userId = localStorage.getItem('userId') || undefined;
-    if (!levelId || !userId) return;
+    if (!topicId || !subTopicId || !levelId || !userId) return;
     let cancelled = false;
     (async () => {
       try {
-        const data = await getLevelProgress(userId, levelId);
+        // 조합별 고유 레벨 ID로 진행도 조회
+        const resolvedLevelId = await import('../../api/explore').then(m => m.resolveLevelEntityId({ subTopicId, level: levelId }));
+        const data = await getLevelProgress(userId, resolvedLevelId);
         if (!cancelled) setProgress(data);
       } catch (e) {
         if (!cancelled) setProgress(null);
