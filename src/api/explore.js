@@ -115,23 +115,7 @@ function coerceLevelId(levelId) {
 // JWT 토큰을 자동으로 헤더에 포함하는 fetch 함수
 async function ensureAuth() {
   if (authInitialized) return;
-  const hasToken = !!localStorage.getItem('accessToken');
-  const isGuestSession = sessionStorage.getItem('guest') === '1';
   // TTL(24h) 만료 여부
-  let ttlExpired = false;
-  try {
-    const at = Number(localStorage.getItem('guestLoginAt')) || 0;
-    if (at > 0) {
-      const elapsedMs = Date.now() - at;
-      const DAY_MS = 24 * 60 * 60 * 1000;
-      ttlExpired = elapsedMs >= DAY_MS;
-    }
-  } catch (_) {}
-
-  // 게스트 세션이면 매 진입 시 갱신, 아니면 토큰 없거나 TTL 만료 시 로그인
-  /*if (isGuestSession || !hasToken || ttlExpired) {
-    try { await guestLogin(API_BASE); } catch (_) {}
-  }*/
   authInitialized = true;
 }
 
@@ -436,76 +420,6 @@ export const getLevelDetail = async (levelId) => {
 // (이전 submitAnswer / completeQuiz / progress 관련 구버전 함수 제거됨)
 
 // 회원가입 - 백엔드: POST /api/auth/signup
-/*
-export const signup = async (username, email, password) => {
-  try {
-    const result = await http("/auth/signup", {
-      method: "POST",
-      body: JSON.stringify({
-        username: username,
-        email: email,
-        password: password
-      })
-    });
-    return {
-      success: true,
-      data: result
-    };
-  } catch (error) {
-    console.log('🎯 더미 회원가입 응답 사용:', error.message);
-    return {
-      success: true,
-      data: {
-        id: Date.now(),
-        username: username,
-        email: email,
-        message: "더미 데이터로 회원가입 성공"
-      },
-      isDummy: true
-    };
-  }
-};
-
-// 로그인 - 백엔드: POST /api/auth/login
-export const login = async (username, password) => {
-  try {
-    const result = await http("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({
-        username: username,
-        password: password
-      })
-    });
-    
-    // JWT 토큰 저장
-    if (result.accessToken) {
-      localStorage.setItem('accessToken', result.accessToken);
-      localStorage.setItem('username', result.username);
-    }
-    
-    return {
-      success: true,
-      data: result
-    };
-  } catch (error) {
-    console.log('🎯 더미 로그인 응답 사용:', error.message);
-    
-    // 더미 토큰 저장
-    const dummyToken = 'dummy_jwt_token_' + Date.now();
-    localStorage.setItem('accessToken', dummyToken);
-    localStorage.setItem('username', username);
-    
-    return {
-      success: true,
-      data: {
-        accessToken: dummyToken,
-        username: username,
-        message: "더미 데이터로 로그인 성공"
-      },
-      isDummy: true
-    };
-  }
-};*/
 
 // ========================================
 // 🔄 기존 함수들 (호환성 유지)
@@ -1118,7 +1032,7 @@ export const submitAnswer = async ({ quizId, questionId, selectedOptionId, userI
   let uid = userId ?? localStorage.getItem('userId') ?? undefined;
   const jwt = token ?? localStorage.getItem('accessToken') ?? undefined;
 
-  // userId가 없으면 게스트 로그인 시도
+  // userId가 없으면 게스트 로그인 시도.
   if (!uid) {
     try {
       const guest = await guestLogin(API_BASE);

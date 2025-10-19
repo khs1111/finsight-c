@@ -1,7 +1,7 @@
 // Centralize API base resolution for consistency across modules
 
 // 환경변수(API_BASE) 우선 사용: 로컬에서도 운영 서버로 연결 가능하게
-const fromEnv = (typeof process !== 'undefined' && (process.env.API_BASE || process.env.VITE_API_BASE || process.env.NEXT_PUBLIC_API_BASE || process.env.REACT_APP_API_BASE)) || '';
+const fromEnv = (typeof process !== 'undefined' && (process.env.API_BASE || process.env.VITE_LIC_API_BASE || process.env.NEXT_PUBAPI_BASE || process.env.REACT_APP_API_BASE)) || '';
 const fromVite = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) || '';
 const fromNext = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_BASE) || '';
 const fromCra  = (typeof process !== 'undefined' && process.env?.REACT_APP_API_BASE) || '';

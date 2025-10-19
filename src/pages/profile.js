@@ -312,38 +312,13 @@ export default function Profile() {
   useEffect(() => {
     (async () => {
       try {
-        const isGuest = sessionStorage.getItem('guest') === '1';
-        const cachedNickname = sessionStorage.getItem('username');
         const uFromSS = Number(sessionStorage.getItem('userId')) || undefined;
         const uFromLS = Number(localStorage.getItem('userId')) || undefined;
         const tFromSS = sessionStorage.getItem('accessToken') || undefined;
         const tFromLS = localStorage.getItem('accessToken') || undefined;
         const userId = uFromSS || uFromLS;
         const token = tFromSS || tFromLS;
-  const hasUserId = !!userId;
-
-        if (isGuest && cachedNickname) {
-          setNickname(cachedNickname);
-          // 티어(뱃지)는 비동기로 따로
-          if (userId) {
-            getCurrentBadge(userId).then(badgeData => {
-              if (badgeData) {
-                const icon = badgeData?.iconUrl || badgeData?.icon_url || badgeData?.badge?.iconUrl || badgeData?.badge?.icon_url;
-                const name = badgeData?.name || badgeData?.badge?.name || badgeData?.title || badgeData?.badge?.title;
-                if (icon) setTierImageUrl(icon);
-                if (name) setTier(name);
-              }
-            }).catch(e => {
-              try {
-                console.log('[Profile][badge] request failed:', e?.message || e);
-                if (e && typeof e === 'object') {
-                  console.log('[Profile][badge] error.details', { status: e.status, body: e.body });
-                }
-              } catch (_) {}
-            });
-          }
-          return;
-        }
+        const hasUserId = !!userId;
 
         // 일반 로그인: 프로필/뱃지 API를 각각 따로 setState
         fetchProfile().then(res => {
