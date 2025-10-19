@@ -51,3 +51,10 @@ function normalizeBooleanFlag(v) {
 }
 
 export const HAS_PROFILE_ENDPOINTS = normalizeBooleanFlag(fromViteProfile || fromNextProfile || fromCraProfile);
+
+// Optional feature flag: whether backend provides /badges endpoints like /badges/user/{id}/current
+const fromViteBadge = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_HAS_BADGE_ENDPOINTS) || '';
+const fromNextBadge = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_HAS_BADGE_ENDPOINTS) || '';
+const fromCraBadge  = (typeof process !== 'undefined' && process.env?.REACT_APP_HAS_BADGE_ENDPOINTS) || '';
+
+export const HAS_BADGE_ENDPOINTS = normalizeBooleanFlag(fromViteBadge || fromNextBadge || fromCraBadge);

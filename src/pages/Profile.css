@@ -211,8 +211,7 @@ body.profile-route { background:#F4F6FA; }
 .tier-badge .tier-star { width:32px; height:32px; position:relative; border-radius:4px; }
 .tier-badge .tier-star::before { content:''; position:absolute; inset:0; background:linear-gradient(180deg,#FFCD42 0%,#FFBC02 35.58%,#B94D00 100%); border:1.6px solid #FFFFFF; border-radius:4px; }
 .tier-badge .tier-label { font-size:18px; font-weight:700; letter-spacing:-0.02em; color:#474747; }
-.p-stats-card {
-  margin:16px 32px 32px 32px; /* hero 아래 16px */
+.p-stats-card { /* hero 아래 16px */
   width:auto;
   min-width:0;
   height:100px;
@@ -702,18 +701,34 @@ body.profile-route { background:#F4F6FA; }
 
 /* --- Profile hero composition (background + character + overlays) --- */
 .p-hero { position:relative; margin-top:18px; left:0; right:0; top:0 !important; height:auto !important; min-height:460px !important; border-radius:0 0 16px 16px !important; overflow:hidden; background: transparent; z-index: 0; }
-.p-hero-bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; border-radius:0 0 16px 16px !important; }
+.p-hero-bg { position:absolute; inset:0; width:110%; height:99.5%; object-fit:cover; z-index:1; border-radius:0 0 16px 16px !important; }
 /* Gradient layer like Rectangle 32977 */
 .p-hero::before { content:""; position:absolute; inset:0; background: linear-gradient(180deg, #F4F6FA 0%, #A0C6FF 100%); z-index:0; opacity: 0.0; /* keep as optional overlay: set >0 to show */ }
+/* Bottom fade overlay: soft gradient to page bg to match spec image */
+.p-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* Fade only near the bottom: transparent through ~72%, then ramp to page bg color */
+  background: linear-gradient(
+    to bottom,
+    rgba(244, 246, 250, 0) 0%,
+    rgba(244, 246, 250, 0) 72%,
+    rgba(244, 246, 250, 0.85) 92%,
+    rgba(244, 246, 250, 1) 100%
+  );
+  z-index: 1; /* above .p-hero-bg (1) due to later paint order; below avatar/shadow (>=2/3) */
+  pointer-events: none;
+}
 /* Bottom bar deprecated: hide to avoid clipping */
 .p-hero-bottom { display:none; }
 /* Character block centered */
 .p-avatar-block { position:absolute; left:50%; top:120px; transform: translateX(-50%); width:266px; height:266px; display:flex; align-items:center; justify-content:center; z-index:3; }
 .p-avatar-block img { width:266px; height:266px; object-fit:contain; display:block; }
 /* Shadow ellipse under character (Ellipse 268) */
-.p-hero-shadow { position:absolute; left:50%; transform: translateX(-50%); top:390px; width:160px; height:28px; background:#573131; filter: blur(2px); border-radius:9999px; z-index:2; opacity:0.35; }
+.p-hero-shadow { position:absolute; left:51.5%; transform: translateX(-50%); top:360px; width:130px; height:28px; background:#573131; filter: blur(2px); border-radius:9999px; z-index:2; opacity:0.35; }
 /* Tier + nickname overlay above character */
-.p-hero-title { position:absolute; left:0; right:0; bottom:24px; display:flex; align-items:center; justify-content:center; z-index:10; }
+.p-hero-title { position:absolute; left:0; right:0; bottom:44px; display:flex; align-items:center; justify-content:center; z-index:10; }
 /* 가독성을 위한 반투명 배경(유리 효과) */
 .p-hero-title .tier-inline { display:flex; align-items:center; gap:8px; background: transparent; padding: 0; border-radius: 0; box-shadow: none; }
 .p-hero-title .nickname-inline { color:#FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,.35); font-weight: 700; }

@@ -62,6 +62,7 @@ function App() {
   }, [isProfile]);
 
   useEffect(() => {
+
     const htmlEl = document.documentElement;
     if (isProfilePayment) {
       document.body.classList.add('profile-payment');
@@ -71,6 +72,10 @@ function App() {
       htmlEl.classList.remove('profile-payment');
     }
   }, [isProfilePayment]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   return (
     <>
