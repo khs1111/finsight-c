@@ -946,3 +946,126 @@ body.profile-route { background:#F4F6FA; }
   margin-top: 0 !important;
   margin-bottom: 0 !important;
 }
+
+.modal-overlay {
+  position: fixed; /* 화면 전체 고정 */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5); /* 반투명 검은색 배경 */
+  display: flex; /* Flexbox 사용 */
+  align-items: center; /* 수직 중앙 정렬 */
+  justify-content: center; /* 수평 중앙 정렬 */
+  z-index: 1000; /* 다른 요소들 위에 표시 */
+  padding: 16px; /* 작은 화면을 위한 여백 */
+  box-sizing: border-box; /* 패딩을 크기 계산에 포함 */
+}
+
+.modal-content {
+  background: var(--W, #FFF); /* 흰색 배경 */
+  border-radius: 12px; /* 모서리 둥글게 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* 그림자 효과 */
+  width: 100%; /* 오버레이 패딩 내에서 최대 너비 사용 */
+  max-width: 348px; /* 최대 너비 */
+  box-sizing: border-box;
+  text-align: center; /* 텍스트 중앙 정렬 */
+  /* 👇 패딩 수정: 상단 20px, 좌우 24px, 하단 24px */
+  padding: 20px 16px 10px; 
+}
+
+.modal-title {
+  color: var(--Text-color, #232527); /* 어두운 텍스트 색상 */
+  /* Title2_Roboto_B_20 */
+  font-family: Roboto, sans-serif; /* Roboto 글꼴 */
+  font-size: 20px;
+  font-weight: 700;
+  line-height: normal;
+}
+
+.modal-logout .modal-title {
+  margin-bottom: 36px;
+  margin-top: 8px; 
+}
+
+.modal-withdraw .modal-title {
+  margin-bottom: 0px;
+  margin-top: 0px;
+}
+
+.modal-description {
+  color: var(--Text-color_m, #808991); /* 회색 텍스트 색상 */
+  /* body_Roboto_R_14_-3% */
+  font-family: Roboto, sans-serif; /* Roboto 글꼴 */
+  font-size: 14px;
+  font-weight: 400;
+  line-height: normal;
+  letter-spacing: -0.42px;
+   /* 👇 설명 아래, 버튼 위 여백 24px (필요시 조정) */
+  margin: 0 0 24px 0;
+  white-space: pre-wrap; /* 자연스러운 줄바꿈 허용 */
+  word-break: keep-all; /* 어색한 단어 잘림 방지 */
+}
+
+.modal-actions {
+  display: flex; /* Flexbox 사용 */
+  gap: 12px; /* 버튼 사이 간격 */
+  justify-content: center; /* 버튼들이 공간을 다 채우지 않을 경우 중앙 정렬 */
+}
+
+/* 공통 버튼 스타일 */
+.modal-btn {
+  color: var(--W, #FFF);
+  display: flex; /* 정렬을 위해 Flexbox 사용 */
+  flex: 1; /* 버튼들이 공간을 동일하게 나눠 가짐 */
+  height: 60px; /* 버튼 높이 (명세서 기준) */
+  justify-content: center; /* 텍스트 수평 중앙 정렬 */
+  align-items: center; /* 텍스트 수직 중앙 정렬 */
+  border-radius: 12px; /* 모서리 둥글게 (명세서 기준) */
+  font-family: Roboto, sans-serif; /* 버튼 글꼴 (Roboto 가정) */
+  font-size: 20px; /* 필요에 따라 조정 */
+  font-weight: 700; /* 굵은 글씨 가정 */
+  cursor: pointer; /* 마우스 오버 시 포인터 */
+  border: none; /* 기본 테두리 제거 */
+  padding: 10px 8px; /* 일관된 패딩 (명세서 파란 버튼 기준) */
+  box-sizing: border-box; /* 패딩 포함 크기 계산 */
+  line-height: normal; /* 일관된 줄 높이 보장 */
+}
+
+/* 확인 버튼 (파란색) 스타일 */
+.modal-btn.confirm {
+  border-radius: 12px;
+  background: var(--button_color, linear-gradient(104deg, #448FFF -6.51%, #4833D0 105.13%));
+}
+
+/* 취소 버튼 (흰색, 파란 테두리) 스타일 */
+.modal-btn.cancel {
+  background-color: var(--W, #FFF); /* 버튼 자체 배경색은 흰색 */
+  border: 1px solid var(--Primary_color, #448FFF); /* 파란색 테두리 */
+  padding: 10px; /* 흰색 버튼 패딩 */
+
+  background-image: var(--button_color, linear-gradient(104deg, #448FFF -6.51%, #4833D0 105.13%));
+  
+  /* 2. 배경을 텍스트 모양으로 잘라냄(클리핑) */
+  background-clip: text;
+  -webkit-background-clip: text; /* 웹킷 브라우저 호환성 */
+
+  /* 3. 실제 텍스트 색상은 투명하게 처리 */
+  color: transparent; /* 기본값 */
+  -webkit-text-fill-color: transparent; /* 웹킷 브라우저에서 중요 */
+  font-family: Roboto, sans-serif; /* Roboto 글꼴 (기본값 추가) */
+  font-size: 20px; /* 명세서 기준 */
+  font-style: normal;
+  font-weight: 700;
+  line-height: normal;
+
+  /* --- .modal-btn 공통 스타일 유지 --- */
+  display: flex; 
+  flex: 1; 
+  height: 60px; 
+  justify-content: center; 
+  align-items: center; 
+  border-radius: 12px; 
+  cursor: pointer; 
+  box-sizing: border-box; 
+}
