@@ -10,9 +10,6 @@ const saveToken = (token) => {
   sessionStorage.setItem('accessToken', token);
 };
 
-const getToken = () => {
-  return localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
-};
 
 // 게스트 로그인 처리 (기존 계정 재사용, robust 저장)
 export async function guestLogin(baseOverride) {
