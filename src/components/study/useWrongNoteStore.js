@@ -26,14 +26,12 @@ export function useWrongNoteStore() {
     (async () => {
       setLoading(true); setError(null);
       try {
-        const token = localStorage.getItem('accessToken');
+  // const token = localStorage.getItem('accessToken'); // 미사용 변수 삭제
         const userId = localStorage.getItem('userId') || undefined;
-        // 1) stats (normalize to { total, byCategory: [{category, count}] })
-  const statData = await getWrongNoteStatistics(userId);
-  if (mounted && statData) setStats(normalizeStats(statData));
-  // 2) list (first page)
-  const listResp = await getWrongNotes(userId, 0, 50, 'all');
-  const items = Array.isArray(listResp?.items) ? listResp.items : Array.isArray(listResp) ? listResp : [];
+        // 새 API 구조에 맞게 파싱
+        const listResp = await getWrongNotes(userId, 0, 50, 'all');
+        const items = Array.isArray(listResp?.wrongNotes) ? listResp.wrongNotes : [];
+        const statData = listResp?.statistics;
         if (mounted) {
           // Merge with existing local state (avoid losing locally added notes)
           setWrongState(prev => {
@@ -44,6 +42,7 @@ export function useWrongNoteStore() {
             // newest first
             return Array.from(byId.values()).sort((a,b) => (b.addedAt||0) - (a.addedAt||0));
           });
+          if (statData) setStats(normalizeStats(statData));
         }
       } catch (e) {
         if (mounted) setError(e?.message || '오답노트 불러오기 실패');

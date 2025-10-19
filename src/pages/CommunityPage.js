@@ -98,10 +98,23 @@ export default function CommunityPage() {
         setPosts(list);
         // 초기 likedMap 동기화 (서버에 liked 여부가 있다면 반영)
         if (Array.isArray(list)) {
+          const userId = localStorage.getItem('userId');
           setLikedMap(prev => {
             const next = new Map(prev);
-            list.forEach(p => {
-              if (typeof p.liked === 'boolean') next.set(p.id, p.liked);
+            list.forEach(async p => {
+              if (typeof p.liked === 'boolean') {
+                next.set(p.id, p.liked);
+              } else if (userId) {
+                // liked 필드가 없으면 개별적으로 상태 조회
+                try {
+                  const status = await import('../api/community').then(mod => mod.getPostLikeStatus(userId, p.id));
+                  next.set(p.id, !!(status?.liked));
+                } catch (_) {
+                  next.set(p.id, false);
+                }
+              } else {
+                next.set(p.id, false);
+              }
             });
             return next;
           });
