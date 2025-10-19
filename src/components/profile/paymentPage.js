@@ -63,7 +63,7 @@ export default function PaymentPage() {
       </div>
 
       <div className="payment-footer">
-        <button className="subscribe-btn" type="button" onClick={() => alert('구독 처리(더미)')}>구독하기</button>
+        <button className="subscribe-btn" type="button" onClick={() => alert('구독 완료되었습니다.')}>구독하기</button>
       </div>
     </div>
   );
