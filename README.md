@@ -193,7 +193,6 @@ const localTime = new Date(new Date(comments[0].createdAt).getTime() + (9 * 60 *
 - `REACT_APP_API_BASE`: API 기본 URL
 - `REACT_APP_NEWS_API_BASE`: 뉴스 API URL
   - 진행도: 레벨/서브섹터/유저 단위의 `isCompleted`, `completionRate`, `quizzes[]`
-- 상세는 [API 매핑 (FE → BE)](#-api-매핑-fe--be) 참고
 
 
 <a id="실행-방법"></a>
