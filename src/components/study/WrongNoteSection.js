@@ -48,11 +48,11 @@ export default function WrongNoteSection() {
       ) : (
         <>
           {error && <div className="error-text">서버 통신 오류: {error}</div>}
-          <div className="wrongnote-list">
+          <div className="wrongnote-list" style={{paddingLeft: 4, paddingRight: 4, boxSizing: 'border-box'}}>
             {subsectorStats.map((sector) => (
               <div key={sector.subsectorId} className="wrongnote-card" style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: 18, gap: 10,
-                width: 380, minHeight: 84, background: '#F9F9F9', boxShadow: '0px 0px 1px rgba(0,0,0,0.18)', borderRadius: '0px 16px 16px 16px', marginBottom: 16
+                width: '100%', maxWidth: '100%', minHeight: 84, background: '#F9F9F9', boxShadow: '0px 0px 1px rgba(0,0,0,0.18)', borderRadius: '0px 16px 16px 16px', marginBottom: 16, boxSizing: 'border-box'
               }}>
                 <div style={{fontFamily: 'Roboto', fontWeight: 700, fontSize: 17, lineHeight: '21px', letterSpacing: '-0.02em', color: '#1B1B1B', marginBottom: 2}}>
                   {sector.subsectorName}
