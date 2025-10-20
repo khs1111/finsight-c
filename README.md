@@ -1,109 +1,216 @@
+
 # 🚀 Finsight 프론트엔드 프로젝트
 
 ## 📘 프로젝트 개요
 
-이 저장소는 Finsight 앱의 프론트엔드(React) 코드를 포함합니다. 구성 화면은 다음과 같습니다:
+Finsight 앱의 프론트엔드(React) 코드입니다. 모바일 퍼스트 UI, 실시간 API 연동, 섹터별 오답노트 통계, 커뮤니티, 뉴스, 프로필 등 다양한 학습/커뮤니티 기능을 제공합니다.
 
-- Explore (퀴즈/탐험지)
-- News / Newsletter (뉴스, 뉴스레터 구독)
-- Community (커뮤니티 게시판)
-- Profile (프로필 및 학습 진행도)
+### 주요 화면 및 기능
+- Explore (탐험지/퀴즈): 주제/세부주제/레벨 선택 → 퀴즈(4문항) → 완료 화면
+- News / Newsletter: 오늘의 뉴스, 카테고리별, 뉴스레터 구독/상세
+- Community: 커뮤니티 게시글 목록, 상세, 댓글(시간 KST 변환), 티어/배지
+- Profile: 출석 캘린더, 배지, 닉네임, 티어
+- Study: 단어장, 오답노트(섹터별 통계/목록)
 
-이 프로젝트는 모바일 퍼스트 UI를 기준으로 설계되었습니다.
+모든 목록 화면에서 각 아이템(뉴스, 커뮤니티 글, 오답노트 등)을 클릭하면 상세 화면으로 이동합니다. 각 상세 화면은 API로 데이터를 받아와 렌더링합니다.
 
-## � 목차
+
+## 📑 목차
 
 1. [프로젝트 개요](#-프로젝트-개요)
-2. [시스템 아키텍처](#-시스템-아키텍처)
-3. [기술 스택](#-기술-스택)
-4. [주요 기능](#-주요-기능)
-5. [패키지 구조](#-패키지-구조)
-6. [API 문서](#-api-문서)
-7. [진척 현황](#-진척-현황)
-8. [CI/CD 파이프라인](#-cicd-파이프라인)
-9. [실행 방법](#️-실행-방법)
+2. [문서 (Frontend)](#-문서-frontend)
+3. [프로젝트 구조](#-프로젝트-구조)
+4. [기술 스택](#-기술-스택)
+5. [주요 기능 및 API 연결](#-주요-기능-및-api-연결)
+6. [패키지 구조](#-패키지-구조)
+7. [데이터베이스 설계(프론트 관점)](#-데이터베이스-설계프론트-관점)
+8. [환경 변수](#-환경-변수)
+9. [실행 방법](#-실행-방법)
+10. [배포](#-배포)
+11. [작업 기록 요약](#-작업-기록-요약)
+12. [라우팅 구조 및 화면 이동](#-라우팅-구조-및-화면-이동)
+13. [API 매핑](#-api-매핑)
+14. [로컬 실행](#-로컬-실행)
+15. [Vercel 배포](#-vercel-배포)
+16. [주요 의존성](#-주요-의존성)
+17. [라이선스](#-라이선스)
+18. [감사의 글](#-감사의-글)
 
 ## �📄 문서 (Frontend)
 
-아래 내용은 본 README에 통합되어 있습니다. 필요 시 상세판은 `/docs` 폴더에서 확인할 수 있습니다.
 
-- [라우팅 구조](#-라우팅-구조)
-- [API 매핑 (FE → BE)](#-api-매핑-fe--be)
-- [로컬 실행](#️-로컬-실행)
+## 🏗️ 프로젝트 구조
+
+```
+src/
+  api/           # API 래퍼 (explore.js, community.js 등)
+  assets/        # 이미지, SVG 등 정적 리소스
+  components/    # 재사용 컴포넌트 (study, explore, news, community 등)
+  pages/         # 라우팅 단위 페이지 (Home.js, Explore.js, StudyPage.js 등)
+  utils/         # 유틸리티 함수
+  hooks/         # 커스텀 훅
+  App.js         # 앱 엔트리포인트
+  index.js       # CRA 엔트리포인트
+public/
+  index.html
+  favicon.ico
+```
 - [Vercel 배포](#-vercel-배포)
 - [작업 기록 요약](#-작업-기록-요약)
 
-## 🏗️ 시스템 아키텍처
+## 🧰 기술 스택
 
-- View: React Function Components + 페이지/도메인별 CSS
-- Routing: React Router (게스트 로그인 가드 포함)
+- React 18, React Router 6
+- CSS(모바일), SVG
+- Fetch API, Axios
+- Vercel 배포
 - API Layer: `src/api/*`에 백엔드 엔드포인트 집약, 폴백 체인으로 다양한 변형 대응
 - 상태/세션: `sessionStorage`(guest), `localStorage`(token/userId)
 - 배포: Vercel (GitHub → Vercel 연결, CRA Build 출력 `build/`)
 
-## 🧰 기술 스택
-
 - React (Create React App), React Router
-- CSS(모바일), SVG
-- Fetch API, JWT 헤더 자동 주입
-- Vercel 배포
+
+
+## ✨ 주요 기능 및 API 연결
+
+### 1. Explore(탐험지)
+- 주제/세부주제/레벨 선택 → 퀴즈(4문항) → 완료 화면
+- 주요 라우팅:
+  - `/explore` (탐험지 메인): 섹터/주제 목록, 각 섹터 클릭 시 상세로 이동
+  - `/explore/level`: 레벨 선택, 각 레벨 클릭 시 퀴즈로 이동
+  - `/explore/quiz`: 퀴즈 진행(4문항), 각 문제 제출 시 API 호출
+  - `/explore/complete`: 완료 화면, 진행률/통계 표시
+- 주요 API:
+  - GET `/api/sectors` → 섹터 목록
+  - GET `/api/sectors/{id}/subsectors` → 서브섹터 목록
+  - GET `/api/subsectors/{id}/levels` → 레벨 목록
+  - GET `/api/levels/{levelId}/quizzes?userId=` → 레벨별 퀴즈 목록
+  - POST `/api/quizzes/{id}/submit-answer?userId=` → 답안 제출
+  - POST `/api/quizzes/{id}/complete?userId=` → 퀴즈 완료
+  - GET `/api/levels/{levelId}/progress?userId=` → 레벨 진행도
+  - GET `/api/users/{userId}/progress` → 전체 진행도
+- 데이터 흐름:
+  - 탐험지 메인에서 섹터/서브섹터/레벨 선택 → 퀴즈 API 호출 및 진행
+  - 퀴즈 제출/완료 시 API로 결과 저장 및 진행도 갱신
+  - 완료 화면에서 진행률/통계 표시
+- 주요 컴포넌트:
+  - LevelPicker, QuizQuestion, CompletionScreen 등
+  - 모든 목록(섹터/레벨/퀴즈)에서 아이템 클릭 시 상세/다음 단계로 이동
+
+### 2. 오답노트(Study)
+- `/study/wrong-notes`: 섹터별 오답 통계 카드, 각 섹터 클릭 시 해당 섹터의 오답 목록으로 이동
+  - `getWrongNotes(userId, page, size, filter)`로 API에서 섹터별 통계(subsectorStatistics) 및 오답 목록(wrongNotes) 직접 수신
+  - StudyPage → WrongNoteSection에서 API를 직접 호출하여 최신 데이터 렌더링
+- 오답노트 상세/통계/삭제/복습 등: `community.js` 내 관련 API 참고
+
+### 3. 커뮤니티(Community)
+- `/community`: 게시글 목록, 각 글 클릭 시 상세로 이동
+- `/community/:id`: 게시글 상세, 댓글 목록/작성/수정/삭제
+  - 댓글 시간(createdAt)은 UTC → KST(+9시간)로 변환하여 한국 시간대로 표시
+  - 댓글 작성/수정/삭제/조회 모두 API 연동
+- 티어/배지 이미지: 서버 DTO + 로컬 이미지 매핑
+
+### 4. 뉴스/뉴스레터(News)
+- `/news`: 오늘의 뉴스 목록, 각 뉴스 클릭 시 상세로 이동
+- `/news/:id`: 뉴스 상세
+- `/search/:query`: 뉴스 검색 결과
+- `/newsletter/*`: 뉴스레터 구독/상세
+
+### 5. Profile(프로필)
+- `/profile`: 출석 캘린더, 배지, 닉네임, 티어 등 서버 DTO 기반 렌더링
+
+### 6. 인증/세션
+- 게스트 로그인: `/api/auth/guest`
+- 토큰/유저ID: localStorage/sessionStorage 관리
 
 ## ✨ 주요 기능
 
-- Explore: 주제/세부주제/레벨 선택 → 퀴즈(4문항) → 완료 화면
-- News/Newsletter
-  - News: 오늘의 뉴스/카테고리 탭, 검색(/search/:query), 기사 상세 뷰
-  - Newsletter: 섹터·키 기반 뉴스레터 뷰, 구독 플로우 라우트, 관리용 퍼블리시 지원
+
+## 🔗 주요 API 예시 및 화면 흐름
+
+```javascript
+// 탐험지(퀴즈) 섹터/레벨/문제 목록 및 상세 이동
+import { getSectors, getSubsectors, getLevels, getQuiz } from '../api/explore.js';
+const sectors = await getSectors(); // 섹터 목록
+// 섹터 클릭 → 상세로 이동
+const subsectors = await getSubsectors(sectorId);
+// 서브섹터 클릭 → 레벨 목록
+const levels = await getLevels(subsectorId);
+// 레벨 클릭 → 퀴즈 목록
+const quiz = await getQuiz(levelId, userId);
+
+// 오답노트 섹터별 통계 및 목록
+import { getWrongNotes } from '../api/community.js';
+const resp = await getWrongNotes(userId, 0, 50, 'all');
+const subsectorStats = resp.subsectorStatistics; // [{subsectorId, subsectorName, wrongCount}, ...]
+// 섹터 클릭 → 해당 섹터 오답 목록 화면으로 이동
+
+// 커뮤니티 게시글/댓글 목록 및 상세 이동
+import { getCommunityPosts, getPostComments } from '../api/community.js';
+const posts = await getCommunityPosts();
+// 게시글 클릭 → 상세로 이동
+const comments = await getPostComments(postId);
+// 댓글 시간 변환
+const localTime = new Date(new Date(comments[0].createdAt).getTime() + (9 * 60 * 60 * 1000)).toLocaleString('ko-KR', { hour12: false });
+```
 - Community: 커뮤니티 목록/헤더 정렬(상단 24px)
 - Profile: 출석 캘린더/요약(배지/진행도)
 - Auth: 게스트 로그인 및 라우팅 가드
-
 ## 🗂️ 패키지 구조
 
-- `src/pages/` 라우팅 단위 페이지 (예: `Home.js`, `Explore.js`, `profile.js`)
 - `src/components/` 재사용 컴포넌트 (예: `components/explore/*`, `components/news/*`)
 - `src/api/` API 래퍼 (예: `explore.js`, `auth.js`)
 - `src/assets/` 정적 리소스(SVG 등)
+- 오답노트 API 응답:
+  ```json
+  {
+    "wrongNotes": [{ id, questionText, ... }],
+    "subsectorStatistics": [{ subsectorId, subsectorName, wrongCount }],
+    "statistics": { totalCount, ... }
+  }
+  ```
+- 커뮤니티 댓글:
+  ```json
+  {
+    "id": 123,
+    "body": "댓글 내용",
+    "createdAt": "2025-10-20T00:13:26",
+    "author": { nickname, badge: { name, imageUrl } }
+  }
+  ```
 
 ## 🗄️ 데이터베이스 설계(프론트 관점)
 
-- 프론트는 DB가 아닌 서버 DTO를 소비합니다. 주요 구조는 아래와 같습니다.
-  - QuestionDTO: `{ id, type, stemMd, options[{id,text,isCorrect}], correctOptionId, article{ id,title,body,imageUrl } }`
+## 🏷️ 환경 변수
+
+- `REACT_APP_API_BASE`: API 기본 URL
+- `REACT_APP_NEWS_API_BASE`: 뉴스 API URL
   - 진행도: 레벨/서브섹터/유저 단위의 `isCompleted`, `completionRate`, `quizzes[]`
 - 상세는 [API 매핑 (FE → BE)](#-api-매핑-fe--be) 참고
 
-## 📜 API 문서
+## 🏷️ 실행 방법
 
-- 본 README의 [API 매핑 (FE → BE)](#-api-매핑-fe--be) 섹션에 정리되어 있습니다.
-
-## 🔁 CI/CD 파이프라인
-
+```bash
+npm install
+npm start
+```
+- 개발 서버: http://localhost:3000
 - GitHub → Vercel 연결로 main 브랜치 푸시 시 자동 배포
 - 환경변수: `REACT_APP_API_BASE` 등 Vercel Project Settings에 설정
 - CRA 프리셋 자동 인식 (Build `npm run build` / Output `build/`)
+## 🏷️ 배포
 
-## ⛏️ 실행 방법
+- Vercel 자동 배포 (main 브랜치 푸시 시)
+- 환경변수는 Vercel Project Settings에서 설정
 
 - 아래 [로컬 실행](#️-로컬-실행) 및 [🏗️ 빌드 및 배포](#-빌드-및-배포) 섹션을 참고하세요.
 
-## 📊 진척 현황
 
-✅ 완료된 것
-Auth
-게스트 로그인 화면/가드 도입, 세션 저장 및 라우팅 연동
-Explore(탐험지)
-주제→세부주제→레벨→퀴즈(4문항)→완료 전체 흐름 동작
-퀴즈 제출(4.2)→결과조회(4.3)→완료(4.4) API 연결 헬퍼 추가
-Completion Screen
-모바일 진입 안정화, 가로 오버스크롤 차단
-Home/News
-컨테이너 100% 폭 정리, 수평 흔들림 제거(overflow-x hidden)
-Community
-정렬, 목록 조회 API 매핑
-Profile
-달력 헤더(년·월/화살표) 정렬 1차 적용
-출석 표시 레이어 정리(별/회색원 정렬 보정 초안)
-Study
+## 🧾 작업 기록 요약
+
+- 오답노트 섹터별 통계/카드 완성 (API 직접 호출)
+- 커뮤니티 댓글 시간 KST 변환 처리
+- 모든 주요 기능 API 연동 및 UI/UX 개선
 오답노트 통계/목록 API 래퍼 스텁 추가 및 스토어/섹션 기본 연동
 README/API 매핑 초안 정리
 
@@ -118,28 +225,24 @@ Study
 
 ---
 
-## 🔀 라우팅 구조
+
+## 🔀 라우팅 구조 및 화면 이동
 
 - `/login` 로그인(게스트 시작)
 - `/` 홈(뉴스/뉴스레터)
-- `/explore`
-  - 메인: 주제/세부주제 선택
-  - `/explore/level` 레벨 선택(레벨 피커)
-  - `/explore/quiz` 퀴즈 진행(4문항 세트)
-  - `/explore/complete` 완료 화면
-- `/study`
-  - `/study/words` 단어장
-  - `/study/wrong-notes` 오답노트(섹터별/총계)
-- `/community`
-  - 목록 `/community`
-  - 글쓰기 `/community/new` (있는 경우)
+- `/explore` 탐험지 메인(섹터 목록)
+  - 섹터 클릭 → `/explore/level` (레벨 목록)
+    - 레벨 클릭 → `/explore/quiz` (퀴즈 진행)
+      - 퀴즈 완료 → `/explore/complete` (완료 화면)
+- `/study/words` 단어장
+- `/study/wrong-notes` 오답노트(섹터별 통계/목록)
+  - 섹터 클릭 → 해당 섹터 오답 목록 화면
+- `/community` 커뮤니티 게시글 목록
+  - 게시글 클릭 → `/community/:id` (상세/댓글)
 - `/profile` 프로필/달력/배지
-
-뉴스/뉴스레터 관련 라우팅
-- `/news/:id` 기사 상세
-- `/search/:query` 뉴스 검색 결과 페이지
-- `/newsletter/*` 뉴스레터 엔트리(하위 라우트에 따라 네비게이션 숨김 처리)
-  - 예: `/newsletter/subscribe`, `/newsletter/econ`, `/newsletter/companies`
+- `/news/:id` 뉴스 상세
+- `/search/:query` 뉴스 검색 결과
+- `/newsletter/*` 뉴스레터 구독/상세
   - App 헤더/바텀내비 숨김 조건: `hideNewsletterNav` 로직 참고 (`src/App.js`)
 
 ---
