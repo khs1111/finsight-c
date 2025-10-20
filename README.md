@@ -1,6 +1,7 @@
 
 
-## � 목차
+
+## 목차
 
 1. [프로젝트 개요](#프로젝트-개요)
 2. [프로젝트 구조](#프로젝트-구조)
@@ -19,7 +20,9 @@
 15. [라이선스](#라이선스)
 16. [감사의 글](#감사의-글)
 
-# �🚀 Finsight 프론트엔드 프로젝트
+
+<a id="프로젝트-개요"></a>
+# � Finsight 프론트엔드 프로젝트
 
 ## 프로젝트 개요
 
@@ -35,7 +38,9 @@ Finsight 앱의 프론트엔드(React) 코드입니다. 모바일 퍼스트 UI, 
 모든 목록 화면에서 각 아이템(뉴스, 커뮤니티 글, 오답노트 등)을 클릭하면 상세 화면으로 이동합니다. 각 상세 화면은 API로 데이터를 받아와 렌더링합니다.
 
 
-## 🏗️ 프로젝트 구조
+
+<a id="프로젝트-구조"></a>
+## 프로젝트 구조
 
 ```
 src/
@@ -54,7 +59,9 @@ public/
 - [Vercel 배포](#-vercel-배포)
 - [작업 기록 요약](#-작업-기록-요약)
 
-## 🧰 기술 스택
+
+<a id="기술-스택"></a>
+## 기술 스택
 
 - React 18, React Router 6
 - CSS(모바일), SVG
@@ -67,7 +74,9 @@ public/
 - React (Create React App), React Router
 
 
-## ✨ 주요 기능 및 API 연결
+
+<a id="주요-기능-및-api-연결"></a>
+## 주요 기능 및 API 연결
 
 ### 1. Explore(탐험지)
 - 주제/세부주제/레벨 선택 → 퀴즈(4문항) → 완료 화면
@@ -152,7 +161,9 @@ const localTime = new Date(new Date(comments[0].createdAt).getTime() + (9 * 60 *
 - Community: 커뮤니티 목록/헤더 정렬(상단 24px)
 - Profile: 출석 캘린더/요약(배지/진행도)
 - Auth: 게스트 로그인 및 라우팅 가드
-## 🗂️ 패키지 구조
+
+<a id="패키지-구조"></a>
+## 패키지 구조
 
 - `src/components/` 재사용 컴포넌트 (예: `components/explore/*`, `components/news/*`)
 - `src/api/` API 래퍼 (예: `explore.js`, `auth.js`)
@@ -175,14 +186,18 @@ const localTime = new Date(new Date(comments[0].createdAt).getTime() + (9 * 60 *
   }
   ```
 
-## 🏷️ 환경 변수
+
+<a id="환경-변수"></a>
+## 환경 변수
 
 - `REACT_APP_API_BASE`: API 기본 URL
 - `REACT_APP_NEWS_API_BASE`: 뉴스 API URL
   - 진행도: 레벨/서브섹터/유저 단위의 `isCompleted`, `completionRate`, `quizzes[]`
 - 상세는 [API 매핑 (FE → BE)](#-api-매핑-fe--be) 참고
 
-## 🏷️ 실행 방법
+
+<a id="실행-방법"></a>
+## 실행 방법
 
 ```bash
 npm install
@@ -192,7 +207,9 @@ npm start
 - GitHub → Vercel 연결로 main 브랜치 푸시 시 자동 배포
 - 환경변수: `REACT_APP_API_BASE` 등 Vercel Project Settings에 설정
 - CRA 프리셋 자동 인식 (Build `npm run build` / Output `build/`)
-## 🏷️ 배포
+
+<a id="배포"></a>
+## 배포
 
 - Vercel 자동 배포 (main 브랜치 푸시 시)
 - 환경변수는 Vercel Project Settings에서 설정
@@ -200,7 +217,9 @@ npm start
 - 아래 [로컬 실행](#️-로컬-실행) 및 [🏗️ 빌드 및 배포](#-빌드-및-배포) 섹션을 참고하세요.
 
 
-## 🧾 작업 기록 요약
+
+<a id="작업-기록-요약"></a>
+## 작업 기록 요약
 
 - 오답노트 섹터별 통계/카드 완성 (API 직접 호출)
 - 커뮤니티 댓글 시간 KST 변환 처리
@@ -220,7 +239,9 @@ Study
 ---
 
 
-## 🔀 라우팅 구조 및 화면 이동
+
+<a id="라우팅-구조-및-화면-이동"></a>
+## 라우팅 구조 및 화면 이동
 
 - `/login` 로그인(게스트 시작)
 - `/` 홈(뉴스/뉴스레터)
@@ -241,7 +262,9 @@ Study
 
 ---
 
-## 🔗 API 매핑 
+
+<a id="api-매핑"></a>
+## API 매핑
 
 실제 백엔드 스펙과 동기화 필요. 현재 프론트 기준 가정/폴백 포함. 서버 DTO 확정되면 업데이트합니다.
 
@@ -323,7 +346,9 @@ Study
 
 ---
 
-## ▶️ 로컬 실행
+
+<a id="로컬-실행"></a>
+## 로컬 실행
 
 사전 준비
 - Node.js 18+ (LTS 권장)
@@ -351,7 +376,9 @@ Troubleshooting
 
 ---
 
-## ▲ Vercel 배포
+
+<a id="vercel-배포"></a>
+## Vercel 배포
 
 빠른 절차
 1) Vercel New Project → GitHub 연결 → 본 저장소 선택
@@ -493,7 +520,9 @@ REACT_APP_ADMIN_KEY=your-admin-key
 
 ---
 
-## 📦 주요 의존성
+
+<a id="주요-의존성"></a>
+## 주요 의존성
 
 이 프로젝트에서 사용된 주요 라이브러리와 버전은 다음과 같습니다:
 
@@ -506,13 +535,17 @@ REACT_APP_ADMIN_KEY=your-admin-key
 
 ---
 
-## 🏷️ 라이선스
+
+<a id="라이선스"></a>
+## 라이선스
 
 이 프로젝트는 MIT 라이선스에 따라 배포됩니다. 자세한 내용은 [LICENSE](./LICENSE) 파일을 참고하세요.
 
 ---
 
-## 🙏 감사의 글
+
+<a id="감사의-글"></a>
+## 감사의 글
 
 이 프로젝트는 다음과 같은 오픈소스 프로젝트와 도구의 도움을 받아 개발되었습니다:
 
