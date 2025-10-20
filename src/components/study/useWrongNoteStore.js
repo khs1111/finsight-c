@@ -29,9 +29,13 @@ export function useWrongNoteStore() {
   // const token = localStorage.getItem('accessToken'); // 미사용 변수 삭제
         const userId = localStorage.getItem('userId') || undefined;
         // 새 API 구조에 맞게 파싱
-        const listResp = await getWrongNotes(userId, 0, 50, 'all');
-        const items = Array.isArray(listResp?.wrongNotes) ? listResp.wrongNotes : [];
-        const statData = listResp?.statistics;
+  const listResp = await getWrongNotes(userId, 0, 50, 'all');
+  console.log('[오답노트 API 응답]', listResp);
+  const items = Array.isArray(listResp?.wrongNotes) ? listResp.wrongNotes : [];
+  const statData = listResp?.statistics;
+  const subsectorStatistics = Array.isArray(listResp?.subsectorStatistics) ? listResp.subsectorStatistics : undefined;
+  const levelStatistics = Array.isArray(listResp?.levelStatistics) ? listResp.levelStatistics : undefined;
+  console.log('[오답노트 subsectorStatistics]', subsectorStatistics);
         if (mounted) {
           // Merge with existing local state (avoid losing locally added notes)
           setWrongState(prev => {
@@ -42,7 +46,21 @@ export function useWrongNoteStore() {
             // newest first
             return Array.from(byId.values()).sort((a,b) => (b.addedAt||0) - (a.addedAt||0));
           });
-          if (statData) setStats(normalizeStats(statData));
+          // Only use API response for stats, never overwrite with fallback if API gave any stats
+          if (statData || subsectorStatistics || levelStatistics) {
+            setStats({
+              statistics: statData ?? { totalCount: items.length },
+              subsectorStatistics: subsectorStatistics ?? [],
+              levelStatistics: levelStatistics ?? [],
+              wrongNotes: items,
+            });
+            console.log('[오답노트 setStats.subsectorStatistics]', subsectorStatistics);
+          } else {
+            // Fallback: only if API gave nothing at all
+            const totals = items.length;
+            setStats({ statistics: { totalCount: totals }, subsectorStatistics: [], levelStatistics: [] });
+            console.log('[오답노트 setStats.subsectorStatistics fallback]', []);
+          }
         }
       } catch (e) {
         if (mounted) setError(e?.message || '오답노트 불러오기 실패');
@@ -97,25 +115,3 @@ export function addWrongNoteImmediate({ question, userAnswer, correctAnswer, cat
 }
 
 // Normalize various possible stats payload shapes
-function normalizeStats(sd) {
-  try {
-    if (!sd) return { total: 0, byCategory: [] };
-    const total = sd.total ?? sd.count ?? sd.overall ?? sd.overallCount ?? sd.totalWrong ?? 0;
-    let byCategory = sd.byCategory ?? sd.categories ?? sd.categoryStats ?? [];
-    if (byCategory && !Array.isArray(byCategory) && typeof byCategory === 'object') {
-      // Convert map/object to array
-      byCategory = Object.entries(byCategory).map(([category, count]) => ({ category, count }));
-    }
-    if (Array.isArray(byCategory)) {
-      byCategory = byCategory.map(x => ({
-        category: x.category ?? x.name ?? x.key ?? '기타',
-        count: x.count ?? x.value ?? x.total ?? 0,
-      }));
-    } else {
-      byCategory = [];
-    }
-    return { total, byCategory };
-  } catch {
-    return { total: 0, byCategory: [] };
-  }
-}

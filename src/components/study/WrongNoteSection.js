@@ -1,46 +1,42 @@
 
-import { useWrongNoteStore } from './useWrongNoteStore';
+import { useEffect, useState } from 'react';
+import { getWrongNotes } from '../../api/explore';
 import Illustration from '../../assets/study/wrongNoteIllustration.svg';
 
-
-
 export default function WrongNoteSection() {
-  const { wrongNotes, loading, error, stats } = useWrongNoteStore();
-  const total = stats?.totalCount ?? stats?.total ?? wrongNotes.length;
-  const empty = !loading && total === 0;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [subsectorStats, setSubsectorStats] = useState([]);
 
-  // 통계 시각화: 카테고리별 비율
-  const statList = (stats?.byCategory && Array.isArray(stats.byCategory)) ? stats.byCategory : [];
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true); setError(null);
+      try {
+        const userId = localStorage.getItem('userId') || undefined;
+        const resp = await getWrongNotes(userId, 0, 50, 'all');
+        if (!mounted) return;
+        setTotalCount(resp?.statistics?.totalCount ?? resp?.totalCount ?? 0);
+        setSubsectorStats(Array.isArray(resp?.subsectorStatistics) ? resp.subsectorStatistics : []);
+      } catch (e) {
+        if (mounted) setError(e?.message || '오답노트 불러오기 실패');
+      }
+      setLoading(false);
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const empty = !loading && (!subsectorStats || subsectorStats.length === 0);
+
   return (
     <div className="wrongnote-wrapper" role="region" aria-label="오답노트">
       <div className="wrongnote-header-block">
         <h2 className="wrongnote-title-line">틀린 문제를 정리해보았어요!</h2>
-  {!empty && <div className="wrongnote-total-overlay">총 {total}개</div>}
-        {!empty && (
-          <img src={Illustration} alt="오답 일러스트" className="wrongnote-float-illust" />
-        )}
+        <p className="wrongnote-subtitle">총 <strong>{totalCount}</strong>개의 오답이 있어요.</p>
+        <img src={Illustration} alt="오답 일러스트" className="wrongnote-float-illust" />
       </div>
-      {/* 통계 시각화 영역 */}
-      {!empty && statList.length > 0 && (
-        <div className="wrongnote-stats-block">
-          <h4 className="wrongnote-stats-title">카테고리별 오답 통계</h4>
-          <ul className="wrongnote-stats-list">
-            {statList.map((item) => {
-              const percent = total > 0 ? Math.round((item.count / total) * 100) : 0;
-              return (
-                <li key={item.category} className="wrongnote-stats-item">
-                  <span className="stat-cat">{item.category}</span>
-                  <span className="stat-bar-wrap">
-                    <span className="stat-bar" style={{width: percent + '%', background: '#FFBC02', display: 'inline-block', height: 8, borderRadius: 4}}></span>
-                  </span>
-                  <span className="stat-count">{item.count}개</span>
-                  <span className="stat-percent">({percent}%)</span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
+
       {loading ? (
         <div className="wrongnote-empty"><p>불러오는 중...</p></div>
       ) : empty ? (
@@ -52,11 +48,18 @@ export default function WrongNoteSection() {
       ) : (
         <>
           {error && <div className="error-text">서버 통신 오류: {error}</div>}
-          {/* 틀린문제 리스트 카드 UI */}
-          <div className="wrongnote-card-list">
-            {wrongNotes.map(note => (
-              <div key={note.id} className="wrongnote-card">
-                <div className="wrongnote-card-question">{note.questionText}</div>
+          <div className="wrongnote-list">
+            {subsectorStats.map((sector) => (
+              <div key={sector.subsectorId} className="wrongnote-card" style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: 18, gap: 10,
+                width: 380, minHeight: 84, background: '#F9F9F9', boxShadow: '0px 0px 1px rgba(0,0,0,0.18)', borderRadius: '0px 16px 16px 16px', marginBottom: 16
+              }}>
+                <div style={{fontFamily: 'Roboto', fontWeight: 700, fontSize: 17, lineHeight: '21px', letterSpacing: '-0.02em', color: '#1B1B1B', marginBottom: 2}}>
+                  {sector.subsectorName}
+                </div>
+                <div style={{fontFamily: 'Roboto', fontWeight: 400, fontSize: 15, lineHeight: '20px', color: '#616161', marginBottom: 2}}>
+                  틀린 문제 개수: {sector.wrongCount}
+                </div>
               </div>
             ))}
           </div>

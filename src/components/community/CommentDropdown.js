@@ -136,7 +136,9 @@ export default function CommentDropdown({ postId, open, onClose }) {
                     return null;
                   })()}
                   <span className="comment-author" style={{ fontWeight: 700, fontSize: 15 }}>{c.author?.nickname || '익명'}</span>
-                  <span className="comment-date" style={{ color: '#aaa', fontSize: 12, marginLeft: 4 }}>{c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</span>
+                  <span className="comment-date" style={{ color: '#aaa', fontSize: 12, marginLeft: 4 }}>
+                    {c.createdAt ? new Date(new Date(c.createdAt).getTime() + (9 * 60 * 60 * 1000)).toLocaleString('ko-KR', { hour12: false }) : ''}
+                  </span>
                 </div>
                 <div className="comment-content" style={{ whiteSpace: 'pre-line', wordBreak: 'break-word', fontSize: 15, marginTop: 2, lineHeight: 1.6, color: '#222' }}>{c.body}</div>
               </li>
