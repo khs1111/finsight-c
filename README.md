@@ -19,21 +19,20 @@ Finsight 앱의 프론트엔드(React) 코드입니다. 모바일 퍼스트 UI, 
 
 1. [프로젝트 개요](#-프로젝트-개요)
 2. [프로젝트 구조](#-프로젝트-구조)
-3. [프로젝트 구조](#-프로젝트-구조)
-4. [기술 스택](#-기술-스택)
-5. [주요 기능 및 API 연결](#-주요-기능-및-api-연결)
-6. [패키지 구조](#-패키지-구조)
-7. [환경 변수](#-환경-변수)
-8. [실행 방법](#-실행-방법)
-9. [배포](#-배포)
-10. [작업 기록 요약](#-작업-기록-요약)
-11. [라우팅 구조 및 화면 이동](#-라우팅-구조-및-화면-이동)
-12. [API 매핑](#-api-매핑)
-13. [로컬 실행](#-로컬-실행)
-14. [Vercel 배포](#-vercel-배포)
-15. [주요 의존성](#-주요-의존성)
-16. [라이선스](#-라이선스)
-17. [감사의 글](#-감사의-글)
+3. [기술 스택](#-기술-스택)
+4. [주요 기능 및 API 연결](#-주요-기능-및-api-연결)
+5. [패키지 구조](#-패키지-구조)
+6. [환경 변수](#-환경-변수)
+7. [실행 방법](#-실행-방법)
+8. [배포](#-배포)
+9. [작업 기록 요약](#-작업-기록-요약)
+10. [라우팅 구조 및 화면 이동](#-라우팅-구조-및-화면-이동)
+11. [API 매핑](#-api-매핑)
+12. [로컬 실행](#-로컬-실행)
+13. [Vercel 배포](#-vercel-배포)
+14. [주요 의존성](#-주요-의존성)
+15. [라이선스](#-라이선스)
+16. [감사의 글](#-감사의-글)
 
 
 ## 🏗️ 프로젝트 구조
@@ -120,25 +119,25 @@ public/
 - 게스트 로그인: `/api/auth/guest`
 - 토큰/유저ID: localStorage/sessionStorage 관리
 
+## ✨ 주요 기능
 
-## 📑 목차
 
-1. [프로젝트 개요](#%F0%9F%9A%80-프로젝트-개요)
-2. [프로젝트 구조](#%F0%9F%8F%97%EF%B8%8F-프로젝트-구조)
-3. [기술 스택](#%F0%9F%A7%B0-기술-스택)
-4. [주요 기능 및 API 연결](#%E2%9C%A8-주요-기능-및-api-연결)
-5. [패키지 구조](#%F0%9F%97%82%EF%B8%8F-패키지-구조)
-6. [환경 변수](#%F0%9F%8F%B7%EF%B8%8F-환경-변수)
-7. [실행 방법](#%F0%9F%8F%B7%EF%B8%8F-실행-방법)
-8. [배포](#%F0%9F%8F%B7%EF%B8%8F-배포)
-9. [작업 기록 요약](#%F0%9F%A7%BE-%EC%9E%91%EC%97%85-%EA%B8%B0%EB%A1%9D-%EC%9A%94%EC%95%BD)
-10. [라우팅 구조 및 화면 이동](#%F0%9F%94%80-%EB%9D%BC%EC%9A%B0%ED%8C%85-%EA%B5%AC%EC%A1%B0-%EB%B0%8F-%ED%99%94%EB%A9%B4-%EC%9D%B4%EB%8F%99)
-11. [API 매핑](#%F0%9F%94%97-api-%EB%A7%A4%ED%95%91)
-12. [로컬 실행](#%E2%96%B6%EF%B8%8F-%EB%A1%9C%EC%BB%AC-%EC%8B%A4%ED%96%89)
-13. [Vercel 배포](#%E2%96%B2-vercel-%EB%B0%B0%ED%8F%AC)
-14. [주요 의존성](#%F0%9F%93%A6-%EC%A3%BC%EC%9A%94-%EC%9D%98%EC%A1%B4%EC%84%B1)
-15. [라이선스](#%F0%9F%8F%B7%EF%B8%8F-%EB%9D%BC%EC%9D%B4%EC%84%A0%EC%8A%A4)
-16. [감사의 글](#%F0%9F%99%8F-%EA%B0%90%EC%82%AC%EC%9D%98-%EA%B8%80)
+## 🔗 주요 API 예시 및 화면 흐름
+
+```javascript
+// 탐험지(퀴즈) 섹터/레벨/문제 목록 및 상세 이동
+import { getSectors, getSubsectors, getLevels, getQuiz } from '../api/explore.js';
+const sectors = await getSectors(); // 섹터 목록
+// 섹터 클릭 → 상세로 이동
+const subsectors = await getSubsectors(sectorId);
+// 서브섹터 클릭 → 레벨 목록
+const levels = await getLevels(subsectorId);
+// 레벨 클릭 → 퀴즈 목록
+const quiz = await getQuiz(levelId, userId);
+
+// 오답노트 섹터별 통계 및 목록
+import { getWrongNotes } from '../api/community.js';
+const resp = await getWrongNotes(userId, 0, 50, 'all');
 const subsectorStats = resp.subsectorStatistics; // [{subsectorId, subsectorName, wrongCount}, ...]
 // 섹터 클릭 → 해당 섹터 오답 목록 화면으로 이동
 
